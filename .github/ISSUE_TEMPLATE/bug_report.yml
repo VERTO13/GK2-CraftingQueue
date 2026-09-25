@@ -1,0 +1,43 @@
+name: Bug report / Reportar un bug
+description: Something doesn't work as expected. / Algo no funciona como debería.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping test Crafting Queue! / ¡Gracias por ayudar a probar Crafting Queue!
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened? / ¿Qué pasó?
+      description: What you did, what you expected and what happened instead. Screenshots help a lot. / Qué hiciste, qué esperabas y qué pasó. Las capturas ayudan mucho.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Mod version / Versión del mod
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: input
+    attributes:
+      label: Playing with / Jugando con
+      options:
+        - Keyboard and mouse / Teclado y mouse
+        - Gamepad / Control
+    validations:
+      required: true
+  - type: input
+    id: resolution
+    attributes:
+      label: Resolution / Resolución
+      placeholder: "1920x1080"
+  - type: textarea
+    id: log
+    attributes:
+      label: Log file / Archivo de registro
+      description: Drag `BepInEx\LogOutput.log` from your game folder here. / Arrastra aquí `BepInEx\LogOutput.log` de la carpeta del juego.
+    validations:
+      required: false
