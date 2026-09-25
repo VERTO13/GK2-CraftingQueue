@@ -11,44 +11,58 @@ A mod that keeps a **crafting queue always on screen**. It shows what you want t
 
 ---
 
-## Installation (2 minutes)
+## Installation (about 2 minutes, no experience needed)
 
-### 1. Find your game folder
+You only do this once. Close the game before you start.
 
-In Steam, right-click **Graveyard Keeper 2** → **Manage** → **Browse local files**. The folder that opens is your *game folder*. It contains `GraveyardKeeper2.exe`.
+### Step 1: Download the mod
 
-### 2. Download the right file from [Releases](../../releases)
+Go to [Releases](../../releases) and download **one** of these files:
 
-| If… | Download |
-|---|---|
-| You have **never installed mods** in Graveyard Keeper 2 | **`CraftingQueue-x.y.z-with-BepInEx.zip`** (includes the mod loader) |
-| You already use **BepInEx 5** mods | **`CraftingQueue-x.y.z.zip`** (just the mod) |
+- **`CraftingQueue-x.y.z-with-BepInEx.zip`**: get this one if you're not sure. It has everything you need.
+- `CraftingQueue-x.y.z.zip`: only the mod. Use it if you already play with other BepInEx mods.
 
-### 3. Extract it into the game folder
+### Step 2: Copy the address of your game folder
 
-Open the zip, select everything inside, and drag it into the game folder. If Windows asks, choose **Replace**.
+1. Open **Steam** and go to your **Library**.
+2. Right-click **Graveyard Keeper 2** → **Manage** → **Browse local files**. A folder opens; this is your *game folder*.
+3. Click the **address bar** at the top of that folder (where the path is shown), then press **Ctrl + C** to copy it.
 
-When you're done, the game folder should look like this:
+> 💡 It doesn't matter which drive or folder your game is on. Steam always opens the right one.
+
+### Step 3: Extract the mod into that folder
+
+1. Find the file you downloaded (it's usually in **Downloads**).
+2. Right-click it → **Extract All…**
+3. Delete the path that appears in the box, then press **Ctrl + V** to paste your game folder's address.
+4. Click **Extract**. If Windows asks about replacing files, choose **Replace**.
+
+### Step 4: Check that it worked
+
+Open the game folder again. You should now see a **`BepInEx`** folder next to `GraveyardKeeper2.exe`:
 
 ```
-Graveyard Keeper 2\
-├─ BepInEx\
-│  ├─ core\ ...
-│  └─ plugins\
-│     └─ CraftingQueue\
-│        └─ CraftingQueue.dll
-├─ winhttp.dll
-├─ doorstop_config.ini
+Graveyard Keeper 2
+├─ BepInEx               ← new
+├─ winhttp.dll           ← new
+├─ doorstop_config.ini   ← new
 └─ GraveyardKeeper2.exe
 ```
 
-### 4. Play
+Start the game and load your save. A **Queue** panel appears at the top right. 🎉
+To add something, hold **Ctrl** and right-click any item.
 
-Start the game and load your save. The **Queue** panel appears at the top right. Hold **Ctrl** and right-click any item to add it.
+### Something went wrong?
 
-**Nothing shows up?** See [Troubleshooting](#troubleshooting).
+| What you see | What to do |
+|---|---|
+| There's a folder called `CraftingQueue-...` inside the game folder, and the `BepInEx` folder is inside it | Move everything from inside that folder into the game folder, then delete the empty folder. |
+| The game opens but there's no panel | Press **F3** (it may be hidden). If it's still missing, see [Troubleshooting](#troubleshooting). |
+| Windows or your antivirus warns about `winhttp.dll` | That file is part of BepInEx, the standard mod loader for Unity games. It's safe; allow it. |
 
-**Uninstall:** delete `BepInEx\plugins\CraftingQueue`. Your save files are never touched.
+### Uninstall
+
+Delete the folder `BepInEx\plugins\CraftingQueue` inside your game folder. Your saves are never touched.
 
 ---
 
@@ -144,16 +158,56 @@ Un mod que mantiene una **cola de crafteo siempre a la vista**. Muestra qué qui
 > ⚠️ **Versión de prueba (beta).** Todavía se está probando y puede tener algunos bugs. Por favor [repórtalos](#reportar-bugs); ayuda muchísimo.
 > 🎮 **El soporte para control es aún más experimental** y casi no se ha probado.
 
-### Instalación (2 minutos)
+### Instalación (unos 2 minutos, sin experiencia)
 
-1. **Encuentra la carpeta del juego:** en Steam, clic derecho en **Graveyard Keeper 2** → **Administrar** → **Ver archivos locales**. Es la carpeta donde está `GraveyardKeeper2.exe`.
-2. **Descarga el archivo correcto** desde [Releases](../../releases):
-   - **Nunca has instalado mods** en este juego → **`CraftingQueue-x.y.z-with-BepInEx.zip`** (incluye el cargador de mods).
-   - **Ya usas mods de BepInEx 5** → **`CraftingQueue-x.y.z.zip`** (solo el mod).
-3. **Descomprímelo dentro de la carpeta del juego:** abre el zip, selecciona todo y arrástralo a la carpeta. Si Windows pregunta, elige **Reemplazar**.
-4. **Juega:** carga tu partida y verás el panel **Cola** arriba a la derecha. Mantén **Ctrl** y da clic derecho sobre cualquier objeto para agregarlo.
+Solo se hace una vez. Cierra el juego antes de empezar.
 
-**Desinstalar:** borra la carpeta `BepInEx\plugins\CraftingQueue`. Tus partidas no se tocan.
+**Paso 1: Descarga el mod**
+
+Entra a [Releases](../../releases) y descarga **uno** de estos archivos:
+
+- **`CraftingQueue-x.y.z-with-BepInEx.zip`**: elige este si no estás seguro. Trae todo lo necesario.
+- `CraftingQueue-x.y.z.zip`: solo el mod, para quien ya juega con otros mods de BepInEx.
+
+**Paso 2: Copia la dirección de la carpeta del juego**
+
+1. Abre **Steam** y ve a tu **Biblioteca**.
+2. Clic derecho en **Graveyard Keeper 2** → **Administrar** → **Ver archivos locales**. Se abre una carpeta: esa es la *carpeta del juego*.
+3. Da clic en la **barra de direcciones**, arriba de la carpeta (donde aparece la ruta), y presiona **Ctrl + C** para copiarla.
+
+> 💡 No importa en qué disco o carpeta tengas el juego: Steam siempre abre la correcta.
+
+**Paso 3: Descomprime el mod en esa carpeta**
+
+1. Busca el archivo que descargaste (normalmente está en **Descargas**).
+2. Clic derecho sobre él → **Extraer todo…**
+3. Borra la ruta que aparece en el cuadro y presiona **Ctrl + V** para pegar la dirección de la carpeta del juego.
+4. Da clic en **Extraer**. Si Windows pregunta por reemplazar archivos, elige **Reemplazar**.
+
+**Paso 4: Revisa que quedó bien**
+
+Abre otra vez la carpeta del juego. Ahora debe haber una carpeta **`BepInEx`** junto a `GraveyardKeeper2.exe`:
+
+```
+Graveyard Keeper 2
+├─ BepInEx               ← nuevo
+├─ winhttp.dll           ← nuevo
+├─ doorstop_config.ini   ← nuevo
+└─ GraveyardKeeper2.exe
+```
+
+Abre el juego y carga tu partida. Arriba a la derecha aparece el panel **Cola**. 🎉
+Para agregar algo, mantén **Ctrl** y da clic derecho sobre cualquier objeto.
+
+**¿Algo salió mal?**
+
+| Lo que ves | Qué hacer |
+|---|---|
+| Dentro de la carpeta del juego quedó una carpeta llamada `CraftingQueue-...` con `BepInEx` adentro | Mueve todo lo que está dentro de esa carpeta a la carpeta del juego y borra la carpeta vacía. |
+| El juego abre pero no aparece el panel | Presiona **F3** (puede estar oculto). Si sigue sin aparecer, revisa que exista `BepInEx\LogOutput.log` en la carpeta del juego; si no existe, BepInEx no quedó instalado. |
+| Windows o el antivirus avisan sobre `winhttp.dll` | Ese archivo es parte de BepInEx, el cargador de mods estándar de los juegos de Unity. Es seguro; permítelo. |
+
+**Desinstalar:** borra la carpeta `BepInEx\plugins\CraftingQueue` dentro de la carpeta del juego. Tus partidas no se tocan.
 
 ### Qué hace
 
