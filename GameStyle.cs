@@ -161,7 +161,7 @@ internal static class GameStyle
             icon.material = iconMaterial;
     }
 
-    // --- Botones − + basura del juego (los mismos que usa el mod en la página del personaje) ---
+    // --- Botones − + basura del juego (los mismos de sus ventanas) ---
     // − y + son los de los deslizadores (UISlider); la basura, el botón de borrar partida (UISaveSlot).
 
     private static GameObject buttonHolder;
@@ -256,7 +256,7 @@ internal static class GameStyle
         return tpl;
     }
 
-    // --- Piezas de ventana del juego para que los paneles se vean como el mod / el juego ---
+    // --- Piezas de ventana del juego para que los paneles se vean como el juego ---
 
     private static readonly FieldInfo CellBackground = typeof(UIItemCell).GetField("background", BindingFlags.Instance | BindingFlags.NonPublic);
     private static Image header;     // barra ornamentada de título ("Cola", "Información"…)

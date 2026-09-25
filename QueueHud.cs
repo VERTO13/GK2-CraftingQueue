@@ -9,11 +9,10 @@ using UnityEngine.UI;
 
 namespace CraftQueue;
 
-// Panel fijo en pantalla mientras juegas: la cola de "No More Running Back" con
-// tienes/necesitas y las recetas abiertas con la flecha. Cada tarea es un bloque (barra de
-// título del juego + requisitos con líneas de árbol). Ancho fijo con nombres en varias
-// líneas, alto máximo con scroll, flechas que comparten estado con la página del personaje,
-// y se puede arrastrar (con un candado para dejarlo fijo).
+// Panel fijo en pantalla mientras juegas: la cola con tienes/necesitas y las recetas
+// abiertas con la flecha. Cada tarea es un bloque (barra de título del juego + requisitos con
+// líneas de árbol). Ancho fijo con nombres en varias líneas, alto máximo con scroll, y se
+// puede arrastrar (con un candado para dejarlo fijo).
 //
 // El mouse se lee directo (Input) en vez de por el EventSystem: la interfaz del juego tiene
 // capas encima que se quedaban con los clics y el panel nunca los recibía.
@@ -142,8 +141,8 @@ internal class QueueHud : MonoBehaviour
                 + (Time.unscaledTime < flashUntil ? "|resaltado" : ""); // al terminar el resaltado se redibuja sin él
             // Activo ANTES de armarlo: con el panel oculto Unity no mide el texto.
             SetShown(true);
-            // Lo que tienes cambia al craftear/recoger sin que el mod original avise (solo lo hace
-            // al abrir el inventario): cada segundo se revisan los materiales que el panel muestra.
+            // Lo que tienes cambia al craftear o recoger sin que el juego avise al panel: cada
+            // segundo se revisan los materiales que el panel muestra.
             if (Time.unscaledTime >= nextCountCheck)
             {
                 nextCountCheck = Time.unscaledTime + 1f;
@@ -612,7 +611,7 @@ internal class QueueHud : MonoBehaviour
         (Sprite sprite, int action)[] buttons = { (MinusSprite(), -1), (PlusSprite(), 1), (TrashSprite(), 0) };
         foreach ((Sprite sprite, int action) in buttons)
         {
-            // Primero el botón real del juego (el mismo que usa el mod); si no está cargado, el dibujo propio.
+            // Primero el botón real del juego; si no está cargado, el dibujo propio.
             GameObject holder = new GameObject("Boton", typeof(RectTransform), typeof(LayoutElement));
             holder.transform.SetParent(g.transform, false);
             RectTransform game = GameStyle.CloneButton(action, holder.transform);
@@ -651,7 +650,7 @@ internal class QueueHud : MonoBehaviour
         headers.Add((head, g, title));
     }
 
-    // Mismo efecto que los botones del mod en la página del personaje: ahí también se ve.
+    // Botones − + basura de cada tarea.
     // Un bloque puede juntar varias tareas del mismo objeto: − y + cambian la última agregada,
     // la basura las quita todas.
     private static void RunAction(object entry, int action)
@@ -1255,7 +1254,7 @@ internal class QueueHud : MonoBehaviour
         }
     }
 
-    // Un bloque por tarea: barra de título (la misma del mod/juego) + cuerpo para sus requisitos.
+    // Un bloque por tarea: barra de título (la del juego) + cuerpo para sus requisitos.
     // Devuelve el cuerpo, donde se agregan los renglones.
     private Transform Block(string iconItem, Sprite iconSprite, string title, string count, bool ready,
         string arrowPath, bool inverted, bool slot = true, bool flash = false, object entry = null, string focusId = null)
@@ -1300,7 +1299,7 @@ internal class QueueHud : MonoBehaviour
         head.GetComponent<LayoutElement>().minHeight = rowHeight + U(1f);
         if (slot)
             ArrowSlot(head.transform, arrowPath, inverted);
-        // Con marco de celda igual que los ingredientes (y que la cola del mod): mismo tamaño en todo el panel.
+        // Con marco de celda igual que los ingredientes (como en el juego): mismo tamaño en todo el panel.
         Fill(head.transform, iconItem, iconSprite, title, count, ready ? Done : Text, ready ? Done : Short, withCell: true);
         if (entry != null)
         {
@@ -1857,7 +1856,7 @@ internal class QueueHud : MonoBehaviour
         ".ooooo.", "o.....o", "o..o..o", "o.ooo.o", "o..o..o", ".o...o.", "..o.o..", "..o.o..", "...o..."
     });
 
-    // Botoncitos − + basura (mismos colores que los del mod: gris y rojo).
+    // Botoncitos − + basura (gris y rojo, como los del juego).
     private static Sprite minus, plus, trash;
     private static readonly Color BtnLine = new Color(0.17f, 0.1f, 0.07f);
     private static readonly Color BtnGrey = new Color(0.36f, 0.34f, 0.36f);

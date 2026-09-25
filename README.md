@@ -129,7 +129,6 @@ dotnet build -c Release -p:GameDir="C:\Program Files (x86)\Steam\steamapps\commo
 
 - Unofficial mod, not affiliated with Lazy Bear Games.
 - Contains no game code or assets, and sends no data anywhere.
-- Inspired by the idea behind **"No More Running Back"** by Amosa Yang (Steam Workshop). This is an independent implementation that shares no code with it. If you use both, you'll see two queue panels.
 - The *with-BepInEx* package includes [BepInEx](https://github.com/BepInEx/BepInEx) 5.4.23.5, unmodified (LGPL-2.1).
 
 ## License
@@ -189,4 +188,3 @@ Abre un [issue](../../issues/new/choose) con:
 
 - Mod no oficial, sin relación con Lazy Bear Games.
 - No incluye código ni recursos del juego y no envía datos a ningún lado.
-- Inspirado en la idea de **"No More Running Back"** de Amosa Yang (Steam Workshop). Es una implementación independiente que no comparte código con ese mod.
