@@ -17,7 +17,7 @@ A mod that keeps a **crafting queue always on screen**. It shows what you want t
 
 In Steam, right-click **Graveyard Keeper 2** → **Manage** → **Browse local files**. The folder that opens is your *game folder*. It contains `GraveyardKeeper2.exe`.
 
-### 2. Download the right file from [Releases](../../releases/latest)
+### 2. Download the right file from [Releases](../../releases)
 
 | If… | Download |
 |---|---|
@@ -148,7 +148,7 @@ Un mod que mantiene una **cola de crafteo siempre a la vista**. Muestra qué qui
 ### Instalación (2 minutos)
 
 1. **Encuentra la carpeta del juego:** en Steam, clic derecho en **Graveyard Keeper 2** → **Administrar** → **Ver archivos locales**. Es la carpeta donde está `GraveyardKeeper2.exe`.
-2. **Descarga el archivo correcto** desde [Releases](../../releases/latest):
+2. **Descarga el archivo correcto** desde [Releases](../../releases):
    - **Nunca has instalado mods** en este juego → **`CraftingQueue-x.y.z-with-BepInEx.zip`** (incluye el cargador de mods).
    - **Ya usas mods de BepInEx 5** → **`CraftingQueue-x.y.z.zip`** (solo el mod).
 3. **Descomprímelo dentro de la carpeta del juego:** abre el zip, selecciona todo y arrástralo a la carpeta. Si Windows pregunta, elige **Reemplazar**.
