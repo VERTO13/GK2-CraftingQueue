@@ -552,6 +552,57 @@ internal static class GameData
         }
     }
 
+    // Lo que hay en los almacenes de OTRAS zonas (desde aquí no se puede usar): la zona que más
+    // tiene y cuánto, para avisar en el panel "· Patio: 7". Los almacenes se revisan cada 2 s.
+    private static float elsewhereAt = -10f;
+    private static readonly List<(string zone, List<WgoData> storages)> otherZones = new List<(string, List<WgoData>)>();
+    private static readonly Dictionary<string, (string zone, int count)> elsewhere = new Dictionary<string, (string, int)>();
+
+    public static (string zone, int count) Elsewhere(string key)
+    {
+        try
+        {
+            if (Time.unscaledTime - elsewhereAt > 2f)
+            {
+                elsewhereAt = Time.unscaledTime;
+                elsewhere.Clear();
+                otherZones.Clear();
+                WorldZoneData here = MainGame.PlayerData?.CurrentWorldZoneData;
+                foreach (GameSceneData scene in MainGame.WorldData?.gameSceneDataList ?? new List<GameSceneData>())
+                    foreach (WorldZoneData z in scene?.worldZones ?? new List<WorldZoneData>())
+                    {
+                        if (z == null || z == here || (here != null && z.id == here.id))
+                            continue;
+                        List<WgoData> storages = ZoneStorages(z).ToList();
+                        if (storages.Count > 0)
+                            otherZones.Add((ZoneName(z.id), storages));
+                    }
+            }
+            if (elsewhere.TryGetValue(key, out (string zone, int count) found))
+                return found;
+            found = (null, 0);
+            foreach ((string zone, List<WgoData> storages) in otherZones)
+            {
+                int n = storages.Sum(w => CountIn(w.Inventory, key));
+                if (n > found.count)
+                    found = (zone, n);
+            }
+            elsewhere[key] = found;
+            return found;
+        }
+        catch
+        {
+            return (null, 0);
+        }
+    }
+
+    public static string ZoneName(string zone)
+    {
+        if (string.IsNullOrEmpty(zone))
+            return "";
+        return LLBase.HasL("wz_" + zone) ? Plain(LLBase.L("wz_" + zone)) : zone;
+    }
+
     public static int CountIn(Inventory inv, string key) =>
         inv?.Data == null ? 0 : ItemsOf(key).Sum(id => inv.Data.GetTotalCountInInventory(id));
 

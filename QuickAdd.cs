@@ -211,7 +211,7 @@ internal class QuickAdd : MonoBehaviour
         // Receta en una mesa de crafteo.
         UICraftPreviewItemCell recipe = go.GetComponentInParent<UICraftPreviewItemCell>();
         if (recipe != null && RecipeData?.GetValue(recipe) is UICraftPreviewItemCellData rd && !rd.IsTab && !rd.IsUnknown && rd.CraftDef != null)
-            return Queue.Add(TaskKind.Craft, rd.CraftDef.id, 1, GameData.Name(GameData.MainOutput(rd.CraftDef) ?? rd.CraftDef.id)) != null;
+            return Queue.Add(TaskKind.Craft, rd.CraftDef.id, 1, GameData.Name(GameData.MainOutput(rd.CraftDef) ?? rd.CraftDef.id), oneMore: true) != null;
 
         // Construcción del menú de construir.
         UIBuildingWidget building = go.GetComponentInParent<UIBuildingWidget>();
@@ -239,9 +239,9 @@ internal class QuickAdd : MonoBehaviour
             if (ld.Item != null && !ld.Item.IsEmpty)
                 return Queue.Add(TaskKind.Item, ld.Item.id, Math.Max(1, ld.Item.Count)) != null;
             if (ld.CraftDef != null && ld.CraftDef.outputItems != null)
-                return Queue.Add(TaskKind.Craft, ld.CraftDef.id, 1, GameData.Name(GameData.MainOutput(ld.CraftDef) ?? ld.CraftDef.id)) != null;
+                return Queue.Add(TaskKind.Craft, ld.CraftDef.id, 1, GameData.Name(GameData.MainOutput(ld.CraftDef) ?? ld.CraftDef.id), oneMore: true) != null;
             if (ld.ItemDef != null)
-                return Queue.Add(TaskKind.Item, ld.ItemDef.id, 1) != null;
+                return Queue.Add(TaskKind.Item, ld.ItemDef.id, 1, oneMore: true) != null;
             // Planos del árbol tecnológico: la construcción con sus materiales, como desde el
             // menú de construir (sin zona: el árbol no dice dónde la vas a poner).
             if (ld.BuildingDef != null)
@@ -291,7 +291,7 @@ internal class QuickAdd : MonoBehaviour
         // Cualquier objeto.
         UIItemCell cell = go.GetComponentInParent<UIItemCell>();
         if (cell != null && cell.DisplayingItem != null && !cell.DisplayingItem.IsEmpty)
-            return Queue.Add(TaskKind.Item, cell.DisplayingItem.id, 1) != null;
+            return Queue.Add(TaskKind.Item, cell.DisplayingItem.id, 1, oneMore: true) != null;
         return false;
     }
 }

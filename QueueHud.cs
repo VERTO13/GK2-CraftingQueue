@@ -542,61 +542,46 @@ internal class QueueHud : MonoBehaviour
 
     private void Seen(string key, int have) => shownCounts[key] = have;
 
-    private int OwnedNow(string id)
+    // Qué se marca en los cofres de cada tarea: lo decide el plan (Plan.MarksFor), con lo que ya
+    // tienes repartido en el orden de la cola.
+
+    // Renglón del plan para esa ruta (lo que pide y lo que le tocó de lo que tienes).
+    private static Plan.Row PlanRow(string path, string id, int want)
     {
-        if (!ownedCache.TryGetValue(id, out int n))
-            ownedCache[id] = n = GameData.Owned(id);
-        return n;
+        if (path != null && Plan.Rows.TryGetValue(path, out Plan.Row r))
+            return r;
+        return new Plan.Row { id = id, want = want, avail = GameData.Owned(id), fuel = GameData.IsFuel(id) };
     }
 
-    private bool Complete(string id, int need) => GameData.IsFuel(id) || OwnedNow(id) >= need;
-
-    // Qué se marca en los cofres de una tarea, se vea o no en el panel (aunque esté plegada):
-    //  - el objeto mismo (si lo tienes, para saber dónde está);
-    //  - si no lo tienes: los ingredientes de la receta elegida;
-    //  - de esos, los que te falten y tengas desplegados en el panel: sus ingredientes, y así.
-    private HashSet<string> MarksForItem(string item, int total, int preferred)
+    // "· Patio: 7": si aquí no te alcanza y en otra zona tienes, dónde y cuánto (en gris).
+    private static string ElsewhereHint(string id, Plan.Row r)
     {
-        HashSet<string> m = new HashSet<string> { item };
-        if (!Complete(item, total))
-            MarkRecipe(m, item, total, item, 1, preferred);
-        return m;
+        if (r.fuel || r.Missing == 0)
+            return "";
+        (string zone, int count) = GameData.Elsewhere(id);
+        return count > 0 && !string.IsNullOrEmpty(zone) ? $" <color={Dim}>· {zone}: {count}</color>" : "";
     }
 
-    private HashSet<string> MarksForBuild(QueueView.Entry e)
+    // La forma del plan (qué renglones hay y cuánto pide cada uno): si cambia, hay que redibujar;
+    // si no, basta con actualizar los números en su lugar.
+    private static string PlanShape()
     {
-        HashSet<string> m = new HashSet<string>();
-        foreach ((string pid, int per) in e.parts)
+        StringBuilder sb = new StringBuilder();
+        foreach (KeyValuePair<string, Plan.Row> kv in Plan.Rows)
         {
-            int need = per * e.need;
-            bool done = Complete(pid, need);
-            m.Add(pid);
-            string path = e.id + "/" + pid;
-            if (!done && Prefs.Expanded.Contains(path))
-                MarkRecipe(m, pid, need, path, 2, -1);
+            sb.Append(kv.Key).Append('=').Append(kv.Value.want);
+            // Los renglones de arriba llevan el aviso de otras zonas solo si falta: eso sí redibuja.
+            if (kv.Key[0] == '#' || kv.Key.IndexOf('/') == kv.Key.LastIndexOf('/'))
+                sb.Append(kv.Value.Missing > 0 ? '-' : '+');
+            sb.Append(';');
         }
-        return m;
+        foreach (KeyValuePair<string, int> kv in Plan.Crafts)
+            sb.Append(kv.Key).Append('x').Append(kv.Value).Append(';');
+        return sb.ToString();
     }
 
-    private void MarkRecipe(HashSet<string> m, string id, int need, string path, int depth, int preferred)
-    {
-        if (depth > Prefs.MaxDepth + 2)
-            return;
-        List<GameData.Recipe> recipes = GameData.OptionsFor(id);
-        if (recipes.Count == 0)
-            return;
-        GameData.Recipe recipe = recipes[Prefs.SelectedRecipe(id, recipes, Mathf.Max(1, need), preferred)];
-        int output = Mathf.Max(1, GameData.OutputCount(recipe, id));
-        int crafts = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(0, need) / (float)output));
-        foreach ((string nid, int n) in GameData.Needs(recipe))
-        {
-            bool done = Complete(nid, n * crafts);
-            m.Add(nid);
-            string childPath = path + "/" + nid;
-            if (!path.Split('/').Contains(nid) && !done && Prefs.Expanded.Contains(childPath))
-                MarkRecipe(m, nid, n * crafts, childPath, depth + 1, -1);
-        }
-    }
+    private string builtShape;
+    private List<QueueView.Entry> builtItems = new List<QueueView.Entry>();
 
     private void FocusPin(RectTransform head, GameObject count, string id)
     {
@@ -702,7 +687,11 @@ internal class QueueHud : MonoBehaviour
 
     private void FillActions(GameObject g, object entry)
     {
-        (Sprite sprite, int action)[] buttons = { (MinusSprite(), -1), (PlusSprite(), 1), (TrashSprite(), 0) };
+        // ▲ ▼ cambian el orden (la de arriba toma primero lo que tienes), − + la cantidad, 🗑 la quita.
+        (Sprite sprite, int action)[] buttons =
+        {
+            (UpSprite(), ActionUp), (DownSprite(), ActionDown), (MinusSprite(), -1), (PlusSprite(), 1), (TrashSprite(), 0)
+        };
         foreach ((Sprite sprite, int action) in buttons)
         {
             // Primero el botón real del juego; si no está cargado, el dibujo propio.
@@ -742,9 +731,11 @@ internal class QueueHud : MonoBehaviour
         }
     }
 
-    // Botones − + basura de cada tarea.
+    private const int ActionUp = 2, ActionDown = 3;
+
+    // Botones de cada tarea.
     // Un bloque puede juntar varias tareas del mismo objeto: − y + cambian la última agregada,
-    // la basura las quita todas.
+    // la basura las quita todas, ▲ ▼ las mueven juntas.
     private static void RunAction(object entry, int action)
     {
         List<object> entries = entry as List<object> ?? new List<object> { entry };
@@ -753,9 +744,23 @@ internal class QueueHud : MonoBehaviour
         if (action == 0)
             foreach (object e in entries)
                 Queue.Remove(e as QueueTask);
+        else if (action == ActionUp || action == ActionDown)
+            MoveGroup(entries[0] as QueueTask, action == ActionUp ? -1 : 1);
         else
             Queue.Change(entries[entries.Count - 1] as QueueTask, action);
         Dirty = true;
+    }
+
+    // Sube o baja un bloque entero de la cola (con todas sus tareas).
+    private static void MoveGroup(QueueTask task, int delta)
+    {
+        List<List<QueueTask>> groups = Plan.Groups.Select(g => g.tasks).ToList();
+        int i = groups.FindIndex(t => t.Contains(task));
+        int j = i + delta;
+        if (i < 0 || j < 0 || j >= groups.Count)
+            return;
+        (groups[i], groups[j]) = (groups[j], groups[i]);
+        Queue.SetOrder(groups.SelectMany(t => t));
     }
 
     private static float LeftEdge(Image i)
@@ -1212,59 +1217,56 @@ internal class QueueHud : MonoBehaviour
         foreach (QueueView.Entry e in items)
             prevNeeds[e.id] = e.need;
 
-        foreach (object block in Blocks(items))
+        // Lo que tienes se reparte entre las tareas en el orden de la cola (la de arriba primero).
+        long tp = Perf.Start();
+        Plan.Compute(items);
+        builtItems = items;
+        builtShape = PlanShape();
+        foreach (Plan.Row r in Plan.Rows.Values)
+            if (!r.fuel)
+                Seen(r.id, GameData.Owned(r.id)); // se vigila aunque no se vea (tareas plegadas)
+        Perf.Stop("panel: plan", tp, top: false);
+
+        foreach (Plan.Group g in Plan.Groups)
         {
             if (rows >= Plugin.HudMaxRows)
             {
                 hiddenRows++;
                 continue;
             }
-            if (block is ItemBlock ib)
+            Plan.Group group = g;
+            markMakers.Add((g.Key, () => Plan.MarksFor(group)));
+            blockMaterials[g.Key] = Plan.MarksFor(g);
+            List<object> entry = g.tasks.Cast<object>().ToList();
+            if (g.item != null)
             {
                 // Un solo bloque por objeto (aunque se haya agregado varias veces o desde distintas
-                // mesas), con "tienes/necesitas" como cualquier objeto. Abierto por defecto
-                // ("~id" = plegado); dentro, una receta a la vez con ◂ ▸.
-                long tk = Perf.Start();
-                string item = ib.item;
-                int total = ib.total, preferredRecipe = ib.preferred;
-                Func<HashSet<string>> marks = () => MarksForItem(item, total, preferredRecipe);
-                markMakers.Add(("i:" + item, marks));
-                blockMaterials["i:" + item] = marks();
-                Perf.Stop("panel: qué marcar", tk, top: false);
-                int have = GameData.Owned(ib.item);
-                Seen(ib.item, have);
-                string itemFold = "~" + ib.item;
-                bool hasRecipe = GameData.OptionsFor(ib.item).Count > 0;
-                BeginBinding(new CountBinding { key = ib.item, want = ib.total });
-                Transform body = Block(ib.item, null, GameData.Name(ib.item), $"{have}/{ib.total}", have >= ib.total,
-                    hasRecipe ? itemFold : null, inverted: true, flash: ib.ids.Any(flashIds.Contains), entry: ib.raws,
-                    focusId: "i:" + ib.item);
+                // mesas): "tienes/necesitas" con lo que le tocó del reparto. Abierto por defecto
+                // ("~id" = plegado); dentro, la receta de lo que falta, una a la vez con ◂ ▸.
+                string item = g.item;
+                Plan.Row head = PlanRow(Plan.HeaderPath(item), item, g.total);
+                string itemFold = "~" + item;
+                bool showRecipe = head.Missing > 0 && GameData.OptionsFor(item).Count > 0;
+                BeginBinding(new CountBinding { key = item, want = g.total, path = Plan.HeaderPath(item) });
+                Transform body = Block(item, null, GameData.Name(item) + ElsewhereHint(item, head), $"{head.avail}/{g.total}",
+                    head.Missing == 0, showRecipe ? itemFold : null, inverted: true, flash: g.ids.Any(flashIds.Contains),
+                    entry: entry, focusId: g.Key);
                 EndBinding();
-                if (hasRecipe && !Prefs.Expanded.Contains(itemFold))
-                    RecipeRows(body, ib.item, ib.total, ib.item, 1, ib.preferred);
+                if (showRecipe && !Prefs.Expanded.Contains(itemFold))
+                    RecipeRows(body, item, head.Missing, item, 1, g.preferred);
                 FinishBody(body);
                 continue;
             }
-            QueueView.Entry e = (QueueView.Entry)block;
-            QueueView.Entry entryForMarks = e;
-            markMakers.Add((e.id, () => MarksForBuild(entryForMarks)));
-            blockMaterials[e.id] = MarksForBuild(e);
+            QueueView.Entry e = g.build;
             bool flash = flashIds.Contains(e.id);
-            bool ready = true;
-            foreach ((string pid, int per) in e.parts)
-            {
-                if (GameData.IsFuel(pid))
-                    continue;
-                int have = GameData.Owned(pid);
-                Seen(pid, have); // aunque la tarea esté plegada, su color depende de esto
-                ready &= have >= per * e.need;
-            }
+            List<string> partPaths = e.parts.Select(p => e.id + "/" + p.id).ToList();
+            bool ready = partPaths.All(p => PlanRow(p, null, 0).Missing == 0);
             string times = e.need > 1 ? $" ×{e.need}" : "";
             // Construcciones: la flecha pliega sus requisitos (abiertas por defecto; "~id" = plegada).
             string fold = "~" + e.id;
-            BeginBinding(new CountBinding { parts = e.parts.Select(p => (p.id, p.n * e.need)).ToList() });
+            BeginBinding(new CountBinding { parts = partPaths });
             Transform b = Block(e.iconItem, e.buildIcon, e.title + times, null, ready, fold, inverted: true, flash: flash,
-                entry: new List<object> { e.raw }, focusId: e.id);
+                entry: entry, focusId: e.id);
             EndBinding();
             if (!Prefs.Expanded.Contains(fold))
             {
@@ -1272,7 +1274,7 @@ internal class QueueHud : MonoBehaviour
                 {
                     string path = e.id + "/" + pid;
                     Item(b, 1, pid, per * e.need, path);
-                    Tree(b, pid, per * e.need, path, 2);
+                    Tree(b, pid, path, 2);
                 }
             }
             FinishBody(b);
@@ -1307,60 +1309,6 @@ internal class QueueHud : MonoBehaviour
                 if (!GameData.IsFuel(key))
                     Materials.Add(key);
         ChestMarks.Dirty = true;
-    }
-
-    // Tareas de un mismo objeto juntas: las agregadas como objeto y las agregadas desde una mesa
-    // ("receta ×N", que producen N × lo que rinda la receta). Construcciones quedan aparte.
-    private class ItemBlock
-    {
-        public string item;
-        public int total;
-        public int preferred = -1; // receta con la que se agregó desde la mesa (si no se eligió otra)
-        public readonly List<object> raws = new List<object>();
-        public readonly List<string> ids = new List<string>();
-    }
-
-    private static List<object> Blocks(List<QueueView.Entry> items)
-    {
-        List<object> blocks = new List<object>();
-        Dictionary<string, ItemBlock> byItem = new Dictionary<string, ItemBlock>();
-        foreach (QueueView.Entry e in items)
-        {
-            string item = null;
-            int amount = e.need;
-            int preferred = -1;
-            if (!e.isBuild)
-            {
-                item = e.id;
-            }
-            else if (e.id.StartsWith("craft:") && e.iconItem != null)
-            {
-                item = e.iconItem;
-                CraftDef craft = GameBalance.Me?.GetDataOrNull<CraftDef>(e.id.Substring("craft:".Length));
-                if (craft != null)
-                {
-                    amount = e.need * GameData.OutputCount(craft, item);
-                    preferred = GameData.OptionsFor(item).FindIndex(o => o.craft == craft); // su primera estación
-                }
-            }
-            if (item == null)
-            {
-                blocks.Add(e); // construcción, obra del pueblo…
-                continue;
-            }
-            if (!byItem.TryGetValue(item, out ItemBlock b))
-            {
-                b = new ItemBlock { item = item };
-                byItem[item] = b;
-                blocks.Add(b);
-            }
-            b.total += amount;
-            if (b.preferred < 0)
-                b.preferred = preferred;
-            b.raws.Add(e.raw);
-            b.ids.Add(e.id);
-        }
-        return blocks;
     }
 
     // Ancho fijo (los nombres largos bajan de renglón) y alto máximo con scroll.
@@ -1522,17 +1470,21 @@ internal class QueueHud : MonoBehaviour
     private void Item(Transform body, int depth, string id, int want, string path)
     {
         string name = GameData.Name(id);
-        string arrow = Expandable(id, path, depth) ? path : null;
         if (GameData.IsFuel(id))
         {
-            Line(body, depth, id, $"{name} ×{want}", null, Text, Text, arrow);
+            Line(body, depth, id, $"{name} ×{want}", null, Text, Text, null);
             return;
         }
-        int have = GameData.Owned(id);
-        Seen(id, have); // se vigila para redibujar si cambia (crafteo, recolección…)
-        bool ok = have >= want;
-        BeginBinding(new CountBinding { key = id, want = want });
-        Line(body, depth, id, name, $"{have}/{want}", ok ? Done : Text, ok ? Done : Short, arrow);
+        // Lo que le tocó del reparto (las tareas de más arriba toman primero).
+        Plan.Row r = PlanRow(path, id, want);
+        want = r.want;
+        Seen(id, GameData.Owned(id)); // se vigila para redibujar si cambia (crafteo, recolección…)
+        bool ok = r.Missing == 0;
+        // La flecha solo si falta algo: lo que ya tienes no hay que hacerlo.
+        string arrow = !ok && Expandable(id, path, depth) ? path : null;
+        string hint = depth == 1 ? ElsewhereHint(id, r) : "";
+        BeginBinding(new CountBinding { key = id, want = want, path = path });
+        Line(body, depth, id, name + hint, $"{r.avail}/{want}", ok ? Done : Text, ok ? Done : Short, arrow);
         EndBinding();
     }
 
@@ -1550,11 +1502,13 @@ internal class QueueHud : MonoBehaviour
     // Las mismas flechas que la página del personaje (mismas rutas): abrir aquí o allá es lo mismo.
     // Una sola receta a la vez: la elegida (o la mejor). Con varias, un renglón
     // "Receta 1/2 · rinde 4  ◂ ▸" para cambiarla (la elección se comparte con la página del personaje).
-    private void Tree(Transform body, string id, int need, string path, int depth)
+    private void Tree(Transform body, string id, string path, int depth)
     {
         if (!Prefs.Expanded.Contains(path) || depth > Prefs.MaxDepth + 2)
             return;
-        RecipeRows(body, id, need, path, depth, -1);
+        int missing = PlanRow(path, id, 0).Missing; // solo se hace lo que falta
+        if (missing > 0)
+            RecipeRows(body, id, missing, path, depth, -1);
     }
 
     // La receta de un objeto: la elegida con ◂ ▸, si no la que se usó al agregarlo desde la mesa,
@@ -1568,10 +1522,12 @@ internal class QueueHud : MonoBehaviour
         int sel = Prefs.SelectedRecipe(id, recipes, Mathf.Max(1, need), preferred);
         GameData.Recipe recipe = recipes[sel];
         int output = GameData.OutputCount(recipe, id);
-        int crafts = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(0, need) / (float)Mathf.Max(1, output)));
+        int crafts = Plan.CraftsAt(path);
+        if (crafts <= 0)
+            crafts = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(0, need) / (float)Mathf.Max(1, output)));
         if (Plugin.CompactRecipes)
         {
-            CompactRecipe(body, depth, id, sel, recipes.Count, output, recipe, crafts);
+            CompactRecipe(body, depth, id, sel, recipes.Count, output, recipe, crafts, path);
             return;
         }
         // Con varias opciones: "1/2 · Mesa ×N ◂ ▸". Con una sola que dé más de 1: "Mesa ×N" (sin
@@ -1583,14 +1539,14 @@ internal class QueueHud : MonoBehaviour
             string childPath = path + "/" + nid;
             Item(body, depth, nid, n * crafts, childPath);
             if (!path.Split('/').Contains(nid))
-                Tree(body, nid, n * crafts, childPath, depth + 1);
+                Tree(body, nid, childPath, depth + 1);
         }
     }
 
     // Estilo compacto: los ingredientes como ícono + "tienes/necesitas" (nombre al pasar el mouse),
     // hasta 3 por renglón. Con varias recetas, arriba "◂ 1/2 ▸ · rinde 4"; con una sola que
     // rinda más de 1, "· rinde N" al final de los ingredientes.
-    private void CompactRecipe(Transform body, int depth, string id, int sel, int count, int output, GameData.Recipe recipe, int crafts)
+    private void CompactRecipe(Transform body, int depth, string id, int sel, int count, int output, GameData.Recipe recipe, int crafts, string path)
     {
         List<(string nid, int want)> needs = GameData.Needs(recipe).Select(x => (x.key, x.count * crafts)).ToList();
         // Mesa y cuánto da: "· Sierra circular ×4" (con varias recetas, junto a "◂ 1/2 ▸").
@@ -1619,7 +1575,7 @@ internal class QueueHud : MonoBehaviour
         float used = 0f;
         List<RectTransform> pieces = new List<RectTransform>();
         foreach ((string nid, int want) in needs)
-            pieces.Add(Chip(row.transform, nid, want));
+            pieces.Add(Chip(row.transform, nid, want, path + "/" + nid));
         if (count <= 1 && yields != null)
             pieces.Add((RectTransform)MakeText(row.transform, yields, Text, TextAlignmentOptions.MidlineLeft, wrap: false).transform);
         foreach (RectTransform piece in pieces)
@@ -1751,7 +1707,7 @@ internal class QueueHud : MonoBehaviour
     }
 
     // Ingrediente en el estilo compacto: ícono con marco + "tienes/necesitas" (o "×N" si es combustible).
-    private RectTransform Chip(Transform row, string nid, int want)
+    private RectTransform Chip(Transform row, string nid, int want, string path)
     {
         GameObject chip = new GameObject("Ingrediente", typeof(RectTransform), typeof(HorizontalLayoutGroup));
         chip.transform.SetParent(row, false);
@@ -1769,14 +1725,15 @@ internal class QueueHud : MonoBehaviour
         }
         else
         {
-            int have = GameData.Owned(nid);
-            Seen(nid, have);
-            label = have + "/" + want;
-            color = have >= want ? Done : Short;
+            Plan.Row r = PlanRow(path, nid, want);
+            want = r.want;
+            Seen(nid, GameData.Owned(nid));
+            label = r.avail + "/" + want;
+            color = r.Missing == 0 ? Done : Short;
         }
         bool fuel = GameData.IsFuel(nid);
         if (!fuel)
-            BeginBinding(new CountBinding { key = nid, want = want, chip = true });
+            BeginBinding(new CountBinding { key = nid, want = want, chip = true, path = path });
         Fill(chip.transform, nid, null, label, null, color, color, withCell: true, stretch: false);
         if (!fuel)
             EndBinding();
@@ -2000,9 +1957,10 @@ internal class QueueHud : MonoBehaviour
     private sealed class CountBinding
     {
         public string key;       // material cuya cantidad se muestra
+        public string path;      // su renglón en el plan (lo que le tocó del reparto)
         public int want;
         public bool chip;        // estilo compacto: el texto es "tienes/necesitas"
-        public List<(string key, int need)> parts; // barra de construcción: solo el color "listo"
+        public List<string> parts; // barra de construcción: rutas de sus materiales (solo el color "listo")
         public TMP_Text name, count;
     }
 
@@ -2022,9 +1980,7 @@ internal class QueueHud : MonoBehaviour
     // Revisa las cantidades y actualiza solo lo que cambió. Devuelve si hubo cambios.
     private bool UpdateCounts()
     {
-        // Lo que se usó para decidir las marcas (incluye ingredientes de tareas plegadas).
-        List<KeyValuePair<string, int>> before = ownedCache.ToList();
-        ownedCache.Clear();
+        // Todo lo que usa el plan se vigila (incluye ingredientes de tareas plegadas).
         bool changed = false;
         foreach (string key in shownCounts.Keys.ToList())
         {
@@ -2035,12 +1991,17 @@ internal class QueueHud : MonoBehaviour
                 changed = true;
             }
         }
-        foreach (KeyValuePair<string, int> kv in before)
-            if (!shownCounts.ContainsKey(kv.Key) && GameData.Owned(kv.Key) != kv.Value)
-                changed = true;
         if (!changed)
             return false;
-        ownedCache.Clear();
+
+        // Se reparte de nuevo. Si cambió qué renglones hay o cuánto pide cada uno (p. ej. ya no
+        // falta un objeto y su receta se va), se redibuja; si no, solo cambian números y colores.
+        Plan.Compute(builtItems);
+        if (PlanShape() != builtShape)
+        {
+            Dirty = true;
+            return true;
+        }
 
         bool resized = false;
         foreach (CountBinding b in countBindings)
@@ -2049,12 +2010,13 @@ internal class QueueHud : MonoBehaviour
                 continue;
             if (b.parts != null)
             {
-                bool ready = b.parts.All(p => GameData.IsFuel(p.key) || OwnedNow(p.key) >= p.need);
+                bool ready = b.parts.All(p => PlanRow(p, null, 0).Missing == 0);
                 b.name.color = ready ? Done : Text;
                 continue;
             }
-            int have = OwnedNow(b.key);
-            bool ok = have >= b.want;
+            Plan.Row r = PlanRow(b.path, b.key, b.want);
+            int have = r.avail;
+            bool ok = r.Missing == 0;
             string text = $"{have}/{b.want}";
             TMP_Text target = b.chip ? b.name : b.count;
             if (target != null)
@@ -2149,6 +2111,18 @@ internal class QueueHud : MonoBehaviour
     private static Sprite PlusSprite() => plus != null ? plus : plus = PixelSprite(new[]
     {
         ".ooooooo.", "o#######o", "o###w###o", "o###w###o", "o#wwwww#o", "o###w###o", "o###w###o", "o#######o", ".ooooooo."
+    }, BtnLine, BtnGrey, BtnMark);
+
+    private static Sprite up, down;
+
+    private static Sprite UpSprite() => up != null ? up : up = PixelSprite(new[]
+    {
+        ".ooooooo.", "o#######o", "o#######o", "o###w###o", "o##www##o", "o#wwwww#o", "o#######o", "o#######o", ".ooooooo."
+    }, BtnLine, BtnGrey, BtnMark);
+
+    private static Sprite DownSprite() => down != null ? down : down = PixelSprite(new[]
+    {
+        ".ooooooo.", "o#######o", "o#######o", "o#wwwww#o", "o##www##o", "o###w###o", "o#######o", "o#######o", ".ooooooo."
     }, BtnLine, BtnGrey, BtnMark);
 
     private static Sprite TrashSprite() => trash != null ? trash : trash = PixelSprite(new[]

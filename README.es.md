@@ -85,8 +85,11 @@ Para agregar algo, mantén **Ctrl** y da clic derecho sobre cualquier objeto.
 - **Una opción por receta y por estación.** Si un objeto tiene varias recetas, o una receta se hace en varias estaciones, cambias entre ellas con ◂ ▸. Cada opción muestra su estación, su cantidad y lo que pide.
 - **Solo lo que puedes usar.** Las recetas que aún no desbloqueas no aparecen, ni las estaciones que todavía no puedes construir. En cuanto las desbloqueas (árbol tecnológico, misiones…), aparecen solas.
 - **Cantidades reales.** El `×N` toma en cuenta tus talentos, o los de un zombi si trabaja esa estación. Para una estación que aún no construyes, muestra el edificio base con tus talentos.
-- **Descuento automático.** Las tareas bajan solas al craftear, construir o terminar obras del pueblo.
-- **Pasa el mouse sobre una tarea** para ver sus botones − + 🗑 y su pin. Arrastra el título para mover el panel; el candado lo deja fijo.
+- **Una tarea pide *tener* esa cantidad.** Lo que ya tienes cuenta, y la receta de abajo es solo para lo que falta. Ctrl + clic derecho en un objeto o una receta pide uno más de lo que tienes; los pedidos (NPC, misiones, encargos, construcciones) piden su cantidad exacta.
+- **Los materiales compartidos se reparten en el orden de la cola.** Si dos tareas usan troncos, la de arriba toma primero lo que tienes y la siguiente lo que sobra. Cambia el orden con ▲ ▼.
+- **Las tareas se completan solas** cuando crafteas, recoges o compras lo que faltaba. Las construcciones y obras del pueblo bajan al construirlas.
+- **Lo que tienes en otras zonas.** Si aquí no te alcanza pero tienes en otra zona, el renglón te dice dónde, en gris: `· Yard: 7`.
+- **Pasa el mouse sobre una tarea** para ver sus botones ▲ ▼ − + 🗑 y su pin. Arrastra el título para mover el panel; el candado lo deja fijo.
 
 ![Botones de una tarea](docs/images/task-buttons.png)
 
@@ -146,6 +149,7 @@ Mantén **Alt** sobre cualquier objeto, en tu inventario, un cofre o el mismo pa
 | Mostrar / ocultar el panel | `F3` | – |
 | Recetas detalladas / compactas | `F4` | – |
 | Ver dónde están los materiales de una tarea | Pasar el mouse sobre la tarea | Seleccionarla en el panel |
+| Cambiar el orden (prioridad) | Pasar el mouse sobre la tarea → ▲ ▼ | – |
 | Usar el panel | Mouse | **R3** entrar · cruceta ↑↓ moverse · → abrir · ← cerrar · LB/RB cambiar receta · X/Y −/+ · A pin · B salir |
 
 ## Reportar bugs

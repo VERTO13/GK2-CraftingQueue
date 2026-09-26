@@ -8,8 +8,8 @@ namespace CraftQueue;
 
 internal enum TaskKind
 {
-    Item,   // "necesito N de este objeto"
-    Craft,  // "hacer esta receta N veces" (agregada desde una mesa)
+    Item,   // "necesito tener N de este objeto"
+    Craft,  // igual, agregada desde una mesa (recuerda la receta para mostrarla primero)
     Build,  // construcción (BuildingDef): colocar N
     Town    // obra del pueblo (TownBuildingDef): reparar/mejorar
 }
@@ -190,12 +190,17 @@ internal static class Queue
             case TaskKind.Item:
                 return "i:" + t.id;
             case TaskKind.Craft:
-                CraftDef craft = GameBalance.Me?.GetDataOrNull<CraftDef>(t.id);
-                string output = craft != null ? GameData.MainOutput(craft) : null;
+                string output = OutputOf(t);
                 return output != null ? "i:" + output : null;
             default:
                 return t.kind + ":" + t.id;
         }
+    }
+
+    private static string OutputOf(QueueTask t)
+    {
+        CraftDef craft = GameBalance.Me?.GetDataOrNull<CraftDef>(t.id);
+        return craft != null ? GameData.MainOutput(craft) : null;
     }
 
     public static void ClearPins()
@@ -225,11 +230,23 @@ internal static class Queue
     // ---------- Agregar ----------
 
     // Si ya hay una tarea igual, le suma; si no, crea una nueva. Devuelve la tarea.
+    // Las tareas de objetos piden TENER esa cantidad. Con oneMore (Ctrl + clic en un objeto o una
+    // receta, sin cantidad pedida) se entiende "quiero N más de lo que ya tengo": si ya tienes 10
+    // y agregas 1, pide 11.
     public static QueueTask Add(TaskKind kind, string id, int count, string title = null, string icon = null,
-        string zone = null, IEnumerable<(string key, int count)> parts = null)
+        string zone = null, IEnumerable<(string key, int count)> parts = null, bool oneMore = false)
     {
         if (!HasSlot || string.IsNullOrEmpty(id) || count <= 0)
             return null;
+        if (oneMore && (kind == TaskKind.Item || kind == TaskKind.Craft))
+        {
+            string item = kind == TaskKind.Item ? id : OutputOf(new QueueTask { kind = kind, id = id });
+            if (item != null)
+            {
+                int planned = Tasks.Where(t => ItemOf(t) == item).Sum(t => t.count);
+                count = Math.Max(planned, GameData.Owned(item)) + count - planned;
+            }
+        }
         QueueTask task = Tasks.FirstOrDefault(t => t.kind == kind && t.id == id && (t.zone ?? "") == (zone ?? ""));
         if (task != null)
         {
@@ -271,38 +288,35 @@ internal static class Queue
             Touch();
     }
 
-    // ---------- Descuento automático ----------
+    public static void RemoveAll(IEnumerable<QueueTask> tasks)
+    {
+        HashSet<QueueTask> gone = new HashSet<QueueTask>(tasks);
+        if (Tasks.RemoveAll(gone.Contains) > 0)
+            Touch();
+    }
 
-    // Se hizo una receta (craft terminado): baja las tareas "hacer esta receta" y las de los
-    // objetos que produjo.
+    // Nuevo orden de la cola (el panel lo pide al subir o bajar una tarea). Las que no vengan en
+    // la lista se quedan al final, en su orden.
+    public static void SetOrder(IEnumerable<QueueTask> order)
+    {
+        List<QueueTask> sorted = order.Where(Tasks.Contains).Distinct().ToList();
+        sorted.AddRange(Tasks.Where(t => !sorted.Contains(t)));
+        if (sorted.SequenceEqual(Tasks))
+            return;
+        Tasks.Clear();
+        Tasks.AddRange(sorted);
+        Touch();
+    }
+
+    // El objeto que pide una tarea de objeto o de receta (null en construcciones).
+    private static string ItemOf(QueueTask t) =>
+        t.kind == TaskKind.Item ? t.id : t.kind == TaskKind.Craft ? OutputOf(t) : null;
+
+    // ---------- Al craftear ----------
+    // Ya no se descuenta: las tareas de objetos piden tener N, y lo crafteado sube lo que tienes.
+    // El plan (Plan.Tick) quita la tarea cuando se completa.
     public static void OnCrafted(CraftDef craft, IEnumerable<(string item, int count)> produced)
     {
-        if (!HasSlot || craft == null)
-            return;
-        bool changed = false;
-        QueueTask recipe = Tasks.FirstOrDefault(t => t.kind == TaskKind.Craft && t.id == craft.id);
-        if (recipe != null)
-        {
-            recipe.count--;
-            changed = true;
-        }
-        foreach ((string item, int count) in produced)
-        {
-            int left = count;
-            foreach (QueueTask t in Tasks.Where(t => t.kind == TaskKind.Item && GameData.ItemsOf(t.id).Contains(item)).ToList())
-            {
-                if (left <= 0)
-                    break;
-                int used = Math.Min(left, t.count);
-                t.count -= used;
-                left -= used;
-                changed = true;
-            }
-        }
-        if (!changed)
-            return;
-        Tasks.RemoveAll(t => t.count <= 0);
-        Touch();
     }
 
     // Se colocó una construcción o se hizo una obra del pueblo.

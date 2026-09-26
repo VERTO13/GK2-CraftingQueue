@@ -85,8 +85,11 @@ To add something, hold **Ctrl** and right-click any item.
 - **One option per recipe and per station.** If an item has several recipes, or one recipe can be made in several stations, switch between them with ◂ ▸. Each option shows its own station, yield and ingredients.
 - **Only what you can actually use.** Recipes you haven't unlocked stay hidden, and so do stations you can't build yet. As soon as you unlock them (tech tree, quests…), they show up on their own.
 - **Real yields.** The `×N` includes your perks and talents, including a zombie's if one works that station. For a station you haven't built yet, it shows the base building plus your perks.
-- **Automatic progress.** Tasks go down on their own when you craft, build, or finish a town work.
-- **Hover a task** to show its − + 🗑 buttons and its pin. Drag the title to move the panel; the lock pins it in place.
+- **A task asks to *have* that many.** What you already own counts, and the recipe below covers only what's missing. Ctrl + right-click on an item or a recipe asks for one more than you have; requests (NPCs, quests, orders, buildings) ask for their exact amount.
+- **Shared materials are split in queue order.** If two tasks need logs, the one on top takes what you have first and the next one gets what's left. Reorder tasks with ▲ ▼.
+- **Tasks finish on their own** when you craft, pick up or buy what was missing. Buildings and town works go down when you build them.
+- **Stock in other zones.** If you're short here but have some elsewhere, the row tells you where, in grey: `· Yard: 7`.
+- **Hover a task** to show its ▲ ▼ − + 🗑 buttons and its pin. Drag the title to move the panel; the lock pins it in place.
 
 ![Task buttons](docs/images/task-buttons.png)
 
@@ -146,6 +149,7 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 | Show / hide panel | `F3` | – |
 | Detailed / compact recipes | `F4` | – |
 | See where a task's materials are | Hover the task in the panel | Select it in the panel |
+| Reorder tasks (priority) | Hover the task → ▲ ▼ | – |
 | Use the panel | Mouse | **R3** to enter · D-pad ↑↓ move · → open · ← close · LB/RB switch recipe · X/Y −/+ · A pin · B exit |
 
 ## Reporting bugs
