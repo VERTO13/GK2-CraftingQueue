@@ -278,6 +278,12 @@ internal static class GameData
                     groups.Add(g = new Recipe { craft = craft, label = baseName });
                 g.stations.Add(id);
             }
+            // Solo estaciones que tienes construidas o que ya puedes construir (como el menú de
+            // construir: sin desbloqueo o desbloqueada, y no bloqueada). Ej.: el Yunque de acero no
+            // aparece mientras no lo desbloquees en el árbol tecnológico.
+            List<Recipe> usable = groups.Where(g => g.stations.Any(StationAvailable)).ToList();
+            if (usable.Count > 0)
+                groups = usable;
             if (groups.Count == 0)
                 groups.Add(new Recipe { craft = craft, label = "?" });
             foreach (Recipe g in groups)
@@ -337,6 +343,27 @@ internal static class GameData
         }
         stationCache[cacheKey] = (Time.unscaledTime, best);
         return best;
+    }
+
+    // ¿Tienes esa estación o puedes construirla? Construida en cualquier lugar: sí. Si se construye
+    // desde el menú, depende de si está desbloqueada. Si no se construye así (fijas del mundo, del
+    // pueblo, de personajes), no hay forma de saberlo: se cuenta como disponible.
+    private static bool StationAvailable(string wgoId)
+    {
+        try
+        {
+            if ((MainGame.WorldData?.GetWgoDataList(wgoId)?.Count ?? 0) > 0)
+                return true;
+            KnowledgeSystem ks = MainGame.Instance?.GameSave?.knowledgeSystem;
+            List<BuildingDef> builders = GameBalance.Me?.buildingDefs?.Where(b => b != null && b.wgoId == wgoId).ToList();
+            if (ks == null || builders == null || builders.Count == 0)
+                return true;
+            return builders.Any(b => (!b.isNeedsUnlock || ks.unlockedBuildings.Contains(b.id)) && !ks.lockedBuildings.Contains(b.id));
+        }
+        catch
+        {
+            return true;
+        }
     }
 
     private static string StationName(string id)
