@@ -410,7 +410,10 @@ internal static class GameData
             if ((MainGame.WorldData?.GetWgoDataList(wgoId)?.Count ?? 0) > 0)
                 return true;
             KnowledgeSystem ks = MainGame.Instance?.GameSave?.knowledgeSystem;
-            List<BuildingDef> builders = GameBalance.Me?.buildingDefs?.Where(b => b != null && b.wgoId == wgoId).ToList();
+            // Solo las que la colocan: las de "quitar" (steel_anvil_r) no necesitan desbloqueo y
+            // hacían parecer disponible un yunque bloqueado. Misma regla que el menú de construir.
+            List<BuildingDef> builders = GameBalance.Me?.buildingDefs?.Where(b => b != null && b.wgoId == wgoId
+                && b.buildingMode != BuildingDef.BuildingMode.None && b.buildingMode != BuildingDef.BuildingMode.Remove).ToList();
             if (ks == null || builders == null || builders.Count == 0)
                 return true;
             return builders.Any(b => (!b.isNeedsUnlock || ks.unlockedBuildings.Contains(b.id)) && !ks.lockedBuildings.Contains(b.id));
