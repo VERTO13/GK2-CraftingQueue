@@ -46,7 +46,7 @@ internal class QueueHud : MonoBehaviour
     private Canvas canvas;
     private RectTransform box;     // todo el panel (se posiciona y se arrastra)
     private RectTransform strip;   // barrita de arriba
-    private Image lockIcon, marksIcon;
+    private Image lockIcon, marksIcon, eyeIcon;
 
     // Para las marcas en los cofres: los materiales que el panel muestra ahora mismo y la escala.
     internal static readonly HashSet<string> Materials = new HashSet<string>();
@@ -303,8 +303,15 @@ internal class QueueHud : MonoBehaviour
         RefreshMarksIcon();
     }
 
+    private void RefreshEyeIcon()
+    {
+        eyeIcon.sprite = Plugin.HudAlwaysOpen ? EyeOn() : EyeOff();
+        ((RectTransform)eyeIcon.transform).sizeDelta = eyeIcon.sprite.rect.size;
+    }
+
     private void RefreshMarksIcon()
     {
+        RefreshEyeIcon();
         marksIcon.sprite = Plugin.ChestMarks ? PinOn() : PinOff();
         ((RectTransform)marksIcon.transform).sizeDelta = marksIcon.sprite.rect.size;
     }
@@ -343,7 +350,7 @@ internal class QueueHud : MonoBehaviour
         trt.anchorMin = Vector2.zero;
         trt.anchorMax = Vector2.one;
         trt.offsetMin = new Vector2(5f, 0f);
-        trt.offsetMax = new Vector2(-28f, 0f);
+        trt.offsetMax = new Vector2(-42f, 0f); // lugar para el ojo, el pin y el candado
         titleText = tt.GetComponent<TextMeshProUGUI>();
         titleText.alignment = TextAlignmentOptions.MidlineLeft;
         titleText.textWrappingMode = TextWrappingModes.NoWrap;
@@ -363,6 +370,14 @@ internal class QueueHud : MonoBehaviour
         mrt.anchoredPosition = new Vector2(-3f - 7f - 5f, 0f); // candado (7 px) + separación
         marksIcon = mk.GetComponent<Image>();
         marksIcon.raycastTarget = false;
+        // Y a su izquierda: "siempre visible" aunque haya un cofre, mesa o el árbol abierto.
+        GameObject ey = new GameObject("Siempre visible", typeof(RectTransform), typeof(Image));
+        ey.transform.SetParent(strip, false);
+        RectTransform ert = (RectTransform)ey.transform;
+        ert.anchorMin = ert.anchorMax = ert.pivot = new Vector2(1f, 0.5f);
+        ert.anchoredPosition = new Vector2(-3f - 7f - 5f - 7f - 5f, 0f); // candado + pin + separaciones
+        eyeIcon = ey.GetComponent<Image>();
+        eyeIcon.raycastTarget = false;
 
         // Ventana que recorta el contenido (debajo de la barrita).
         GameObject f = new GameObject("Ventana", typeof(RectTransform), typeof(RectMask2D));
@@ -496,8 +511,10 @@ internal class QueueHud : MonoBehaviour
         // El candado y el botón de marcas: su lado de la barrita, con margen para atinarles fácil.
         if (Inside(strip, m) && m.x >= LeftEdge(lockIcon) - 2f * canvas.scaleFactor)
             return lockIcon;
-        if (Inside(strip, m) && m.x >= LeftEdge(marksIcon) - 3f * canvas.scaleFactor)
+        if (Inside(strip, m) && m.x >= LeftEdge(marksIcon) - 2f * canvas.scaleFactor)
             return marksIcon;
+        if (Inside(strip, m) && m.x >= LeftEdge(eyeIcon) - 3f * canvas.scaleFactor)
+            return eyeIcon;
         if (!Inside(frame, m))
             return null;
         foreach (KeyValuePair<Image, (object entry, int action)> b in actionButtons)
@@ -769,6 +786,12 @@ internal class QueueHud : MonoBehaviour
             Plugin.HudMovable = !Plugin.HudMovable;
             lockIcon.sprite = Plugin.HudMovable ? LockOpen() : LockClosed();
             ((RectTransform)lockIcon.transform).sizeDelta = lockIcon.sprite.rect.size;
+        }
+        else if (target == eyeIcon)
+        {
+            Plugin.HudAlwaysOpen = !Plugin.HudAlwaysOpen;
+            RefreshEyeIcon();
+            lastFit = null; // acomodar ya con el modo nuevo
         }
         else if (target == marksIcon)
         {
@@ -1055,8 +1078,9 @@ internal class QueueHud : MonoBehaviour
                     mode = FitMode.Moved;
                     x = left ? Mathf.Max(0f, occ.xMin - gap - fullSize.x) : Mathf.Min(occ.xMax + gap, screenW - fullSize.x);
                 }
-                else
+                else if (!Plugin.HudAlwaysOpen)
                     mode = FitMode.Folded;
+                // Siempre visible (el ojo): se queda completo en su lugar, encima de la ventana.
             }
         }
 
@@ -1073,7 +1097,7 @@ internal class QueueHud : MonoBehaviour
         {
             // La barrita: del ancho de su título y los dos botones, siempre en la esquina de su
             // lado (donde el jugador dejó el panel), aunque toque un poco la ventana.
-            float w = Mathf.Min(fullSize.x, Mathf.Ceil(titleText.GetPreferredValues(titleText.text).x) + 5f + 28f + 4f);
+            float w = Mathf.Min(fullSize.x, Mathf.Ceil(titleText.GetPreferredValues(titleText.text).x) + 5f + 42f + 4f);
             float foldX = left ? Plugin.HudSideOffset : screenW - Plugin.HudSideOffset - w;
             if (peeking)
                 x = xMin; // se despliega en su lugar de siempre, encima de la ventana
@@ -2082,6 +2106,19 @@ internal class QueueHud : MonoBehaviour
     {
         "..ooo..", ".o...o.", ".....o.", "ooooooo", "o#####o", "o##o##o", "o##o##o", "o#####o", "ooooooo"
     });
+
+    // Siempre visible: ojo dorado = prendido, solo contorno = apagado.
+    private static Sprite eyeOn, eyeOff;
+
+    private static Sprite EyeOn() => eyeOn != null ? eyeOn : eyeOn = PixelSprite(new[]
+    {
+        "..ooooo..", ".o#####o.", "o##ooo##o", "o##ooo##o", "o##ooo##o", ".o#####o.", "..ooooo.."
+    }, new Color(0.30f, 0.19f, 0.07f), new Color(0.98f, 0.78f, 0.26f), Color.clear);
+
+    private static Sprite EyeOff() => eyeOff != null ? eyeOff : eyeOff = PixelSprite(new[]
+    {
+        "..ooooo..", ".o.....o.", "o..ooo..o", "o..ooo..o", "o..ooo..o", ".o.....o.", "..ooooo.."
+    }, new Color(0.62f, 0.58f, 0.52f), Color.clear, Color.clear);
 
     // Marcar cofres: pin relleno = prendido, solo contorno = apagado.
     private static Sprite pinOn, pinOff;

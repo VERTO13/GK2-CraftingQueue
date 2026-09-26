@@ -14,7 +14,7 @@ namespace CraftQueue;
 //   botones − + basura, scroll, se puede mover y fijar con el candado.
 // - Descuento automático al craftear, construir o terminar obras del pueblo.
 // - Mantener Alt sobre cualquier objeto muestra su receta.
-[BepInPlugin(Guid, "Crafting Queue", "0.4.13")]
+[BepInPlugin(Guid, "Crafting Queue", "0.4.14")]
 public class Plugin : BaseUnityPlugin
 {
     public const string Guid = "verto13.gk2.craftingqueue";
@@ -23,7 +23,7 @@ public class Plugin : BaseUnityPlugin
 
     private static ConfigEntry<KeyCode> addModifier, hoverKey, hudKey, recipeStyleKey;
     private static ConfigEntry<float> hoverTextSize, hudTop, hudSideOffset, hudWidth, hudMaxHeight, hudTextSize, hudIconSize, hudScale, hudOpacity;
-    private static ConfigEntry<bool> hudVisible, hudHideWithWindows, hudInWorkWindows, hudMovable, chestMarks, measurePerf;
+    private static ConfigEntry<bool> hudVisible, hudHideWithWindows, hudInWorkWindows, hudMovable, chestMarks, measurePerf, hudAlwaysOpen;
     private static ConfigEntry<string> hudSide, recipeStyle;
     private static ConfigEntry<int> hudMaxRows;
 
@@ -35,6 +35,7 @@ public class Plugin : BaseUnityPlugin
     internal static bool HudInWorkWindows => hudInWorkWindows.Value;
     internal static bool HudMovable { get => hudMovable.Value; set => hudMovable.Value = value; }
     internal static bool ChestMarks { get => chestMarks.Value; set => chestMarks.Value = value; }
+    internal static bool HudAlwaysOpen { get => hudAlwaysOpen.Value; set => hudAlwaysOpen.Value = value; }
     internal static bool HudLeft => hudSide.Value.StartsWith("Izq", StringComparison.OrdinalIgnoreCase)
                                     || hudSide.Value.StartsWith("Left", StringComparison.OrdinalIgnoreCase);
     internal static float HudTop => hudTop.Value;
@@ -152,6 +153,9 @@ public class Plugin : BaseUnityPlugin
         chestMarks = Config.Bind(P, "MarcarCofres", true,
             "Encima de cada cofre o almacén de la zona, una burbujita con los materiales de tu cola que tiene. " +
             "Se cambia en el juego con el botón junto al candado.");
+        hudAlwaysOpen = Config.Bind(P, "SiempreVisible", false,
+            "Con un cofre, mesa o el árbol abierto: false = el panel se recorre o se pliega para no tapar la ventana " +
+            "(al pasar el mouse se despliega); true = siempre se ve completo. Se cambia en el juego con el ojo de la barra del panel.");
         hudWidth = Config.Bind(P, "Ancho", 170f,
             new ConfigDescription("Ancho del panel; los nombres largos bajan de renglón.", new AcceptableValueRange<float>(100f, 800f)));
         hudMaxHeight = Config.Bind(P, "AltoMaximo", 200f,
