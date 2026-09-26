@@ -121,7 +121,7 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 
 ### And also
 
-- **Stays out of the way:** with a chest or station open, the panel moves beside the window. At small resolutions it folds into a small "Queue" tab that expands when you hover it.
+- **Stays out of the way:** with a chest, station or the tech tree open, the panel moves aside on its own side, or folds into a small "Queue" tab that expands when you hover it. Prefer to always see it? Turn on the **eye** icon in the panel's title bar.
 - **Pixel-crisp** at 720p, 1080p, 1440p and 4K.
 - **Light on performance.** Amounts update in place instead of redrawing the panel, and nothing heavy runs while you play (about 0.1 ms per frame on average).
 - **One queue per save slot.** It's saved in its own file and never touches your save.
@@ -268,7 +268,7 @@ Para agregar algo, mantén **Ctrl** y da clic derecho sobre cualquier objeto.
 - **Pasa el mouse sobre una tarea o un ingrediente** del panel para ver al momento dónde están sus materiales, aunque no tenga pin.
 - El pin junto al candado (dorado cuando está prendido) marca toda la cola; el pin de una tarea, solo esa tarea. Los pines se guardan con tu partida.
 
-**Y además:** vista rápida con **Alt** sobre un objeto; el panel se acomoda junto a cofres y mesas (o se pliega en resoluciones chicas); nítido en cualquier resolución; muy ligero (unos 0.1 ms por cuadro); una cola por partida guardada; **16 idiomas**.
+**Y además:** vista rápida con **Alt** sobre un objeto; el panel se acomoda junto a cofres, mesas y el árbol (o se pliega; con el **ojo** de su barra se ve siempre completo); nítido en cualquier resolución; muy ligero (unos 0.1 ms por cuadro); una cola por partida guardada; **16 idiomas**.
 
 ### Controles
 
