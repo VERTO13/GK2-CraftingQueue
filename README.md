@@ -70,14 +70,31 @@ Delete the folder `BepInEx\plugins\CraftingQueue` inside your game folder. Your 
 
 ### Queue panel, always visible
 
-`have/need` for every material. Expand any material to see how it's made, one recipe at a time. When there are several recipes, switch with ◂ ▸; each one shows the station it uses and how many it makes.
+`have/need` for every material. Expand any material to see how it's made, one recipe at a time, with the station it's made in and how many it makes (`×N`).
 
 ![Queue panel](docs/images/panel-tree.png)
 
-- **Add with Ctrl + right-click:** items, recipes in a crafting station, buildings in the build menu, and town works (repair/upgrade).
-- **Real yields:** the `×N` takes your perks and station upgrades into account, not just the base recipe.
-- **Automatic progress:** tasks go down on their own when you craft, build, or finish a town work.
+- **One option per recipe and per station.** If an item has several recipes, or one recipe can be made in several stations, switch between them with ◂ ▸. Each option shows its own station, yield and ingredients.
+- **Only what you can actually use.** Recipes you haven't unlocked stay hidden, and so do stations you can't build yet. As soon as you unlock them (tech tree, quests…), they show up on their own.
+- **Real yields.** The `×N` includes your perks and talents, including a zombie's if one works that station. For a station you haven't built yet, it shows the base building plus your perks.
+- **Automatic progress.** Tasks go down on their own when you craft, build, or finish a town work.
 - **Hover a task** to show its − + 🗑 buttons. Drag the title to move the panel; the lock pins it in place.
+
+### Add anything with Ctrl + right-click
+
+Works on almost everything that shows an item or a recipe:
+
+| Where | What gets added |
+|---|---|
+| Inventory, chests, any item | The item |
+| A recipe in a crafting station | "Make this recipe" with its ingredients |
+| Build menu / town works | The building with its materials |
+| Quest requirements | The item, with the amount the quest asks for |
+| Tech tree | The recipe or item that a tech unlocks |
+| NPC conversations ("0/1" answers) and request pop-ups | The item they ask for, with the amount |
+| Vendor orders | The ordered item, with the order's amount |
+
+If the panel is folded because a window is open, it unfolds for a moment so you can see the new task.
 
 ### Chest bubbles: see where everything is
 
@@ -85,7 +102,8 @@ Bubbles over the chests and storages in your current zone show which queued mate
 
 ![Chest bubbles](docs/images/chest-bubbles.png)
 
-- The **pin next to the lock** marks materials for the whole queue. A **task's pin** marks only that task.
+- **Hover a task or an ingredient** in the panel to see where its materials are right away, even without a pin.
+- The **pin next to the lock** (gold when on) marks materials for the whole queue. A **task's pin** marks only that task. Pins are saved with your save slot.
 - If you already have an item, only the item itself is marked, so you know where to pick it up. If you don't, its ingredients are marked instead.
 - Bubbles turn transparent when your mouse is over them or when they cover your character.
 
@@ -94,6 +112,7 @@ Bubbles over the chests and storages in your current zone show which queued mate
 - **Quick recipe view:** hold **Alt** over any item to see its recipe tree without adding it.
 - **Stays out of the way:** with a chest or station open, the panel moves beside the window. At small resolutions it folds into a small "Queue" tab that expands when you hover it.
 - **Pixel-crisp** at 720p, 1080p, 1440p and 4K.
+- **Light on performance.** Amounts update in place instead of redrawing the panel, and nothing heavy runs while you play (about 0.1 ms per frame on average).
 - **One queue per save slot.** It's saved in its own file and never touches your save.
 - **16 languages.** All of the game's official languages; it follows the game's language live.
 
@@ -105,6 +124,7 @@ Bubbles over the chests and storages in your current zone show which queued mate
 | Show a recipe | Hold `Alt` over an item | Hold **R3** on the selected slot |
 | Show / hide panel | `F3` | – |
 | Detailed / compact recipes | `F4` | – |
+| See where a task's materials are | Hover the task in the panel | Select it in the panel |
 | Use the panel | Mouse | **R3** to enter · D-pad ↑↓ move · → open · ← close · LB/RB switch recipe · X/Y −/+ · A pin · B exit |
 
 ## Configuration
@@ -115,13 +135,16 @@ Your queues are saved in `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveya
 
 **Translations:** to fix a translation or add a language, copy `BepInEx\plugins\CraftingQueue\lang\_plantilla_en.txt` to `lang\<language code>.txt` and translate the right-hand side.
 
+**Diagnostics:** the `[Diagnóstico] MedirRendimiento` setting (off by default) writes timings to `BepInEx\LogOutput.log` and a list of recipes whose yield depends on perks to the queue folder. It's only for tracking down problems and doesn't change the game.
+
 ## Troubleshooting
 
 - **The panel doesn't appear:**
   1. Check that `BepInEx\LogOutput.log` exists in the game folder. If it doesn't, BepInEx isn't installed; use the *with-BepInEx* zip.
   2. If the log exists, look inside it for `Crafting Queue`.
 - **The panel is hidden:** press `F3`.
-- **No chest bubbles:** turn on the pin next to the lock (or a task's pin). Bubbles only show chests in the zone you're in.
+- **No chest bubbles:** turn on the pin next to the lock (or a task's pin), or hover a task in the panel. Bubbles only show chests in the zone you're in.
+- **A recipe doesn't show how to make it:** you probably haven't unlocked it yet. It appears on its own as soon as you do.
 
 ## Reporting bugs
 
@@ -211,14 +234,30 @@ Para agregar algo, mantén **Ctrl** y da clic derecho sobre cualquier objeto.
 
 ### Qué hace
 
-- **Panel de la cola siempre a la vista**, con `tienes/necesitas` de cada material, árbol de recetas y recetas alternativas con ◂ ▸ (mesa y cantidad de cada una).
-- **Agregar con Ctrl + clic derecho:** objetos, recetas de mesa, construcciones y obras del pueblo.
-- **Cantidades reales**, con tus talentos y mejoras de estación.
+**Panel de la cola siempre a la vista**
+- `tienes/necesitas` de cada material, con el árbol de recetas: cómo se hace, en qué mesa y cuánto sale (`×N`).
+- **Una opción por receta y por estación:** si un objeto tiene varias recetas, o una receta se hace en varias estaciones, cambias con ◂ ▸. Cada opción muestra su estación, su cantidad y lo que pide.
+- **Solo lo que puedes usar:** las recetas y estaciones que aún no desbloqueas no aparecen. En cuanto las desbloqueas (árbol tecnológico, misiones…), aparecen solas.
+- **Cantidades reales:** el `×N` toma en cuenta tus talentos, o los de un zombi si trabaja esa estación. Para una estación que aún no construyes, muestra el edificio base con tus talentos.
 - **Descuento automático** al craftear, construir o terminar obras del pueblo.
-- **Burbujas sobre los cofres** de tu zona, con los materiales de tu cola que tiene cada uno. El pin junto al candado marca toda la cola; el pin de una tarea, solo esa tarea.
-- **Vista rápida:** mantén **Alt** sobre un objeto para ver su receta.
-- **No estorba:** con un cofre o mesa abierta se mueve a un lado, o se pliega en resoluciones chicas.
-- **Nítido en cualquier resolución.** Una cola por partida guardada. **16 idiomas.**
+
+**Agregar con Ctrl + clic derecho** sobre casi todo lo que muestra un objeto o una receta:
+
+| Dónde | Qué se agrega |
+|---|---|
+| Inventario, cofres, cualquier objeto | El objeto |
+| Una receta en una mesa de crafteo | "Hacer esta receta", con sus ingredientes |
+| Menú de construir / obras del pueblo | La construcción con sus materiales |
+| Requisitos de misión | El objeto, con la cantidad que pide la misión |
+| Árbol tecnológico | La receta u objeto que desbloquea |
+| Conversaciones con NPC (respuestas con "0/1") y ventanas de pedido | El objeto que te piden, con su cantidad |
+| Encargos de comerciantes | El objeto del encargo, con su cantidad |
+
+**Burbujas sobre los cofres** de tu zona, con los materiales de tu cola que tiene cada uno:
+- **Pasa el mouse sobre una tarea o un ingrediente** del panel para ver al momento dónde están sus materiales, aunque no tenga pin.
+- El pin junto al candado (dorado cuando está prendido) marca toda la cola; el pin de una tarea, solo esa tarea. Los pines se guardan con tu partida.
+
+**Y además:** vista rápida con **Alt** sobre un objeto; el panel se acomoda junto a cofres y mesas (o se pliega en resoluciones chicas); nítido en cualquier resolución; muy ligero (unos 0.1 ms por cuadro); una cola por partida guardada; **16 idiomas**.
 
 ### Controles
 
@@ -228,6 +267,7 @@ Para agregar algo, mantén **Ctrl** y da clic derecho sobre cualquier objeto.
 | Ver una receta | Mantener `Alt` sobre un objeto | Mantener **R3** sobre lo seleccionado |
 | Mostrar / ocultar el panel | `F3` | – |
 | Recetas detalladas / compactas | `F4` | – |
+| Ver dónde están los materiales de una tarea | Pasar el mouse sobre la tarea | Seleccionarla en el panel |
 | Usar el panel | Mouse | **R3** entrar · cruceta ↑↓ moverse · → abrir · ← cerrar · LB/RB cambiar receta · X/Y −/+ · A pin · B salir |
 
 ### Reportar bugs
