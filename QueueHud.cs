@@ -1181,7 +1181,7 @@ internal class QueueHud : MonoBehaviour
                 int have = GameData.Owned(ib.item);
                 Seen(ib.item, have);
                 string itemFold = "~" + ib.item;
-                bool hasRecipe = GameData.RecipesFor(ib.item).Count > 0;
+                bool hasRecipe = GameData.OptionsFor(ib.item).Count > 0;
                 BeginBinding(new CountBinding { key = ib.item, want = ib.total });
                 Transform body = Block(ib.item, null, GameData.Name(ib.item), $"{have}/{ib.total}", have >= ib.total,
                     hasRecipe ? itemFold : null, inverted: true, flash: ib.ids.Any(flashIds.Contains), entry: ib.raws,
@@ -1491,7 +1491,7 @@ internal class QueueHud : MonoBehaviour
             return false;
         if (path.Split('/').Count(p => p == id) > 1)
             return false;
-        return GameData.RecipesFor(id).Count > 0;
+        return GameData.OptionsFor(id).Count > 0; // alguna receta que sí puedas hacer
     }
 
     // Las mismas flechas que la página del personaje (mismas rutas): abrir aquí o allá es lo mismo.

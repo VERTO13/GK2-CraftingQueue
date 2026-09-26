@@ -293,11 +293,9 @@ internal static class GameData
             // Solo estaciones que tienes construidas o que ya puedes construir (como el menú de
             // construir: sin desbloqueo o desbloqueada, y no bloqueada). Ej.: el Yunque de acero no
             // aparece mientras no lo desbloquees en el árbol tecnológico.
-            List<Recipe> usable = groups.Where(g => g.stations.Any(StationAvailable)).ToList();
-            if (usable.Count > 0)
-                groups = usable;
-            if (groups.Count == 0)
-                groups.Add(new Recipe { craft = craft, label = "?" });
+            // Si no tienes ninguna estación donde hacerla, la receta no se muestra (como una
+            // bloqueada); aparece sola cuando desbloqueas o construyes una de sus estaciones.
+            groups = groups.Where(g => g.stations.Any(StationAvailable)).ToList();
             foreach (Recipe g in groups)
             {
                 string built = BestBuilt(g)?.id;
