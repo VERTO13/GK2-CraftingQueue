@@ -1448,7 +1448,9 @@ internal class QueueHud : MonoBehaviour
             CompactRecipe(body, depth, id, sel, recipes.Count, output, craft, crafts);
             return;
         }
-        if (recipes.Count > 1)
+        // Con varias recetas: "1/2 · Mesa ×N ◂ ▸". Con una sola que dé más de 1: "Mesa ×N" (sin
+        // flechas), para saber cuánto sale por vez (y ver al momento si un talento lo sube).
+        if (recipes.Count > 1 || output > 1)
             RecipeSwitcher(body, depth, id, sel, recipes.Count, output, craft);
         foreach ((string nid, int n) in GameData.Needs(craft))
         {
@@ -1716,7 +1718,7 @@ internal class QueueHud : MonoBehaviour
             LayoutElement yle = y.gameObject.AddComponent<LayoutElement>();
             yle.minWidth = yle.preferredWidth = Mathf.Ceil(y.GetPreferredValues(yield).x) + 1f;
         }
-        foreach (int delta in new[] { -1, 1 })
+        foreach (int delta in count > 1 ? new[] { -1, 1 } : Array.Empty<int>()) // una sola receta: sin flechas
         {
             GameObject b = new GameObject(delta < 0 ? "Anterior" : "Siguiente", typeof(RectTransform), typeof(LayoutElement));
             b.transform.SetParent(row.transform, false);
