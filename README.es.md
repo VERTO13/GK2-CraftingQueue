@@ -145,7 +145,7 @@ Mantén **Alt** sobre cualquier objeto, en tu inventario, un cofre o el mismo pa
 - **No cambia la jugabilidad ni el balance, y nunca toca tu partida.** El mod solo lee datos del juego y agrega su panel; tu cola se guarda en su propio archivo por partida.
 - **Una sola cosa funciona distinto:** mientras mantienes **Ctrl**, el clic derecho agrega a la cola en vez de hacer su acción normal.
 - **Sin acceso a internet, sin recolectar datos, sin archivos ni recursos del juego incluidos.** Código abierto (MIT).
-- **Funciona junto con otros mods.** No cambia cómo se juega, así que es difícil que choque con ellos. Si otro mod usa las mismas teclas (Ctrl + clic derecho, Alt, F3, F4), cambia las nuestras en el archivo de configuración del mod (ver *Configuración* más abajo).
+- **Funciona junto con otros mods.** No cambia cómo se juega, así que es difícil que choque con ellos.
 
 ## Controles
 
@@ -172,7 +172,7 @@ Abre un [issue](../../issues/new/choose) con:
 <details>
 <summary><b>Configuración</b></summary>
 
-Los ajustes están en `BepInEx\config\verto13.gk2.craftingqueue.cfg`. El archivo se crea la primera vez que juegas y cada ajuste viene explicado adentro: teclas, lado del panel, ancho, alto, tamaño de íconos, opacidad, estilo de receta…
+Los ajustes están en `BepInEx\config\verto13.gk2.craftingqueue.cfg` (ábrelo con el Bloc de notas con el juego cerrado). El archivo se crea la primera vez que juegas y cada ajuste viene explicado adentro: lado del panel, ancho, alto, tamaño de íconos, opacidad, estilo de receta…
 
 Tus colas se guardan en `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2\CraftingQueue\`.
 

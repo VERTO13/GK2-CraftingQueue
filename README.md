@@ -145,7 +145,7 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 - **No gameplay or balance changes, and your save is never touched.** The mod only reads game data and adds its panel; your queue lives in its own file per save slot.
 - **One thing works differently:** while you hold **Ctrl**, right-click adds to the queue instead of doing its normal action.
 - **No network access, no data collection, no game files or assets included.** Open source (MIT).
-- **Works alongside other mods.** It doesn't change how the game plays, so it's unlikely to clash with them. If another mod uses the same keys (Ctrl + right-click, Alt, F3, F4), change ours in the mod's config file (see *Configuration* below).
+- **Works alongside other mods.** It doesn't change how the game plays, so it's unlikely to clash with them.
 
 ## Controls
 
@@ -172,7 +172,7 @@ Open an [issue](../../issues/new/choose) and include:
 <details>
 <summary><b>Configuration</b></summary>
 
-Settings live in `BepInEx\config\verto13.gk2.craftingqueue.cfg`. The file is created the first time you play, and every setting is documented inside it: keys, panel side, width, height, icon size, opacity, recipe style…
+Settings live in `BepInEx\config\verto13.gk2.craftingqueue.cfg` (open it with Notepad while the game is closed). The file is created the first time you play, and every setting is explained inside it: panel side, width, height, icon size, opacity, recipe style…
 
 Your queues are saved in `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2\CraftingQueue\`.
 
