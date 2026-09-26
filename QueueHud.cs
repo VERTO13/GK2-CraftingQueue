@@ -636,6 +636,12 @@ internal class QueueHud : MonoBehaviour
                 pendingActions.Remove(actions);
                 FillActions(actions, entry);
             }
+            // Con los botones, el título pasa a un renglón y la barra se haría más baja: el mouse
+            // quedaba fuera, se ocultaban, el título volvía a dos renglones… y temblaba. Se
+            // conserva la altura de la barra mientras se ven los botones.
+            LayoutElement hle = h.GetComponent<LayoutElement>();
+            if (hle != null)
+                hle.minHeight = on ? Mathf.Max(rowHeight + U(1f), h.rect.height) : rowHeight + U(1f);
             actions.SetActive(on);
             if (title != null)
             {
