@@ -17,6 +17,7 @@ namespace CraftQueue;
 //  - lo que desbloquea el árbol tecnológico                 -> la receta o el objeto
 //  - lo que te pide un personaje en un diálogo              -> el objeto, con la cantidad que pide
 //  - un pedido/encargo de un comerciante                    -> el objeto, con la cantidad del encargo
+//  - lo que pide una opción de respuesta en una conversación -> el objeto, con la cantidad
 // Mientras Ctrl está presionado, el clic derecho no hace lo que el juego hace normalmente
 // (cerrar la ventana de crafteo o abrir el menú del objeto).
 internal class QuickAdd : MonoBehaviour
@@ -30,6 +31,10 @@ internal class QuickAdd : MonoBehaviour
     private static readonly System.Reflection.FieldInfo LinkedData = AccessTools.Field(typeof(LazyWidget<LinkedEntityWidgetData>), "data");
     private static readonly System.Reflection.FieldInfo DialogData = AccessTools.Field(typeof(LazyWidget<UIDialogWindowData>), "data");
     private static readonly System.Reflection.FieldInfo DialogItemArea = AccessTools.Field(typeof(UIDialogWindow), "itemIconWithBackgroundParent");
+    // Qué muestra un ícono de respuesta (precio, recompensa, requisito, día, encargo), si el juego lo guarda.
+    private static readonly System.Reflection.FieldInfo AnswerIconKind =
+        typeof(UIMultiAnswerIcon).GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)
+            .FirstOrDefault(f => f.FieldType == typeof(UIMultiAnswerIcon.DisplayType));
 
     // El diálogo "te piden X (tienes/necesitas)" solo guarda el ícono y el nombre del objeto:
     // al crearse se anota qué objeto y cuántos pide, para poder agregarlo a la cola.
@@ -149,7 +154,10 @@ internal class QuickAdd : MonoBehaviour
         try
         {
             if (TryAddUnderMouse())
+            {
+                QueueHud.ShowAfterAdd();
                 try { LazyAudio.PlayAndForget("gui_click"); } catch { }
+            }
         }
         catch (Exception e)
         {
@@ -234,6 +242,23 @@ internal class QuickAdd : MonoBehaviour
                 return Queue.Add(TaskKind.Craft, ld.CraftDef.id, 1, GameData.Name(GameData.MainOutput(ld.CraftDef) ?? ld.CraftDef.id)) != null;
             if (ld.ItemDef != null)
                 return Queue.Add(TaskKind.Item, ld.ItemDef.id, 1) != null;
+        }
+
+        // Opción de respuesta en una conversación ("Poesía impresa 0/1"): lo que te piden (precio,
+        // requisito o encargo) con su cantidad. Las recompensas no: esas no las fabricas tú.
+        UIMultiAnswerIcon answer = go.GetComponentInParent<UIMultiAnswerIcon>();
+        if (answer != null)
+        {
+            string kind = AnswerIconKind?.GetValue(answer)?.ToString();
+            if (kind == "Reward" || kind == "DayNumber")
+                return false;
+            ItemCount ic = answer.ItemCount;
+            if (ic != null && !string.IsNullOrEmpty(ic.itemId))
+                return Queue.Add(TaskKind.Item, ic.itemId, Math.Max(1, ic.count)) != null;
+            var answerOrder = answer.VendorOrderDef;
+            if (answerOrder != null && !string.IsNullOrEmpty(answerOrder.itemId))
+                return Queue.Add(TaskKind.Item, answerOrder.itemId, Math.Max(1, answerOrder.count)) != null;
+            return false;
         }
 
         // Pedido de un comerciante: el objeto con la cantidad que pide el encargo.

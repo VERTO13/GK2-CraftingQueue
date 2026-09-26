@@ -94,6 +94,17 @@ internal static class GameData
         return !ks.blackListCrafts.Contains(c.id) && !ks.IsOneTimeCraftCompleted(c);
     }
 
+    // Cambia cuando desbloqueas (o se bloquea) una receta: el panel lo usa para redibujarse y
+    // mostrar al momento las recetas nuevas de lo que ya tienes en la cola.
+    public static int KnowledgeStamp
+    {
+        get
+        {
+            KnowledgeSystem ks = MainGame.Instance?.GameSave?.knowledgeSystem;
+            return ks == null ? 0 : ks.unlockedCrafts.Count * 31 + ks.blackListCrafts.Count;
+        }
+    }
+
     // ---------- Estaciones reales (talentos y mejoras) ----------
     // Lo que rinde y lo que pide una receta se calcula con fórmulas que dependen de la estación
     // donde se hace: ahí entran tus talentos (p. ej. "más objetos del cubo de destilación") y las

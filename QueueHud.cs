@@ -225,6 +225,7 @@ internal class QueueHud : MonoBehaviour
         sb.Append(Plugin.HudTextSize).Append(Plugin.HudIconSize).Append(Plugin.HudOpacity).Append(Plugin.HudWidth);
         sb.Append(Plugin.HudMaxRows).Append(Plugin.HudScale).Append(Plugin.HudMaxHeight).Append(Plugin.CompactRecipes);
         sb.Append(LLBase.CurrentLang); // si cambias el idioma del juego, se redibuja traducido
+        sb.Append('|').Append(GameData.KnowledgeStamp); // receta recién desbloqueada: aparece ya
         sb.Append(Screen.width).Append('x').Append(Screen.height).Append(Plugin.HudTop); // y si cambias la resolución
         return sb.ToString();
     }
@@ -899,6 +900,10 @@ internal class QueueHud : MonoBehaviour
     private enum FitMode { Normal, Moved, Folded }
 
     private int lastWindows;
+    private static float peekUntil;
+
+    // Recién agregaste algo: si el panel está plegado por una ventana, se muestra 2 segundos.
+    internal static void ShowAfterAdd() => peekUntil = Time.unscaledTime + 2f;
 
     private FitMode fit = FitMode.Normal;
     private Vector2 fullSize;
@@ -964,8 +969,9 @@ internal class QueueHud : MonoBehaviour
 
         // Plegado: al pasar el mouse por la barrita se despliega; sigue abierto mientras el mouse
         // esté sobre el panel desplegado.
+        // También se despliega un momento al agregar algo, para que se vea que sí entró.
         if (mode == FitMode.Folded)
-            peeking = Inside(box, Input.mousePosition);
+            peeking = Inside(box, Input.mousePosition) || Time.unscaledTime < peekUntil;
         else
             peeking = false;
 

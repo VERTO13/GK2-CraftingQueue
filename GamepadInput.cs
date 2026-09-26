@@ -96,7 +96,10 @@ internal class GamepadInput : MonoBehaviour
             bool added = QuickAdd.AddFrom(focused);
             Plugin.Log.LogInfo($"Control: R3 en ventana, seleccionado {(focused != null ? focused.name : "nada")}, agregado {added}");
             if (added)
+            {
+                QueueHud.ShowAfterAdd();
                 Click();
+            }
         }
         else if (QueueHud.Showing && QueueHud.Instance != null && QueueHud.Instance.GamepadEnter())
         {
