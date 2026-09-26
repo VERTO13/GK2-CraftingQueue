@@ -112,13 +112,38 @@ internal static class GameData
     // rinde. Sin estación construida, queda el cálculo base.
 
     private static readonly Dictionary<string, (float time, WgoData station)> stationCache = new Dictionary<string, (float, WgoData)>();
+    private static int stationStamp;
+
+    // Huella barata de lo que cambia cuánto rinde una receta: talentos activos, tecnologías
+    // investigadas y objetos de la zona (una estación nueva o mejorada cambia la lista).
+    public static int StationsStamp
+    {
+        get
+        {
+            GameSave save = MainGame.Instance?.GameSave;
+            int perks = save?.perkSystemData?.activePerks?.Count ?? 0;
+            int techs = save?.knowledgeSystem?.unlockedTechs?.Count ?? 0;
+            int zone = MainGame.PlayerData?.CurrentWorldZoneData?.wgoDataList?.Count ?? 0;
+            return perks * 1000003 + techs * 1009 + zone;
+        }
+    }
+
+    // Se construyó o terminó una obra: recalcular ya (una mejora puede no cambiar la cuenta de objetos).
+    public static void ResetStations() => stationCache.Clear();
 
     private static WgoData StationOf(CraftDef craft)
     {
         if (craft == null)
             return null;
-        // Las estaciones y los talentos cambian poco: se recalcula cada minuto como mucho.
-        if (stationCache.TryGetValue(craft.id, out var cached) && Time.unscaledTime - cached.time < 60f)
+        // Se recalcula solo cuando algo pudo cambiar lo que rinde una receta: un talento nuevo,
+        // una tecnología, o una estación construida/mejorada (ver StationsStamp y ResetStations).
+        int stamp = StationsStamp;
+        if (stamp != stationStamp)
+        {
+            stationStamp = stamp;
+            stationCache.Clear();
+        }
+        if (stationCache.TryGetValue(craft.id, out var cached))
             return cached.station;
         long t = Perf.Start();
         try { return FindStation(craft); }

@@ -281,6 +281,9 @@ internal static class Queue
     // Se colocó una construcción o se hizo una obra del pueblo.
     public static void OnBuilt(TaskKind kind, string id)
     {
+        // Una estación nueva o mejorada puede cambiar lo que rinden las recetas: recalcular ya.
+        GameData.ResetStations();
+        QueueHud.Dirty = true;
         if (!HasSlot || string.IsNullOrEmpty(id))
             return;
         QueueTask task = Tasks.FirstOrDefault(t => t.kind == kind && t.id == id);

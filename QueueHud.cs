@@ -237,6 +237,7 @@ internal class QueueHud : MonoBehaviour
         sb.Append(Plugin.HudMaxRows).Append(Plugin.HudScale).Append(Plugin.HudMaxHeight).Append(Plugin.CompactRecipes);
         sb.Append(LLBase.CurrentLang); // si cambias el idioma del juego, se redibuja traducido
         sb.Append('|').Append(GameData.KnowledgeStamp); // receta recién desbloqueada: aparece ya
+        sb.Append('|').Append(GameData.StationsStamp);  // talento o estación nueva: el ×N al momento
         sb.Append(Screen.width).Append('x').Append(Screen.height).Append(Plugin.HudTop); // y si cambias la resolución
         return sb.ToString();
     }
