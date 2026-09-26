@@ -36,6 +36,7 @@ internal class ChestMarks : MonoBehaviour
     private readonly Dictionary<SGuid, Mark> marks = new Dictionary<SGuid, Mark>();
     private readonly List<(Mark mark, float x, float y)> placing = new List<(Mark, float, float)>();
     private readonly List<Rect> placed = new List<Rect>();
+    private static readonly Comparison<(Mark mark, float x, float y)> ByHeight = (a, b) => a.y.CompareTo(b.y);
     private float nextScan;
     private string lastError;
 
@@ -377,14 +378,21 @@ internal class ChestMarks : MonoBehaviour
         }
         Vector2 mouse = (Vector2)Input.mousePosition / s;
         // De abajo hacia arriba: cada burbuja que choca con una ya puesta sube lo justo.
-        foreach ((Mark mark, float x, float y0) in placing.OrderBy(p => p.y))
+        placing.Sort(ByHeight); // sin LINQ: esto corre cada cuadro
+        foreach ((Mark mark, float x, float y0) in placing)
         {
             float w = mark.box.rect.width, h = mark.box.rect.height;
             float y = y0;
             for (int guard = 0; guard < 12; guard++)
             {
                 Rect r = new Rect(x - w / 2f, y, w, h);
-                Rect hit = placed.FirstOrDefault(p => p.Overlaps(r));
+                Rect hit = default;
+                foreach (Rect p in placed)
+                    if (p.Overlaps(r))
+                    {
+                        hit = p;
+                        break;
+                    }
                 if (hit.width <= 0f)
                     break;
                 y = hit.yMax + 1f;

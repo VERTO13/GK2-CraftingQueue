@@ -454,8 +454,8 @@ internal class QueueHud : MonoBehaviour
         foreach (Image c in cycleButtons.Keys)
             if (c != null && Inside((RectTransform)c.transform.parent, m)) // el área completa del botón
                 return c;
-        foreach (HudArrow a in panel.GetComponentsInChildren<HudArrow>())
-            if (Inside((RectTransform)a.transform, m))
+        foreach (HudArrow a in arrows)
+            if (a != null && Inside((RectTransform)a.transform, m))
                 return a.image;
         return null;
     }
@@ -760,6 +760,7 @@ internal class QueueHud : MonoBehaviour
     }
 
     private readonly List<NavRow> navRows = new List<NavRow>();
+    private readonly List<HudArrow> arrows = new List<HudArrow>(); // flechas del panel (sin buscarlas cada cuadro)
     private int navIndex;
     private string navKey;
     private Image navMark;
@@ -896,7 +897,7 @@ internal class QueueHud : MonoBehaviour
     private FitMode fit = FitMode.Normal;
     private Vector2 fullSize;
     private bool barShown, peeking;
-    private string lastFit;
+    private (FitMode, bool, float, Vector2, float, float)? lastFit; // último acomodo aplicado
 
     private void LateUpdate()
     {
@@ -982,8 +983,8 @@ internal class QueueHud : MonoBehaviour
         x = Mathf.Clamp(x, 0f, Mathf.Max(0f, screenW - size.x));
         float fromTop = Mathf.Clamp(Plugin.HudTop, 0f, Mathf.Max(0f, screenH - size.y));
 
-        string key = $"{mode}|{peeking}|{x}|{size}|{fromTop}|{s}";
-        if (key == lastFit)
+        var key = (mode, peeking, x, size, fromTop, s);
+        if (lastFit.HasValue && lastFit.Value.Equals(key))
             return;
         lastFit = key;
         fit = mode;
@@ -1032,6 +1033,7 @@ internal class QueueHud : MonoBehaviour
         actionButtons.Clear();
         cycleButtons.Clear();
         navRows.Clear();
+        arrows.Clear();
         tipTargets.Clear();
         ShowDetail(null, null);
         shownActions = null;
@@ -1759,6 +1761,7 @@ internal class QueueHud : MonoBehaviour
         HudArrow h = holder.AddComponent<HudArrow>();
         h.path = path;
         h.image = img;
+        arrows.Add(h);
     }
 
     // Ícono (con el marco de celda del juego) + nombre (puede bajar de renglón) + tienes/necesitas.

@@ -213,15 +213,32 @@ internal static class GameData
     public static bool IsAny(string key) => key.StartsWith(AnyPrefix);
 
     // Los objetos concretos que cumplen con la clave (uno, o todos los del grupo).
+    // Los objetos de un grupo no cambian durante la partida: se calculan una vez y se guardan.
+    private static readonly Dictionary<string, string[]> itemsCache = new Dictionary<string, string[]>();
+    private static GameBalance itemsCacheFrom;
+
     public static IEnumerable<string> ItemsOf(string key)
     {
         if (string.IsNullOrEmpty(key))
-            return Enumerable.Empty<string>();
+            return Array.Empty<string>();
+        if (!ReferenceEquals(GameBalance.Me, itemsCacheFrom))
+        {
+            itemsCache.Clear();
+            itemsCacheFrom = GameBalance.Me;
+        }
+        if (itemsCache.TryGetValue(key, out string[] cached))
+            return cached;
+        string[] result;
         if (!IsAny(key))
-            return new[] { key };
-        List<ItemDef> defs = null;
-        try { new NeedItemData(key.Substring(AnyPrefix.Length), 1).TryGetGroupItemDefs(out defs); } catch { }
-        return (defs ?? new List<ItemDef>()).Where(d => d != null).Select(d => d.id).Distinct();
+            result = new[] { key };
+        else
+        {
+            List<ItemDef> defs = null;
+            try { new NeedItemData(key.Substring(AnyPrefix.Length), 1).TryGetGroupItemDefs(out defs); } catch { }
+            result = (defs ?? new List<ItemDef>()).Where(d => d != null).Select(d => d.id).Distinct().ToArray();
+        }
+        itemsCache[key] = result;
+        return result;
     }
 
     public static string DisplayItem(string key) => IsAny(key) ? ItemsOf(key).FirstOrDefault() ?? key.Substring(AnyPrefix.Length) : key;
@@ -268,8 +285,11 @@ internal static class GameData
         {
             if (MainGame.PlayerData == null)
                 return 0;
-            MultiInventory inv = new MultiInventory(MainGame.PlayerData, addCurrentPlayerWorldZone: true);
-            return ItemsOf(key).Sum(id => inv.GetTotalCount(id));
+            MultiInventory inv = CountingInventory();
+            int total = 0;
+            foreach (string id in ItemsOf(key))
+                total += inv.GetTotalCount(id);
+            return total;
         }
         catch
         {
@@ -295,6 +315,21 @@ internal static class GameData
 
     public static int CountIn(Inventory inv, string key) =>
         inv?.Data == null ? 0 : ItemsOf(key).Sum(id => inv.Data.GetTotalCountInInventory(id));
+
+    // Inventario + almacenes de la zona, armado una sola vez por cuadro (el panel pregunta por
+    // muchos materiales seguidos; armarlo para cada uno recorría la zona entera cada vez).
+    private static MultiInventory countingInventory;
+    private static int countingFrame = -1;
+
+    private static MultiInventory CountingInventory()
+    {
+        if (countingInventory == null || countingFrame != Time.frameCount)
+        {
+            countingInventory = new MultiInventory(MainGame.PlayerData, addCurrentPlayerWorldZone: true);
+            countingFrame = Time.frameCount;
+        }
+        return countingInventory;
+    }
 
     private static string ResolveStar(string id)
     {

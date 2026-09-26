@@ -174,12 +174,20 @@ internal static class GameStyle
     // (p. ej. en la pantalla de partidas guardadas), para tenerlos después aunque ya no estén.
     public static void CaptureButtons()
     {
-        if (Time.unscaledTime < nextButtonScan)
-            return;
+        if (Time.unscaledTime < nextButtonScan || buttonTemplates.Count >= 3)
+            return; // ya están los tres: no se vuelve a buscar
         nextButtonScan = Time.unscaledTime + 3f;
-        foreach (int action in new[] { -1, 1, 0 })
+        foreach (int action in ButtonActions)
             ButtonTemplate(action);
     }
+
+    private static readonly int[] ButtonActions = { -1, 1, 0 };
+
+    // Buscar un botón recorre todos los objetos cargados (caro): como mucho una vez cada 3 s
+    // por botón, aunque el panel se redibuje o tenga muchas tareas (antes era una búsqueda por
+    // tarea en cada redibujo mientras el botón no existía).
+    private static readonly System.Collections.Generic.Dictionary<int, float> nextButtonSearch =
+        new System.Collections.Generic.Dictionary<int, float>();
 
     // action: -1 = restar, 1 = sumar, 0 = quitar. Devuelve el botón clonado (solo imagen, sin lógica) o null.
     public static RectTransform CloneButton(int action, Transform parent)
@@ -196,6 +204,9 @@ internal static class GameStyle
     {
         if (buttonTemplates.TryGetValue(action, out GameObject t) && t != null)
             return t;
+        if (nextButtonSearch.TryGetValue(action, out float next) && Time.unscaledTime < next)
+            return null;
+        nextButtonSearch[action] = Time.unscaledTime + 3f;
         // Los botones del juego (deslizadores de Ajustes, borrar partida). Se capturan en cuanto
         // existen: la pantalla de partidas guardadas pasa al cargar, así que la basura casi siempre
         // está; − y + aparecen tras abrir Ajustes o una ventana con cantidad.
