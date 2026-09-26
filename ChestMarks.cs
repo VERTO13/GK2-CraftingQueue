@@ -23,6 +23,9 @@ internal class ChestMarks : MonoBehaviour
 
     internal static bool Dirty; // el panel cambió de materiales: revisar ya
 
+    // Lo que se señala con el mouse en el panel (vista temporal) o, si nada, lo de los pines.
+    private static HashSet<string> Wanted => QueueHud.HoverMaterials.Count > 0 ? QueueHud.HoverMaterials : QueueHud.Materials;
+
     private sealed class Mark
     {
         public RectTransform box;
@@ -63,7 +66,7 @@ internal class ChestMarks : MonoBehaviour
     private void Tick()
     {
         // Materials ya viene filtrado: toda la cola (pin general) o solo las recetas con pin.
-        bool show = QueueHud.Showing && QueueHud.NoWindows && QueueHud.Materials.Count > 0
+        bool show = QueueHud.Showing && QueueHud.NoWindows && Wanted.Count > 0
                     && MainGame.PlayerData != null && !GameState.InCutscene;
         if (!show)
         {
@@ -120,7 +123,7 @@ internal class ChestMarks : MonoBehaviour
         foreach (WgoData wgo in GameData.ZoneStorages())
         {
             storages++;
-            List<(string key, int count)> found = QueueHud.Materials
+            List<(string key, int count)> found = Wanted
                 .Select(k => (k, GameData.CountIn(wgo.Inventory, k)))
                 .Where(x => x.Item2 > 0)
                 .OrderByDescending(x => x.Item2)
@@ -152,7 +155,7 @@ internal class ChestMarks : MonoBehaviour
             marks.Remove(id);
         }
         // Diagnóstico (solo cuando cambia): qué se busca y qué se encontró.
-        string summary = $"materiales {QueueHud.Materials.Count} ({string.Join(", ", QueueHud.Materials.Take(6))}), " +
+        string summary = $"materiales {Wanted.Count} ({string.Join(", ", Wanted.Take(6))}), " +
                          $"almacenes en la zona {storages}, con materiales {withItems}, sin dibujo {noView}, marcas {marks.Count}";
         if (summary != lastSummary)
         {

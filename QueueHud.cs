@@ -49,6 +49,41 @@ internal class QueueHud : MonoBehaviour
 
     // Para las marcas en los cofres: los materiales que el panel muestra ahora mismo y la escala.
     internal static readonly HashSet<string> Materials = new HashSet<string>();
+    // Con el mouse sobre una tarea (o un ingrediente) del panel: se marca eso en los cofres,
+    // aunque no tenga pin, mientras el mouse siga ahí.
+    internal static readonly HashSet<string> HoverMaterials = new HashSet<string>();
+    private object hoverMarksFor;
+
+    private void UpdateHoverMarks(Vector2 m, bool active)
+    {
+        NavRow row = null;
+        if (active && Inside(frame, m))
+            foreach (NavRow r in navRows)
+                if (r.rt != null && (r.pin != null || r.recipeOf != null) && Inside(r.rt, m))
+                {
+                    row = r;
+                    break;
+                }
+        SetHoverMarks(row);
+    }
+
+    // También lo usa el control: el renglón seleccionado al navegar el panel.
+    private void SetHoverMarks(NavRow row)
+    {
+        if (row != null && row.pin == null && row.recipeOf == null)
+            row = null;
+        object key = row == null ? null : (object)(row.pin ?? row.recipeOf);
+        if (Equals(key, hoverMarksFor))
+            return;
+        hoverMarksFor = key;
+        HoverMaterials.Clear();
+        if (row?.pin != null && blockMaterials.TryGetValue(row.pin, out HashSet<string> set))
+            HoverMaterials.UnionWith(set);
+        else if (row?.recipeOf != null)
+            HoverMaterials.Add(row.recipeOf);
+        HoverMaterials.RemoveWhere(GameData.IsFuel);
+        ChestMarks.Dirty = true; // mostrarlo ya, sin esperar la siguiente revisión
+    }
     internal static float GameScale = 1f;
     internal static bool NoWindows; // jugando, sin cofres/mesas/menús abiertos
     private RectTransform frame;   // ventana visible (recorta el contenido)
@@ -393,6 +428,7 @@ internal class QueueHud : MonoBehaviour
         }
         Vector2 m = Input.mousePosition;
         bool over = Inside(box, m);
+        UpdateHoverMarks(m, over && fit != FitMode.Folded);
         UpdateTooltip(m, over && !dragging && !scrolling && Inside(frame, m));
         float s = canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f;
 
@@ -806,6 +842,7 @@ internal class QueueHud : MonoBehaviour
         if (navMark != null)
             navMark.gameObject.SetActive(false);
         ShowActionsFor(null);
+        SetHoverMarks(null);
     }
 
     internal void GamepadMove(int delta)
@@ -904,6 +941,7 @@ internal class QueueHud : MonoBehaviour
         ApplyScroll();
 
         ShowActionsFor(row.entry != null ? row.rt : null); // una tarea: sus botones − + a la vista
+        SetHoverMarks(row); // y sus materiales marcados en los cofres, como con el mouse
     }
 
     // --- Junto a cofres y mesas: no tapar la ventana ---
@@ -1890,15 +1928,16 @@ internal class QueueHud : MonoBehaviour
     // Marcar cofres: pin relleno = prendido, solo contorno = apagado.
     private static Sprite pinOn, pinOff;
 
+    // Prendido: dorado con borde oscuro (se reconoce de un vistazo). Apagado: solo contorno gris.
     private static Sprite PinOn() => pinOn != null ? pinOn : pinOn = PixelSprite(new[]
     {
         ".ooooo.", "o#####o", "o##o##o", "o#ooo#o", "o##o##o", ".o###o.", "..o#o..", "..o#o..", "...o..."
-    });
+    }, new Color(0.30f, 0.19f, 0.07f), new Color(0.98f, 0.78f, 0.26f), Color.clear);
 
     private static Sprite PinOff() => pinOff != null ? pinOff : pinOff = PixelSprite(new[]
     {
         ".ooooo.", "o.....o", "o..o..o", "o.ooo.o", "o..o..o", ".o...o.", "..o.o..", "..o.o..", "...o..."
-    });
+    }, new Color(0.62f, 0.58f, 0.52f), Color.clear, Color.clear);
 
     // Botoncitos − + basura (gris y rojo, como los del juego).
     private static Sprite minus, plus, trash;
