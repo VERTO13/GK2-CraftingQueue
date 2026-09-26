@@ -72,13 +72,15 @@ Delete the folder `BepInEx\plugins\CraftingQueue` inside your game folder. Your 
 
 `have/need` for every material. Expand any material to see how it's made, one recipe at a time, with the station it's made in and how many it makes (`×N`).
 
-![Queue panel](docs/images/panel-tree.png)
+![Two recipe options for the same item, switched with the arrows](docs/images/recipe-options.png)
 
 - **One option per recipe and per station.** If an item has several recipes, or one recipe can be made in several stations, switch between them with ◂ ▸. Each option shows its own station, yield and ingredients.
 - **Only what you can actually use.** Recipes you haven't unlocked stay hidden, and so do stations you can't build yet. As soon as you unlock them (tech tree, quests…), they show up on their own.
 - **Real yields.** The `×N` includes your perks and talents, including a zombie's if one works that station. For a station you haven't built yet, it shows the base building plus your perks.
 - **Automatic progress.** Tasks go down on their own when you craft, build, or finish a town work.
-- **Hover a task** to show its − + 🗑 buttons. Drag the title to move the panel; the lock pins it in place.
+- **Hover a task** to show its − + 🗑 buttons and its pin. Drag the title to move the panel; the lock pins it in place.
+
+![Task buttons](docs/images/task-buttons.png)
 
 ### Add anything with Ctrl + right-click
 
@@ -90,11 +92,13 @@ Works on almost everything that shows an item or a recipe:
 | A recipe in a crafting station | "Make this recipe" with its ingredients |
 | Build menu / town works | The building with its materials |
 | Quest requirements | The item, with the amount the quest asks for |
-| Tech tree | The recipe or item that a tech unlocks |
+| Tech tree | The recipe, item or building (blueprint) that a tech unlocks |
 | NPC conversations ("0/1" answers) and request pop-ups | The item they ask for, with the amount |
 | Vendor orders | The ordered item, with the order's amount |
 
 If the panel is folded because a window is open, it unfolds for a moment so you can see the new task.
+
+![An NPC asks for an item: Ctrl + right-click its icon to queue it](docs/images/npc-request.png)
 
 ### Chest bubbles: see where everything is
 
@@ -107,9 +111,16 @@ Bubbles over the chests and storages in your current zone show which queued mate
 - If you already have an item, only the item itself is marked, so you know where to pick it up. If you don't, its ingredients are marked instead.
 - Bubbles turn transparent when your mouse is over them or when they cover your character.
 
+### Quick recipe view (Alt)
+
+Hold **Alt** over any item, in your inventory, a chest, or the queue panel itself, to see its full recipe tree without adding it.
+
+![Alt over an item in the inventory](docs/images/alt-inventory.png)
+
+![Alt over a task in the queue panel](docs/images/alt-panel.png)
+
 ### And also
 
-- **Quick recipe view:** hold **Alt** over any item to see its recipe tree without adding it.
 - **Stays out of the way:** with a chest or station open, the panel moves beside the window. At small resolutions it folds into a small "Queue" tab that expands when you hover it.
 - **Pixel-crisp** at 720p, 1080p, 1440p and 4K.
 - **Light on performance.** Amounts update in place instead of redrawing the panel, and nothing heavy runs while you play (about 0.1 ms per frame on average).
@@ -249,7 +260,7 @@ Para agregar algo, mantén **Ctrl** y da clic derecho sobre cualquier objeto.
 | Una receta en una mesa de crafteo | "Hacer esta receta", con sus ingredientes |
 | Menú de construir / obras del pueblo | La construcción con sus materiales |
 | Requisitos de misión | El objeto, con la cantidad que pide la misión |
-| Árbol tecnológico | La receta u objeto que desbloquea |
+| Árbol tecnológico | La receta, objeto o construcción (plano) que desbloquea |
 | Conversaciones con NPC (respuestas con "0/1") y ventanas de pedido | El objeto que te piden, con su cantidad |
 | Encargos de comerciantes | El objeto del encargo, con su cantidad |
 
