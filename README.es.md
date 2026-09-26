@@ -197,6 +197,7 @@ dotnet build -c Release -p:GameDir="C:\Program Files (x86)\Steam\steamapps\commo
 ## Notas
 
 - Mod no oficial, sin relación con Lazy Bear Games.
+- Hecho con apoyo de inteligencia artificial ([Claude](https://claude.com), de Anthropic): el código se escribió junto con Claude y cada función se probó en el juego antes de publicarla.
 - No incluye código ni recursos del juego y no envía datos a ningún lado.
 - El paquete *with-BepInEx* incluye [BepInEx](https://github.com/BepInEx/BepInEx) 5.4.23.5 sin modificar (LGPL-2.1).
 
