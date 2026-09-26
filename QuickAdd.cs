@@ -242,6 +242,21 @@ internal class QuickAdd : MonoBehaviour
                 return Queue.Add(TaskKind.Craft, ld.CraftDef.id, 1, GameData.Name(GameData.MainOutput(ld.CraftDef) ?? ld.CraftDef.id)) != null;
             if (ld.ItemDef != null)
                 return Queue.Add(TaskKind.Item, ld.ItemDef.id, 1) != null;
+            // Planos del árbol tecnológico: la construcción con sus materiales, como desde el
+            // menú de construir (sin zona: el árbol no dice dónde la vas a poner).
+            if (ld.BuildingDef != null)
+            {
+                BuildingDef def = ld.BuildingDef;
+                BuildData data = BuildData.GetDataForBuild(def);
+                return Queue.Add(TaskKind.Build, def.id, 1, GameData.Plain(LLBase.L(def.id)), data?.IconId,
+                    null, GameData.Needs(def.needItems)) != null;
+            }
+            if (ld.TownBuildingDef != null)
+            {
+                TownBuildingDef def = ld.TownBuildingDef;
+                return Queue.Add(TaskKind.Town, def.id, 1, GameData.Plain(LLBase.L(def.id)), def.iconId,
+                    null, GameData.Needs(def.needItems)) != null;
+            }
         }
 
         // Opción de respuesta en una conversación ("Poesía impresa 0/1"): lo que te piden (precio,
