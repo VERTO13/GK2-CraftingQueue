@@ -145,7 +145,7 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 - **No gameplay or balance changes, and your save is never touched.** The mod only reads game data and adds its panel; your queue lives in its own file per save slot.
 - **One thing works differently:** while you hold **Ctrl**, right-click adds to the queue instead of doing its normal action.
 - **No network access, no data collection, no game files or assets included.** Open source (MIT).
-- **Used alongside** BetterAutoCrafting, BetterContainer, BetterItemStacks, BetterPlayerInventory, BigItemStacking and SaveAnywhere during development. If another mod uses the same keys (Ctrl + right-click, Alt, F3, F4), you can change them in the config.
+- **Works alongside other mods.** It doesn't change how the game plays, so it's unlikely to clash with them. If another mod uses the same keys (Ctrl + right-click, Alt, F3, F4), change ours in the mod's config file (see *Configuration* below).
 
 ## Controls
 

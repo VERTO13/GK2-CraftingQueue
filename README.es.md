@@ -145,7 +145,7 @@ Mantén **Alt** sobre cualquier objeto, en tu inventario, un cofre o el mismo pa
 - **No cambia la jugabilidad ni el balance, y nunca toca tu partida.** El mod solo lee datos del juego y agrega su panel; tu cola se guarda en su propio archivo por partida.
 - **Una sola cosa funciona distinto:** mientras mantienes **Ctrl**, el clic derecho agrega a la cola en vez de hacer su acción normal.
 - **Sin acceso a internet, sin recolectar datos, sin archivos ni recursos del juego incluidos.** Código abierto (MIT).
-- **Se usó junto con** BetterAutoCrafting, BetterContainer, BetterItemStacks, BetterPlayerInventory, BigItemStacking y SaveAnywhere durante el desarrollo. Si otro mod usa las mismas teclas (Ctrl + clic derecho, Alt, F3, F4), puedes cambiarlas en el config.
+- **Funciona junto con otros mods.** No cambia cómo se juega, así que es difícil que choque con ellos. Si otro mod usa las mismas teclas (Ctrl + clic derecho, Alt, F3, F4), cambia las nuestras en el archivo de configuración del mod (ver *Configuración* más abajo).
 
 ## Controles
 
