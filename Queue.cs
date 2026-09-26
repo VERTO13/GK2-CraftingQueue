@@ -181,6 +181,23 @@ internal static class Queue
         return on;
     }
 
+    // El id con el que el panel identifica el bloque de esa tarea (el mismo que usa su pin):
+    // objetos y recetas se juntan por objeto ("i:<objeto>"); construcciones y obras, por tarea.
+    private static string PinIdFor(QueueTask t)
+    {
+        switch (t.kind)
+        {
+            case TaskKind.Item:
+                return "i:" + t.id;
+            case TaskKind.Craft:
+                CraftDef craft = GameBalance.Me?.GetDataOrNull<CraftDef>(t.id);
+                string output = craft != null ? GameData.MainOutput(craft) : null;
+                return output != null ? "i:" + output : null;
+            default:
+                return t.kind + ":" + t.id;
+        }
+    }
+
     public static void ClearPins()
     {
         if (Pins.Count == 0)
@@ -191,6 +208,12 @@ internal static class Queue
 
     private static void Touch(bool save = true)
     {
+        // Pines de tareas que ya no están en la cola (terminadas o quitadas): fuera.
+        if (save && Pins.Count > 0)
+        {
+            HashSet<string> live = new HashSet<string>(Tasks.Select(PinIdFor).Where(p => p != null));
+            Pins.RemoveWhere(p => !live.Contains(p));
+        }
         Version++;
         if (save)
             Save();
@@ -221,6 +244,10 @@ internal static class Queue
                 task.partCounts.Add(n);
             }
             Tasks.Add(task);
+            // Tarea nueva: su pin prendido, para ver al momento en qué cofres están sus materiales
+            // (si ya estaba en la cola y solo se suma, se respeta su pin como esté).
+            if (Plugin.PinNewTasks && PinIdFor(task) is string pin)
+                Pins.Add(pin);
         }
         Touch();
         return task;

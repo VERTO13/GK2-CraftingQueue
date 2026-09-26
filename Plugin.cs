@@ -14,7 +14,7 @@ namespace CraftQueue;
 //   botones − + basura, scroll, se puede mover y fijar con el candado.
 // - Descuento automático al craftear, construir o terminar obras del pueblo.
 // - Mantener Alt sobre cualquier objeto muestra su receta.
-[BepInPlugin(Guid, "Crafting Queue", "0.4.14")]
+[BepInPlugin(Guid, "Crafting Queue", "0.4.15")]
 public class Plugin : BaseUnityPlugin
 {
     public const string Guid = "verto13.gk2.craftingqueue";
@@ -23,7 +23,7 @@ public class Plugin : BaseUnityPlugin
 
     private static ConfigEntry<KeyCode> addModifier, hoverKey, hudKey, recipeStyleKey;
     private static ConfigEntry<float> hoverTextSize, hudTop, hudSideOffset, hudWidth, hudMaxHeight, hudTextSize, hudIconSize, hudScale, hudOpacity;
-    private static ConfigEntry<bool> hudVisible, hudHideWithWindows, hudInWorkWindows, hudMovable, chestMarks, measurePerf, hudAlwaysOpen;
+    private static ConfigEntry<bool> hudVisible, hudHideWithWindows, hudInWorkWindows, hudMovable, chestMarks, measurePerf, hudAlwaysOpen, pinNewTasks;
     private static ConfigEntry<string> hudSide, recipeStyle;
     private static ConfigEntry<int> hudMaxRows;
 
@@ -36,6 +36,7 @@ public class Plugin : BaseUnityPlugin
     internal static bool HudMovable { get => hudMovable.Value; set => hudMovable.Value = value; }
     internal static bool ChestMarks { get => chestMarks.Value; set => chestMarks.Value = value; }
     internal static bool HudAlwaysOpen { get => hudAlwaysOpen.Value; set => hudAlwaysOpen.Value = value; }
+    internal static bool PinNewTasks => pinNewTasks.Value;
     internal static bool HudLeft => hudSide.Value.StartsWith("Izq", StringComparison.OrdinalIgnoreCase)
                                     || hudSide.Value.StartsWith("Left", StringComparison.OrdinalIgnoreCase);
     internal static float HudTop => hudTop.Value;
@@ -153,6 +154,8 @@ public class Plugin : BaseUnityPlugin
         chestMarks = Config.Bind(P, "MarcarCofres", true,
             "Encima de cada cofre o almacén de la zona, una burbujita con los materiales de tu cola que tiene. " +
             "Se cambia en el juego con el botón junto al candado.");
+        pinNewTasks = Config.Bind(P, "PinAlAgregar", true,
+            "Al agregar una tarea nueva, su pin se prende solo: sus materiales se marcan en los cofres al momento.");
         hudAlwaysOpen = Config.Bind(P, "SiempreVisible", false,
             "Con un cofre, mesa o el árbol abierto: false = el panel se recorre o se pliega para no tapar la ventana " +
             "(al pasar el mouse se despliega); true = siempre se ve completo. Se cambia en el juego con el ojo de la barra del panel.");
