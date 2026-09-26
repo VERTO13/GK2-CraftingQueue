@@ -42,9 +42,11 @@ internal class ChestMarks : MonoBehaviour
 
     private void LateUpdate()
     {
+        long t = Perf.Start();
         try
         {
             Tick();
+            Perf.Stop("burbujas", t);
         }
         catch (Exception e)
         {
@@ -73,9 +75,13 @@ internal class ChestMarks : MonoBehaviour
         {
             Dirty = false;
             nextScan = Time.unscaledTime + 0.5f;
+            long ts = Perf.Start();
             Scan();
+            Perf.Stop("burbujas: revisar cofres", ts, top: false);
         }
+        long tp = Perf.Start();
         Place();
+        Perf.Stop("burbujas: posición", tp, top: false);
     }
 
     private void Ensure()

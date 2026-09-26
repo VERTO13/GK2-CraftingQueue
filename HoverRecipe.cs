@@ -31,6 +31,13 @@ internal class HoverRecipe : MonoBehaviour
 
     private void Update()
     {
+        long t = Perf.Start();
+        try { Show(); }
+        finally { Perf.Stop("vista alt", t); }
+    }
+
+    private void Show()
+    {
         // Con el mouse: Alt sobre la celda. Con el control: mantener R3 sobre la celda seleccionada.
         UIItemCell pad = GamepadInput.RecipeCell;
         UIItemCell cell = Plugin.HoverHeld() ? CellUnderMouse() : pad;

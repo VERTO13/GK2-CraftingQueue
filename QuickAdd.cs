@@ -13,6 +13,9 @@ namespace CraftQueue;
 //  - una receta en una mesa de crafteo                      -> "hacer esta receta 1 vez"
 //  - una construcción en el menú de construir               -> con sus materiales
 //  - una obra del pueblo (reparar/mejorar)                  -> con sus materiales
+//  - un requisito de misión                                 -> el objeto, con la cantidad que pide
+//  - lo que desbloquea el árbol tecnológico                 -> la receta o el objeto
+//  - lo que te pide un personaje en un diálogo              -> el objeto, con la cantidad que pide
 // Mientras Ctrl está presionado, el clic derecho no hace lo que el juego hace normalmente
 // (cerrar la ventana de crafteo o abrir el menú del objeto).
 internal class QuickAdd : MonoBehaviour
@@ -23,6 +26,23 @@ internal class QuickAdd : MonoBehaviour
     private static readonly System.Reflection.FieldInfo RecipeData = AccessTools.Field(typeof(LazyWidget<UICraftPreviewItemCellData>), "data");
     private static readonly System.Reflection.FieldInfo BuildingData = AccessTools.Field(typeof(LazyWidget<UIBuildingWidgetData>), "data");
     private static readonly System.Reflection.FieldInfo TownData = AccessTools.Field(typeof(LazyWidget<UITownBuildingWidgetData>), "data");
+    private static readonly System.Reflection.FieldInfo LinkedData = AccessTools.Field(typeof(LazyWidget<LinkedEntityWidgetData>), "data");
+    private static readonly System.Reflection.FieldInfo DialogData = AccessTools.Field(typeof(LazyWidget<UIDialogWindowData>), "data");
+    private static readonly System.Reflection.FieldInfo DialogItemArea = AccessTools.Field(typeof(UIDialogWindow), "itemIconWithBackgroundParent");
+
+    // El diálogo "te piden X (tienes/necesitas)" solo guarda el ícono y el nombre del objeto:
+    // al crearse se anota qué objeto y cuántos pide, para poder agregarlo a la cola.
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<UIDialogWindowData, Tuple<string, int>> dialogRequests =
+        new System.Runtime.CompilerServices.ConditionalWeakTable<UIDialogWindowData, Tuple<string, int>>();
+
+    private static void RememberDialogRequest(UIDialogWindowData __instance, Item item, int needCount)
+    {
+        if (__instance != null && item != null && !string.IsNullOrEmpty(item.id))
+        {
+            dialogRequests.Remove(__instance);
+            dialogRequests.Add(__instance, Tuple.Create(item.id, Math.Max(1, needCount)));
+        }
+    }
 
     public static bool ModifierHeld()
     {
@@ -42,8 +62,19 @@ internal class QuickAdd : MonoBehaviour
             prefix: nameof(SkipMenuWhileAdding));
         // Ventanas donde el clic derecho las cierra.
         foreach (Type w in new[] { typeof(UICraftWindow), typeof(UIBuildingWindow), typeof(UICraftSelectionWindow),
-                     typeof(UIFuelCraftWindow), typeof(UISingleCraftWindow) })
+                     typeof(UIFuelCraftWindow), typeof(UISingleCraftWindow),
+                     typeof(UIDialogWindow), typeof(UIQuestInfoWindow), typeof(CharacterWindow) })
             Patch(harmony, AccessTools.Method(w, "GetGameKeyDelegates"), postfix: nameof(KeepWindowOpen));
+        // Diálogo que pide un objeto con "tienes/necesitas": anotar cuál y cuántos.
+        System.Reflection.ConstructorInfo askCtor = AccessTools.Constructor(typeof(UIDialogWindowData), new[]
+        {
+            typeof(Item), typeof(string), typeof(string), typeof(string), typeof(int), typeof(int), typeof(Action), typeof(Action), typeof(bool)
+        });
+        if (askCtor != null)
+        {
+            try { harmony.Patch(askCtor, postfix: new HarmonyMethod(typeof(QuickAdd), nameof(RememberDialogRequest))); }
+            catch (Exception e) { Plugin.Log.LogWarning("Ctrl + clic derecho (diálogo): " + e.Message); }
+        }
     }
 
     private static void Patch(Harmony harmony, System.Reflection.MethodInfo m, string prefix = null, string postfix = null)
@@ -105,8 +136,11 @@ internal class QuickAdd : MonoBehaviour
 
     private void Update()
     {
+        long t = Perf.Start();
         CloseStrayMenu();
-        if (!Input.GetMouseButtonDown(1) || !ModifierHeld() || !Queue.HasSlot)
+        bool adding = Input.GetMouseButtonDown(1) && ModifierHeld() && Queue.HasSlot;
+        Perf.Stop("ctrl + clic", t);
+        if (!adding)
             return;
         suppressUntil = Time.unscaledTime + 0.6f;
         try
@@ -125,6 +159,9 @@ internal class QuickAdd : MonoBehaviour
         EventSystem es = EventSystem.current;
         if (es == null)
             return false;
+        // Diálogo "te piden X": el ícono no recibe clics, así que se mira dónde está el mouse.
+        if (LazyWindowsStackController.ActiveWindow is UIDialogWindow dialog && AddDialogRequest(dialog, Input.mousePosition))
+            return true;
         hits.Clear();
         es.RaycastAll(new PointerEventData(es) { position = Input.mousePosition }, hits);
         foreach (RaycastResult hit in hits)
@@ -136,6 +173,20 @@ internal class QuickAdd : MonoBehaviour
                 return true;
         }
         return false;
+    }
+
+    // El objeto que pide un diálogo "tienes/necesitas", si el mouse está sobre su ícono o nombre.
+    private static bool AddDialogRequest(UIDialogWindow dialog, Vector2 mouse)
+    {
+        if (!(DialogItemArea?.GetValue(dialog) is GameObject area) || !area.activeInHierarchy)
+            return false;
+        Canvas c = area.GetComponentInParent<Canvas>();
+        Camera cam = c != null && c.renderMode != RenderMode.ScreenSpaceOverlay ? c.worldCamera : null;
+        if (!RectTransformUtility.RectangleContainsScreenPoint((RectTransform)area.transform, mouse, cam))
+            return false;
+        if (!(DialogData?.GetValue(dialog) is UIDialogWindowData data) || !dialogRequests.TryGetValue(data, out Tuple<string, int> req))
+            return false;
+        return Queue.Add(TaskKind.Item, req.Item1, req.Item2) != null;
     }
 
     // Agrega a la cola lo que representa ese elemento de la interfaz (o alguno de sus padres):
@@ -168,6 +219,25 @@ internal class QuickAdd : MonoBehaviour
             return Queue.Add(TaskKind.Town, def.id, 1, GameData.Plain(LLBase.L(def.id)), def.iconId,
                 td.WorldZoneData?.id, GameData.Needs(td.GetCurrentNeedItems())) != null;
         }
+
+        // Requisito de una misión (objeto y cantidad), o lo que desbloquea el árbol tecnológico
+        // (receta u objeto): el mismo elemento del juego en los dos lugares.
+        LinkedEntityWidget linked = go.GetComponentInParent<LinkedEntityWidget>();
+        if (linked != null && LinkedData?.GetValue(linked) is LinkedEntityWidgetData ld)
+        {
+            if (ld.Item != null && !ld.Item.IsEmpty)
+                return Queue.Add(TaskKind.Item, ld.Item.id, Math.Max(1, ld.Item.Count)) != null;
+            if (ld.CraftDef != null && ld.CraftDef.outputItems != null)
+                return Queue.Add(TaskKind.Craft, ld.CraftDef.id, 1, GameData.Name(GameData.MainOutput(ld.CraftDef) ?? ld.CraftDef.id)) != null;
+            if (ld.ItemDef != null)
+                return Queue.Add(TaskKind.Item, ld.ItemDef.id, 1) != null;
+        }
+
+        // Diálogo con un objeto (por ejemplo, lo que te pide un personaje): su celda con la cantidad.
+        UIDialogWindow dlg = go.GetComponentInParent<UIDialogWindow>();
+        if (dlg != null && DialogData?.GetValue(dlg) is UIDialogWindowData dd && dd.Item != null && !dd.Item.IsEmpty
+            && go.GetComponentInParent<UIItemCell>() != null)
+            return Queue.Add(TaskKind.Item, dd.Item.id, Math.Max(1, dd.Item.Count)) != null;
 
         // Cualquier objeto.
         UIItemCell cell = go.GetComponentInParent<UIItemCell>();

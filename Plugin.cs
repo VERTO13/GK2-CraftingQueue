@@ -14,7 +14,7 @@ namespace CraftQueue;
 //   botones − + basura, scroll, se puede mover y fijar con el candado.
 // - Descuento automático al craftear, construir o terminar obras del pueblo.
 // - Mantener Alt sobre cualquier objeto muestra su receta.
-[BepInPlugin(Guid, "Crafting Queue", "0.3.1")]
+[BepInPlugin(Guid, "Crafting Queue", "0.3.3")]
 public class Plugin : BaseUnityPlugin
 {
     public const string Guid = "verto13.gk2.craftingqueue";
@@ -23,7 +23,7 @@ public class Plugin : BaseUnityPlugin
 
     private static ConfigEntry<KeyCode> addModifier, hoverKey, hudKey, recipeStyleKey;
     private static ConfigEntry<float> hoverTextSize, hudTop, hudSideOffset, hudWidth, hudMaxHeight, hudTextSize, hudIconSize, hudScale, hudOpacity;
-    private static ConfigEntry<bool> hudVisible, hudHideWithWindows, hudInWorkWindows, hudMovable, chestMarks;
+    private static ConfigEntry<bool> hudVisible, hudHideWithWindows, hudInWorkWindows, hudMovable, chestMarks, measurePerf;
     private static ConfigEntry<string> hudSide, recipeStyle;
     private static ConfigEntry<int> hudMaxRows;
 
@@ -105,9 +105,14 @@ public class Plugin : BaseUnityPlugin
 
     private void Update()
     {
+        Perf.On = measurePerf.Value;
+        long t = Perf.Start();
         Queue.SyncSlot(GameState.Slot); // cada partida guardada tiene su propia cola
         GameStyle.CaptureButtons();     // botones del juego para el panel, en cuanto existan
+        Perf.Stop("partida y botones", t);
     }
+
+    private void LateUpdate() => Perf.EndFrame(Time.unscaledDeltaTime);
 
     private void BindConfig()
     {
@@ -153,5 +158,7 @@ public class Plugin : BaseUnityPlugin
             new ConfigDescription("Detallada: línea + ingredientes con nombre. Compacta: una línea con lo que pide.",
                 new AcceptableValueList<string>("Detallada", "Compacta")));
         recipeStyleKey = Config.Bind(P, "TeclaEstiloReceta", KeyCode.F4, "Cambia entre el estilo detallado y el compacto mientras juegas.");
+        measurePerf = Config.Bind("Diagnóstico", "MedirRendimiento", false,
+            "Escribe en BepInEx\\LogOutput.log cuánto tarda cada parte del mod (cada 15 s) y los cuadros lentos. Solo para buscar problemas.");
     }
 }

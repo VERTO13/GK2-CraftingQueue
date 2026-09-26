@@ -74,9 +74,11 @@ internal class QueueHud : MonoBehaviour
 
     private void Update()
     {
+        long t = Perf.Start();
         try
         {
             Tick();
+            Perf.Stop("panel", t);
         }
         catch (Exception e)
         {
@@ -146,13 +148,17 @@ internal class QueueHud : MonoBehaviour
             if (Time.unscaledTime >= nextCountCheck)
             {
                 nextCountCheck = Time.unscaledTime + 1f;
+                long tc = Perf.Start();
                 if (CountsChanged())
                     signature = null;
+                Perf.Stop("panel: contar", tc, top: false);
             }
             if (sig != signature)
             {
                 signature = sig;
+                long tb = Perf.Start();
                 Build(items);
+                Perf.Stop("panel: armar", tb, top: false);
             }
         }
         catch (Exception e)
@@ -901,10 +907,12 @@ internal class QueueHud : MonoBehaviour
 
     private void LateUpdate()
     {
+        long t = Perf.Start();
         try
         {
             Fit();
             UpdateNavMark();
+            Perf.Stop("panel: acomodo", t);
         }
         catch (Exception e)
         {
@@ -1213,6 +1221,13 @@ internal class QueueHud : MonoBehaviour
 
     // Ancho fijo (los nombres largos bajan de renglón) y alto máximo con scroll.
     private void Layout()
+    {
+        long t = Perf.Start();
+        LayoutCore();
+        Perf.Stop("panel: medir tamaño", t, top: false);
+    }
+
+    private void LayoutCore()
     {
         float width = Plugin.HudWidth;
         // Título del panel a la altura de la letra, con el nombre que el juego usa para la cola.

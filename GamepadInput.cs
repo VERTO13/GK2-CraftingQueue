@@ -33,9 +33,11 @@ internal class GamepadInput : MonoBehaviour
 
     private void Update()
     {
+        long t = Perf.Start();
         try
         {
             Tick();
+            Perf.Stop("control", t);
         }
         catch (Exception e)
         {

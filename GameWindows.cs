@@ -89,6 +89,13 @@ internal static class GameWindows
         if (Time.unscaledTime < nextOccupied)
             return occupied;
         nextOccupied = Time.unscaledTime < fastUntil ? 0f : Time.unscaledTime + 0.5f;
+        long t = Perf.Start();
+        try { return MeasureOccupied(); }
+        finally { Perf.Stop("ventanas: medir", t, top: false); }
+    }
+
+    private static Rect? MeasureOccupied()
+    {
         occupied = null;
         Vector3[] c = new Vector3[4];
         float xMin = float.MaxValue, yMin = float.MaxValue, xMax = float.MinValue, yMax = float.MinValue;
