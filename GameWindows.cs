@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using LazyBearTechnology;
 using UnityEngine;
@@ -57,6 +58,10 @@ internal static class GameWindows
         }
         return any ? true : (bool?)null;
     }
+
+    // Para el registro: qué ventanas hay abiertas (tipo y si se ve).
+    public static string Describe() =>
+        string.Join(", ", Stack().Where(w => w != null).Select(w => w.GetType().Name + (w.gameObject.activeInHierarchy ? "" : "(oculta)")));
 
     // Huella barata de qué ventanas hay abiertas: cambia en el mismo cuadro en que se abre o
     // cierra una, para reaccionar al instante (sin esperar las revisiones periódicas).

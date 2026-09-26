@@ -1046,17 +1046,14 @@ internal class QueueHud : MonoBehaviour
             occ = new Rect(occPx.Value.x / s, occPx.Value.y / s, occPx.Value.width / s, occPx.Value.height / s);
             if (normal.Overlaps(occ))
             {
+                // Nunca cambia de lado (confundía): si cabe junto a la ventana de SU lado, se
+                // recorre hacia allá; si no, se pliega en su misma esquina.
                 float gap = 3f;
-                float rightSpace = screenW - occ.xMax - gap, leftSpace = occ.xMin - gap;
-                if (fullSize.x <= rightSpace && (!left || fullSize.x > leftSpace))
+                float ownSpace = left ? occ.xMin - gap : screenW - occ.xMax - gap;
+                if (fullSize.x <= ownSpace)
                 {
                     mode = FitMode.Moved;
-                    x = Mathf.Min(occ.xMax + gap, screenW - fullSize.x);
-                }
-                else if (fullSize.x <= leftSpace)
-                {
-                    mode = FitMode.Moved;
-                    x = Mathf.Max(0f, occ.xMin - gap - fullSize.x);
+                    x = left ? Mathf.Max(0f, occ.xMin - gap - fullSize.x) : Mathf.Min(occ.xMax + gap, screenW - fullSize.x);
                 }
                 else
                     mode = FitMode.Folded;
@@ -1074,15 +1071,12 @@ internal class QueueHud : MonoBehaviour
         Vector2 size = fullSize;
         if (mode == FitMode.Folded)
         {
-            // La barrita: del ancho de su título y los dos botones, en la esquina de su lado
-            // (o del otro, si solo allá hay espacio libre).
+            // La barrita: del ancho de su título y los dos botones, siempre en la esquina de su
+            // lado (donde el jugador dejó el panel), aunque toque un poco la ventana.
             float w = Mathf.Min(fullSize.x, Mathf.Ceil(titleText.GetPreferredValues(titleText.text).x) + 5f + 28f + 4f);
-            float mine = left ? occ.xMin : screenW - occ.xMax, other = left ? screenW - occ.xMax : occ.xMin;
-            bool onLeft = left ? (mine >= w || other < w) : !(mine >= w || other < w);
-            float foldX = onLeft ? Mathf.Min(Plugin.HudSideOffset, Mathf.Max(0f, occ.xMin - w - 3f))
-                                 : Mathf.Max(screenW - Plugin.HudSideOffset - w, Mathf.Min(screenW - w, occ.xMax + 3f));
+            float foldX = left ? Plugin.HudSideOffset : screenW - Plugin.HudSideOffset - w;
             if (peeking)
-                x = onLeft ? foldX : foldX + w - fullSize.x; // se despliega desde la barrita, encima de la ventana
+                x = xMin; // se despliega en su lugar de siempre, encima de la ventana
             else
             {
                 x = foldX;
@@ -1097,6 +1091,8 @@ internal class QueueHud : MonoBehaviour
         if (lastFit.HasValue && lastFit.Value.Equals(key))
             return;
         lastFit = key;
+        if (mode != fit)
+            Plugin.Log.LogInfo($"Panel: {fit} → {mode} (ventanas: {GameWindows.Describe()}, ocupan {occPx})");
         fit = mode;
         box.anchorMin = box.anchorMax = box.pivot = new Vector2(0f, 1f);
         box.anchoredPosition = new Vector2(Mathf.Round(x), -Mathf.Round(fromTop));
