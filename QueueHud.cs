@@ -194,9 +194,10 @@ internal class QueueHud : MonoBehaviour
             if (Time.unscaledTime >= nextCountCheck)
             {
                 nextCountCheck = Time.unscaledTime + 1f;
+                // Solo números y colores: se actualizan en su lugar, sin rehacer el panel.
                 long tc = Perf.Start();
-                if (CountsChanged())
-                    signature = null;
+                if (signature != null)
+                    UpdateCounts();
                 Perf.Stop("panel: contar", tc, top: false);
             }
             if (sig != signature)
@@ -229,18 +230,6 @@ internal class QueueHud : MonoBehaviour
         if (onlyWork == true && Plugin.HudInWorkWindows)
             return true; // cofres, mesas de crafteo, construcción, tiendas…
         return !Plugin.HudHideWithWindows;
-    }
-
-    private bool CountsChanged()
-    {
-        foreach (KeyValuePair<string, int> kv in shownCounts)
-            if (GameData.Owned(kv.Key) != kv.Value)
-                return true;
-        // También lo que decide qué se marca en los cofres (ingredientes de tareas plegadas).
-        foreach (KeyValuePair<string, int> kv in ownedCache)
-            if (!shownCounts.ContainsKey(kv.Key) && GameData.Owned(kv.Key) != kv.Value)
-                return true;
-        return false;
     }
 
     private void SetShown(bool shown)
@@ -1100,6 +1089,9 @@ internal class QueueHud : MonoBehaviour
         cycleButtons.Clear();
         navRows.Clear();
         arrows.Clear();
+        countBindings.Clear();
+        markMakers.Clear();
+        pendingBinding = null;
         tipTargets.Clear();
         ShowDetail(null, null);
         shownActions = null;
@@ -1155,21 +1147,29 @@ internal class QueueHud : MonoBehaviour
                 // mesas), con "tienes/necesitas" como cualquier objeto. Abierto por defecto
                 // ("~id" = plegado); dentro, una receta a la vez con ◂ ▸.
                 long tk = Perf.Start();
-                blockMaterials["i:" + ib.item] = MarksForItem(ib.item, ib.total, ib.preferred);
+                string item = ib.item;
+                int total = ib.total, preferredRecipe = ib.preferred;
+                Func<HashSet<string>> marks = () => MarksForItem(item, total, preferredRecipe);
+                markMakers.Add(("i:" + item, marks));
+                blockMaterials["i:" + item] = marks();
                 Perf.Stop("panel: qué marcar", tk, top: false);
                 int have = GameData.Owned(ib.item);
                 Seen(ib.item, have);
                 string itemFold = "~" + ib.item;
                 bool hasRecipe = GameData.RecipesFor(ib.item).Count > 0;
+                BeginBinding(new CountBinding { key = ib.item, want = ib.total });
                 Transform body = Block(ib.item, null, GameData.Name(ib.item), $"{have}/{ib.total}", have >= ib.total,
                     hasRecipe ? itemFold : null, inverted: true, flash: ib.ids.Any(flashIds.Contains), entry: ib.raws,
                     focusId: "i:" + ib.item);
+                EndBinding();
                 if (hasRecipe && !Prefs.Expanded.Contains(itemFold))
                     RecipeRows(body, ib.item, ib.total, ib.item, 1, ib.preferred);
                 FinishBody(body);
                 continue;
             }
             QueueView.Entry e = (QueueView.Entry)block;
+            QueueView.Entry entryForMarks = e;
+            markMakers.Add((e.id, () => MarksForBuild(entryForMarks)));
             blockMaterials[e.id] = MarksForBuild(e);
             bool flash = flashIds.Contains(e.id);
             bool ready = true;
@@ -1184,8 +1184,10 @@ internal class QueueHud : MonoBehaviour
             string times = e.need > 1 ? $" ×{e.need}" : "";
             // Construcciones: la flecha pliega sus requisitos (abiertas por defecto; "~id" = plegada).
             string fold = "~" + e.id;
+            BeginBinding(new CountBinding { parts = e.parts.Select(p => (p.id, p.n * e.need)).ToList() });
             Transform b = Block(e.iconItem, e.buildIcon, e.title + times, null, ready, fold, inverted: true, flash: flash,
                 entry: new List<object> { e.raw }, focusId: e.id);
+            EndBinding();
             if (!Prefs.Expanded.Contains(fold))
             {
                 foreach ((string pid, int per) in e.parts)
@@ -1212,8 +1214,14 @@ internal class QueueHud : MonoBehaviour
             navKey = navRows[navIndex].key;
         }
 
-        // Lo que se marca en los cofres: pin general prendido = toda la cola; si no, solo las
-        // tareas con pin (o nada). Un pin de una tarea que ya no está en la cola no cuenta.
+        RecomputeMaterials();
+        Layout();
+    }
+
+    // Lo que se marca en los cofres: pin general prendido = toda la cola; si no, solo las
+    // tareas con pin (o nada). Un pin de una tarea que ya no está en la cola no cuenta.
+    private void RecomputeMaterials()
+    {
         List<string> ids = (Plugin.ChestMarks ? blockMaterials.Keys : Queue.Pins.Where(blockMaterials.ContainsKey)).ToList();
         Materials.Clear();
         foreach (string id in ids)
@@ -1221,8 +1229,6 @@ internal class QueueHud : MonoBehaviour
                 if (!GameData.IsFuel(key))
                     Materials.Add(key);
         ChestMarks.Dirty = true;
-
-        Layout();
     }
 
     // Tareas de un mismo objeto juntas: las agregadas como objeto y las agregadas desde una mesa
@@ -1446,7 +1452,9 @@ internal class QueueHud : MonoBehaviour
         int have = GameData.Owned(id);
         Seen(id, have); // se vigila para redibujar si cambia (crafteo, recolección…)
         bool ok = have >= want;
+        BeginBinding(new CountBinding { key = id, want = want });
         Line(body, depth, id, name, $"{have}/{want}", ok ? Done : Text, ok ? Done : Short, arrow);
+        EndBinding();
     }
 
     // Tiene flecha si hay receta conocida, no es combustible, no repite un material de más arriba
@@ -1685,7 +1693,12 @@ internal class QueueHud : MonoBehaviour
             label = have + "/" + want;
             color = have >= want ? Done : Short;
         }
+        bool fuel = GameData.IsFuel(nid);
+        if (!fuel)
+            BeginBinding(new CountBinding { key = nid, want = want, chip = true });
         Fill(chip.transform, nid, null, label, null, color, color, withCell: true, stretch: false);
+        if (!fuel)
+            EndBinding();
         tipTargets[(RectTransform)chip.transform] = nid;
         return (RectTransform)chip.transform;
     }
@@ -1884,6 +1897,8 @@ internal class QueueHud : MonoBehaviour
             mle.preferredWidth = 0f; // toma el espacio que sobre; si no alcanza, baja de renglón
             mle.minWidth = 20f;
         }
+        if (pendingBinding != null)
+            pendingBinding.name = main;
 
         if (count != null)
         {
@@ -1891,7 +1906,92 @@ internal class QueueHud : MonoBehaviour
             LayoutElement cle = c.gameObject.AddComponent<LayoutElement>();
             cle.flexibleWidth = 0f;
             cle.minWidth = 20f;
+            if (pendingBinding != null)
+                pendingBinding.count = c;
         }
+    }
+
+    // --- Cantidades que se actualizan en su lugar ---
+    // Al recoger o craftear solo cambian números y colores: se actualizan esos textos en vez de
+    // rehacer todo el panel (rehacerlo costaba 20-30 ms, un pequeño tirón cada vez).
+
+    private sealed class CountBinding
+    {
+        public string key;       // material cuya cantidad se muestra
+        public int want;
+        public bool chip;        // estilo compacto: el texto es "tienes/necesitas"
+        public List<(string key, int need)> parts; // barra de construcción: solo el color "listo"
+        public TMP_Text name, count;
+    }
+
+    private readonly List<CountBinding> countBindings = new List<CountBinding>();
+    private readonly List<(string id, Func<HashSet<string>> make)> markMakers = new List<(string, Func<HashSet<string>>)>();
+    private CountBinding pendingBinding;
+
+    private void BeginBinding(CountBinding b) => pendingBinding = b;
+
+    private void EndBinding()
+    {
+        if (pendingBinding != null && pendingBinding.name != null)
+            countBindings.Add(pendingBinding);
+        pendingBinding = null;
+    }
+
+    // Revisa las cantidades y actualiza solo lo que cambió. Devuelve si hubo cambios.
+    private bool UpdateCounts()
+    {
+        // Lo que se usó para decidir las marcas (incluye ingredientes de tareas plegadas).
+        List<KeyValuePair<string, int>> before = ownedCache.ToList();
+        ownedCache.Clear();
+        bool changed = false;
+        foreach (string key in shownCounts.Keys.ToList())
+        {
+            int now = GameData.Owned(key);
+            if (now != shownCounts[key])
+            {
+                shownCounts[key] = now;
+                changed = true;
+            }
+        }
+        foreach (KeyValuePair<string, int> kv in before)
+            if (!shownCounts.ContainsKey(kv.Key) && GameData.Owned(kv.Key) != kv.Value)
+                changed = true;
+        if (!changed)
+            return false;
+        ownedCache.Clear();
+
+        bool resized = false;
+        foreach (CountBinding b in countBindings)
+        {
+            if (b.name == null)
+                continue;
+            if (b.parts != null)
+            {
+                bool ready = b.parts.All(p => GameData.IsFuel(p.key) || OwnedNow(p.key) >= p.need);
+                b.name.color = ready ? Done : Text;
+                continue;
+            }
+            int have = OwnedNow(b.key);
+            bool ok = have >= b.want;
+            string text = $"{have}/{b.want}";
+            TMP_Text target = b.chip ? b.name : b.count;
+            if (target != null)
+            {
+                resized |= target.text.Length != text.Length;
+                target.text = text;
+                target.color = ok ? Done : Short;
+            }
+            if (!b.chip)
+                b.name.color = ok ? Done : Text;
+        }
+        // Lo que se marca en los cofres depende de qué ya tienes completo.
+        foreach ((string id, Func<HashSet<string>> make) in markMakers)
+            blockMaterials[id] = make();
+        RecomputeMaterials();
+        hoverMarksFor = null; // la vista temporal se recalcula con lo nuevo
+        if (resized)
+            Layout(); // un número con más cifras puede mover el renglón
+        return true;
     }
 
     private TMP_Text MakeText(Transform parent, string text, Color color, TextAlignmentOptions align, bool wrap)
