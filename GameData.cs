@@ -135,7 +135,11 @@ internal static class GameData
         get
         {
             GameSave save = MainGame.Instance?.GameSave;
-            return (save?.perkSystemData?.activePerks?.Count ?? 0) * 1009 + (save?.knowledgeSystem?.unlockedTechs?.Count ?? 0);
+            KnowledgeSystem ks = save?.knowledgeSystem;
+            // Construcciones desbloqueadas también (por tecnología, misión o lo que sea): una
+            // estación nueva aparece al momento como opción de receta.
+            return ((save?.perkSystemData?.activePerks?.Count ?? 0) * 1009 + (ks?.unlockedTechs?.Count ?? 0)) * 1009
+                   + (ks?.unlockedBuildings?.Count ?? 0) * 31 + (ks?.lockedBuildings?.Count ?? 0);
         }
     }
 
@@ -262,7 +266,7 @@ internal static class GameData
 
     public static List<Recipe> OptionsFor(string key)
     {
-        int stamp = (StationsStamp * 31 + KnowledgeStamp) * 31 + (LLBase.CurrentLang?.GetHashCode() ?? 0);
+        int stamp = ((StationsStamp * 31 + KnowledgeStamp) * 31 + PerksStamp) * 31 + (LLBase.CurrentLang?.GetHashCode() ?? 0);
         if (optionsCache.TryGetValue(key, out var cached) && cached.stamp == stamp)
             return cached.list;
         List<Recipe> list = new List<Recipe>();
