@@ -14,7 +14,7 @@ namespace CraftQueue;
 //   botones − + basura, scroll, se puede mover y fijar con el candado.
 // - Descuento automático al craftear, construir o terminar obras del pueblo.
 // - Mantener Alt sobre cualquier objeto muestra su receta.
-[BepInPlugin(Guid, "Crafting Queue", "0.3.5")]
+[BepInPlugin(Guid, "Crafting Queue", "0.3.6")]
 public class Plugin : BaseUnityPlugin
 {
     public const string Guid = "verto13.gk2.craftingqueue";
@@ -72,6 +72,7 @@ public class Plugin : BaseUnityPlugin
     }
 
     private static bool started;
+    private string lastSlot;
 
     private void Awake()
     {
@@ -94,6 +95,7 @@ public class Plugin : BaseUnityPlugin
         Harmony harmony = new Harmony(Guid);
         GameHooks.Apply(harmony);
         QuickAdd.Apply(harmony);
+        GameStyle.Apply(harmony); // botones del juego: se guardan cuando el juego los crea
 
         gameObject.AddComponent<QuickAdd>();
         gameObject.AddComponent<QueueHud>();
@@ -107,8 +109,14 @@ public class Plugin : BaseUnityPlugin
     {
         Perf.On = measurePerf.Value;
         long t = Perf.Start();
-        Queue.SyncSlot(GameState.Slot); // cada partida guardada tiene su propia cola
-        GameStyle.CaptureButtons();     // botones del juego para el panel, en cuanto existan
+        string slot = GameState.Slot;
+        if (slot != lastSlot)
+        {
+            lastSlot = slot;
+            if (slot != null)
+                GameStyle.SearchButtonsOnce(); // durante la carga de la partida, una sola vez
+        }
+        Queue.SyncSlot(slot); // cada partida guardada tiene su propia cola
         Perf.Stop("partida y botones", t);
     }
 

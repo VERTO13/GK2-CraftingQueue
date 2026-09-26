@@ -56,6 +56,7 @@ internal class QueueHud : MonoBehaviour
     private RectTransform barTrack, barHandle;
     private string signature;
     private float nextCheck, nextScale;
+    private Canvas gameCanvas; // el lienzo principal del juego (para copiar su escala)
     private float gameScale = 1f;
     private int rows;
     private int hiddenRows;
@@ -113,7 +114,9 @@ internal class QueueHud : MonoBehaviour
             signature = null; // aunque la cola no cambió (p. ej. ya hay botones del juego para usar)
         }
 
+        long tm = Perf.Start();
         HandleMouse();
+        Perf.Stop("panel: mouse", tm, top: false);
 
         // Se abrió o cerró una ventana: revisar y acomodar ya, no en la siguiente vuelta.
         int windows = GameWindows.Signature();
@@ -130,17 +133,25 @@ internal class QueueHud : MonoBehaviour
         nextCheck = Time.unscaledTime + 0.4f;
         try
         {
+            long tq = Perf.Start();
             List<QueueView.Entry> items = ShouldShow() ? QueueView.Items() : null;
+            Perf.Stop("panel: leer cola", tq, top: false);
             // Cola vacía: el panel se ve igual, con la ayuda de cómo agregar (así se sabe que el mod está activo).
             if (items == null || (items.Count == 0 && !Queue.HasSlot))
             {
                 SetShown(false);
                 return;
             }
+            long ts = Perf.Start();
             GameStyle.TryInit();
+            Perf.Stop("panel: estilo del juego", ts, top: false);
+            long te = Perf.Start();
             Ensure();
+            Perf.Stop("panel: escala", te, top: false);
+            long tg = Perf.Start();
             string sig = Signature(items) + "|" + gameScale // la escala del juego cambia con la resolución
                 + (Time.unscaledTime < flashUntil ? "|resaltado" : ""); // al terminar el resaltado se redibuja sin él
+            Perf.Stop("panel: firma", tg, top: false);
             // Activo ANTES de armarlo: con el panel oculto Unity no mide el texto.
             SetShown(true);
             // Lo que tienes cambia al craftear o recoger sin que el juego avise al panel: cada
@@ -234,16 +245,18 @@ internal class QueueHud : MonoBehaviour
     {
         if (canvas == null)
             Create();
-        if (Time.unscaledTime >= nextScale)
+        // El lienzo del juego se busca una vez (buscar entre todos cuesta); después solo se lee su
+        // escala. Si desaparece (cambio de escena), se vuelve a buscar, como mucho cada 5 s.
+        if ((gameCanvas == null || !gameCanvas.isActiveAndEnabled) && Time.unscaledTime >= nextScale)
         {
-            nextScale = Time.unscaledTime + 2f;
-            Canvas game = FindObjectsByType<Canvas>(FindObjectsSortMode.None)
+            nextScale = Time.unscaledTime + 5f;
+            gameCanvas = FindObjectsByType<Canvas>(FindObjectsSortMode.None)
                 .Where(c => c != canvas && c.isRootCanvas && c.renderMode == RenderMode.ScreenSpaceOverlay && c.scaleFactor > 0f)
                 .OrderByDescending(c => c.GetComponent<CanvasScaler>() != null)
                 .FirstOrDefault();
-            if (game != null)
-                GameScale = gameScale = game.scaleFactor;
         }
+        if (gameCanvas != null && gameCanvas.scaleFactor > 0f)
+            GameScale = gameScale = gameCanvas.scaleFactor;
         // Escala entera (pixeles exactos): la fuente y los íconos pixelados solo se ven nítidos así.
         float panelScale = GameStyle.PanelScale(gameScale);
         canvas.scaleFactor = panelScale;
@@ -1102,7 +1115,9 @@ internal class QueueHud : MonoBehaviour
                 // Un solo bloque por objeto (aunque se haya agregado varias veces o desde distintas
                 // mesas), con "tienes/necesitas" como cualquier objeto. Abierto por defecto
                 // ("~id" = plegado); dentro, una receta a la vez con ◂ ▸.
+                long tk = Perf.Start();
                 blockMaterials["i:" + ib.item] = MarksForItem(ib.item, ib.total, ib.preferred);
+                Perf.Stop("panel: qué marcar", tk, top: false);
                 int have = GameData.Owned(ib.item);
                 Seen(ib.item, have);
                 string itemFold = "~" + ib.item;
@@ -1329,7 +1344,9 @@ internal class QueueHud : MonoBehaviour
             GameObject countObj = count != null ? head.transform.GetChild(head.transform.childCount - 1).gameObject : null;
             if (focusId != null)
                 FocusPin((RectTransform)head.transform, countObj, focusId);
+            long tb = Perf.Start();
             HeaderActions((RectTransform)head.transform, countObj, entry);
+            Perf.Stop("panel: botones − +", tb, top: false);
             // Para el control: una tarea de objeto cambia sus recetas con LB/RB.
             AddNav((RectTransform)head.transform, "h:" + (focusId ?? title), arrowPath, entry, focusId,
                 focusId != null && focusId.StartsWith("i:") ? iconItem : null);

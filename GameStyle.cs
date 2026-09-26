@@ -168,52 +168,68 @@ internal static class GameStyle
     private static readonly System.Collections.Generic.Dictionary<int, GameObject> buttonTemplates =
         new System.Collections.Generic.Dictionary<int, GameObject>();
 
-    private static float nextButtonScan;
-
-    // Se llama seguido desde el plugin: guarda los botones del juego en cuanto aparecen
-    // (p. ej. en la pantalla de partidas guardadas), para tenerlos después aunque ya no estén.
-    public static void CaptureButtons()
+    // Los botones se guardan en cuanto el juego los crea (Awake de UISlider y UISaveSlot, ver
+    // Apply). Buscarlos recorre todos los objetos cargados y tardaba hasta 100 ms: medido, era la
+    // causa de los tirones. Por eso solo se busca UNA vez por partida cargada, durante la carga
+    // (donde la pantalla de carga oculta la pausa); si no están, el panel usa sus propios dibujos.
+    public static void Apply(HarmonyLib.Harmony harmony)
     {
-        if (Time.unscaledTime < nextButtonScan || buttonTemplates.Count >= 3)
-            return; // ya están los tres: no se vuelve a buscar
-        nextButtonScan = Time.unscaledTime + 3f;
-        foreach (int action in ButtonActions)
-            ButtonTemplate(action);
+        try
+        {
+            harmony.Patch(HarmonyLib.AccessTools.Method(typeof(UISlider), "Awake"),
+                postfix: new HarmonyLib.HarmonyMethod(typeof(GameStyle), nameof(SliderCreated)));
+            harmony.Patch(HarmonyLib.AccessTools.Method(typeof(UISaveSlot), "Awake"),
+                postfix: new HarmonyLib.HarmonyMethod(typeof(GameStyle), nameof(SaveSlotCreated)));
+        }
+        catch (System.Exception e)
+        {
+            Plugin.Log.LogWarning("Botones del juego: " + e.Message);
+        }
+    }
+
+    private static readonly FieldInfo SliderDecrease = typeof(UISlider).GetField("decreaseButton", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+    private static readonly FieldInfo SliderIncrease = typeof(UISlider).GetField("increaseButton", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+    private static readonly FieldInfo SlotDelete = typeof(UISaveSlot).GetField("deleteButton", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+
+    private static void SliderCreated(UISlider __instance)
+    {
+        Keep(-1, SliderDecrease?.GetValue(__instance) as Component);
+        Keep(1, SliderIncrease?.GetValue(__instance) as Component);
+    }
+
+    private static void SaveSlotCreated(UISaveSlot __instance) => Keep(0, SlotDelete?.GetValue(__instance) as Component);
+
+    private static void Keep(int action, Component source)
+    {
+        try
+        {
+            if (source != null && !(buttonTemplates.TryGetValue(action, out GameObject t) && t != null))
+                MakeTemplate(action, source);
+        }
+        catch (System.Exception e)
+        {
+            Plugin.Log.LogWarning("Botones del juego: " + e.Message);
+        }
     }
 
     private static readonly int[] ButtonActions = { -1, 1, 0 };
 
-    // Buscar un botón recorre todos los objetos cargados (caro): como mucho una vez cada 3 s
-    // por botón, aunque el panel se redibuje o tenga muchas tareas (antes era una búsqueda por
-    // tarea en cada redibujo mientras el botón no existía).
-    private static readonly System.Collections.Generic.Dictionary<int, float> nextButtonSearch =
-        new System.Collections.Generic.Dictionary<int, float>();
+    // Una sola búsqueda por partida cargada, para los botones que todavía falten.
+    public static void SearchButtonsOnce()
+    {
+        foreach (int action in ButtonActions)
+            if (!(buttonTemplates.TryGetValue(action, out GameObject t) && t != null))
+                Keep(action, SearchGameButton(action));
+    }
 
     // action: -1 = restar, 1 = sumar, 0 = quitar. Devuelve el botón clonado (solo imagen, sin lógica) o null.
     public static RectTransform CloneButton(int action, Transform parent)
     {
-        GameObject tpl = ButtonTemplate(action);
-        if (tpl == null)
-            return null;
+        if (!buttonTemplates.TryGetValue(action, out GameObject tpl) || tpl == null)
+            return null; // nunca se busca aquí: se usa el dibujo propio
         GameObject copy = Object.Instantiate(tpl, parent, false);
         copy.SetActive(true);
         return (RectTransform)copy.transform;
-    }
-
-    private static GameObject ButtonTemplate(int action)
-    {
-        if (buttonTemplates.TryGetValue(action, out GameObject t) && t != null)
-            return t;
-        if (nextButtonSearch.TryGetValue(action, out float next) && Time.unscaledTime < next)
-            return null;
-        nextButtonSearch[action] = Time.unscaledTime + 3f;
-        // Los botones del juego (deslizadores de Ajustes, borrar partida). Se capturan en cuanto
-        // existen: la pantalla de partidas guardadas pasa al cargar, así que la basura casi siempre
-        // está; − y + aparecen tras abrir Ajustes o una ventana con cantidad.
-        Component source = SearchGameButton(action);
-        if (source == null)
-            return null;
-        return MakeTemplate(action, source);
     }
 
     private static Component SearchGameButton(int action)

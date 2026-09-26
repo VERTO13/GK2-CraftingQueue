@@ -117,8 +117,16 @@ internal static class GameData
     {
         if (craft == null)
             return null;
-        if (stationCache.TryGetValue(craft.id, out var cached) && Time.unscaledTime - cached.time < 10f)
+        // Las estaciones y los talentos cambian poco: se recalcula cada minuto como mucho.
+        if (stationCache.TryGetValue(craft.id, out var cached) && Time.unscaledTime - cached.time < 60f)
             return cached.station;
+        long t = Perf.Start();
+        try { return FindStation(craft); }
+        finally { Perf.Stop("recetas: buscar estación", t, top: false); }
+    }
+
+    private static WgoData FindStation(CraftDef craft)
+    {
         WgoData best = null;
         int bestOutput = int.MinValue;
         try
