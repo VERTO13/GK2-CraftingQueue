@@ -353,25 +353,30 @@ internal static class GameData
         {
             best = null;
         }
-        // Sin ninguna construida: se calcula como si la tuvieras (la mejora más alta que ya puedes
-        // construir), con tus talentos y ventajas. Así una estación mejor que todavía no construyes
-        // no aparenta rendir menos que la que ya tienes.
+        // Sin ninguna construida: el edificio BASE de esa opción (su primera mejora), sin nada
+        // agregado, con solo lo tuyo (talentos, ventajas, pasivas). Lo que dependa de mejoras o
+        // complementos del edificio se verá cuando lo construyas: entonces se usa el real, arriba.
         if (best == null)
         {
-            string output = MainOutput(r.craft);
-            foreach (string stationId in r.stations.Where(StationAvailable))
-            {
-                WgoData preview = PreviewStation(stationId);
-                int n = preview != null ? RawOutput(r.craft, output, preview) : int.MinValue;
-                if (n > bestOutput)
-                {
-                    best = preview;
-                    bestOutput = n;
-                }
-            }
+            string baseStation = r.stations.Where(StationAvailable).OrderBy(TierOf).FirstOrDefault()
+                                 ?? r.stations.OrderBy(TierOf).FirstOrDefault();
+            if (baseStation != null)
+                best = PreviewStation(baseStation);
         }
         stationCache[cacheKey] = (Time.unscaledTime, best);
         return best;
+    }
+
+    // Nivel de mejora por el nombre: sin número o "I" = 1, "II" = 2, "III" = 3…
+    private static int TierOf(string stationId)
+    {
+        string name = StationName(stationId);
+        string[] tiers = { " V", " IV", " III", " II", " I" };
+        int[] values = { 5, 4, 3, 2, 1 };
+        for (int i = 0; i < tiers.Length; i++)
+            if (name.EndsWith(tiers[i], StringComparison.Ordinal))
+                return values[i];
+        return 1;
     }
 
     // Estación "de prueba" para calcular fórmulas: vacía, solo con su tipo. No se pone en el mundo,
