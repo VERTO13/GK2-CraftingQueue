@@ -68,6 +68,7 @@ To add something, hold **Ctrl** and right-click any item.
 
 - **Update:** download the new version and extract it the same way, choosing **Replace**. Your queue is kept.
 - **Uninstall:** delete the folder `BepInEx\plugins\CraftingQueue` inside your game folder. Your saves are never touched.
+- Your queues are kept outside the game folder, so they survive updates and reinstalls. To erase them too, delete `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2\CraftingQueue` (paste it into the File Explorer address bar).
 
 </details>
 

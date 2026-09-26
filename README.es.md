@@ -68,6 +68,7 @@ Para agregar algo, mantén **Ctrl** y da clic derecho sobre cualquier objeto.
 
 - **Actualizar:** descarga la versión nueva y descomprímela igual, eligiendo **Reemplazar**. Tu cola se conserva.
 - **Desinstalar:** borra la carpeta `BepInEx\plugins\CraftingQueue` dentro de la carpeta del juego. Tus partidas no se tocan.
+- Tus colas se guardan fuera de la carpeta del juego, así que se conservan al actualizar o reinstalar. Para borrarlas también, borra `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2\CraftingQueue` (pégalo en la barra de direcciones del Explorador).
 
 </details>
 
