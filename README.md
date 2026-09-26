@@ -7,7 +7,7 @@ A mod that keeps a **crafting queue always on screen**. It shows what you want t
 
 > 🇪🇸 **¿Español?** → [Leer en español](#español)
 
-![Crafting Queue in game](docs/images/overview.jpg)
+![Crafting Queue in game: Ctrl + right-click adds recipes, chest bubbles show where the materials are](docs/images/usage.gif)
 
 ---
 
@@ -72,7 +72,7 @@ Delete the folder `BepInEx\plugins\CraftingQueue` inside your game folder. Your 
 
 `have/need` for every material. Expand any material to see how it's made, one recipe at a time, with the station it's made in and how many it makes (`×N`).
 
-![Two recipe options for the same item, switched with the arrows](docs/images/recipe-options.png)
+![Melted Fat: two recipes, switched with the arrows (yield and ingredients change)](docs/images/multi-recipe.gif)
 
 - **One option per recipe and per station.** If an item has several recipes, or one recipe can be made in several stations, switch between them with ◂ ▸. Each option shows its own station, yield and ingredients.
 - **Only what you can actually use.** Recipes you haven't unlocked stay hidden, and so do stations you can't build yet. As soon as you unlock them (tech tree, quests…), they show up on their own.
@@ -98,6 +98,8 @@ Works on almost everything that shows an item or a recipe:
 
 If the panel is folded because a window is open, it unfolds for a moment so you can see the new task.
 
+![Removing tasks, then queuing blueprints from the tech tree and raising their amount](docs/images/remove-and-blueprints.gif)
+
 ![An NPC asks for an item: Ctrl + right-click its icon to queue it](docs/images/npc-request.png)
 
 ### Chest bubbles: see where everything is
@@ -117,7 +119,7 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 
 ![Alt over an item in the inventory](docs/images/alt-inventory.png)
 
-![Alt over a task in the queue panel](docs/images/alt-panel.png)
+![Alt over the ingredients in the queue panel](docs/images/alt-view.gif)
 
 ### And also
 
@@ -191,6 +193,10 @@ Un mod que mantiene una **cola de crafteo siempre a la vista**. Muestra qué qui
 
 > ⚠️ **Versión de prueba (beta).** Todavía se está probando y puede tener algunos bugs. Por favor [repórtalos](#reportar-bugs); ayuda muchísimo.
 > 🎮 **El soporte para control es aún más experimental** y casi no se ha probado.
+
+![Crafting Queue en el juego](docs/images/usage.gif)
+
+> Las demás animaciones (recetas múltiples, planos del árbol, vista Alt) están en la [sección en inglés](#features).
 
 ### Instalación (unos 2 minutos, sin experiencia)
 
