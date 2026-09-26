@@ -128,6 +128,17 @@ internal static class GameData
         }
     }
 
+    // Solo talentos y tecnologías (sin los objetos de la zona, que cambian por cualquier cosa):
+    // para que el panel se redibuje únicamente cuando de verdad pudo cambiar un ×N.
+    public static int PerksStamp
+    {
+        get
+        {
+            GameSave save = MainGame.Instance?.GameSave;
+            return (save?.perkSystemData?.activePerks?.Count ?? 0) * 1009 + (save?.knowledgeSystem?.unlockedTechs?.Count ?? 0);
+        }
+    }
+
     // Se construyó o terminó una obra: recalcular ya (una mejora puede no cambiar la cuenta de objetos).
     public static void ResetStations() => stationCache.Clear();
 

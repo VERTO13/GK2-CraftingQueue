@@ -41,6 +41,7 @@ internal class QueueHud : MonoBehaviour
     private Dictionary<string, int> prevNeeds;               // cola del dibujo anterior
     private readonly HashSet<string> flashIds = new HashSet<string>(); // tareas recién agregadas/aumentadas
     private float flashUntil, nextCountCheck;
+    private readonly List<GameObject> glows = new List<GameObject>(); // brillos de "recién agregada"
 
     private Canvas canvas;
     private RectTransform box;     // todo el panel (se posiciona y se arrastra)
@@ -184,8 +185,15 @@ internal class QueueHud : MonoBehaviour
             Ensure();
             Perf.Stop("panel: escala", te, top: false);
             long tg = Perf.Start();
-            string sig = Signature(items) + "|" + gameScale // la escala del juego cambia con la resolución
-                + (Time.unscaledTime < flashUntil ? "|resaltado" : ""); // al terminar el resaltado se redibuja sin él
+            string sig = Signature(items) + "|" + gameScale; // la escala del juego cambia con la resolución
+            // Al terminar el brillo de "recién agregada" se quita en su lugar (antes se redibujaba todo).
+            if (glows.Count > 0 && Time.unscaledTime >= flashUntil)
+            {
+                foreach (GameObject g in glows)
+                    if (g != null)
+                        Destroy(g);
+                glows.Clear();
+            }
             Perf.Stop("panel: firma", tg, top: false);
             // Activo ANTES de armarlo: con el panel oculto Unity no mide el texto.
             SetShown(true);
@@ -261,7 +269,8 @@ internal class QueueHud : MonoBehaviour
         sb.Append(Plugin.HudMaxRows).Append(Plugin.HudScale).Append(Plugin.HudMaxHeight).Append(Plugin.CompactRecipes);
         sb.Append(LLBase.CurrentLang); // si cambias el idioma del juego, se redibuja traducido
         sb.Append('|').Append(GameData.KnowledgeStamp); // receta recién desbloqueada: aparece ya
-        sb.Append('|').Append(GameData.StationsStamp);  // talento o estación nueva: el ×N al momento
+        sb.Append('|').Append(GameData.PerksStamp);     // talento o tecnología nueva: el ×N al momento
+        // (una estación construida o mejorada redibuja por su cuenta: Queue.OnBuilt)
         sb.Append(Screen.width).Append('x').Append(Screen.height).Append(Plugin.HudTop); // y si cambias la resolución
         return sb.ToString();
     }
@@ -622,6 +631,11 @@ internal class QueueHud : MonoBehaviour
             if (h == null)
                 continue;
             bool on = h == head;
+            if (on && pendingActions.TryGetValue(actions, out object entry))
+            {
+                pendingActions.Remove(actions);
+                FillActions(actions, entry);
+            }
             actions.SetActive(on);
             if (title != null)
             {
@@ -654,6 +668,17 @@ internal class QueueHud : MonoBehaviour
         h.childControlWidth = h.childControlHeight = true;
         h.childForceExpandWidth = h.childForceExpandHeight = false;
         g.GetComponent<LayoutElement>().flexibleWidth = 0f;
+        g.SetActive(false);
+        headers.Add((head, g, title));
+        pendingActions[g] = entry;
+    }
+
+    // Los botones − + 🗑 se crean la primera vez que se muestran (al pasar el mouse por la tarea),
+    // no en cada redibujado: casi nunca se ven todos y crearlos costaba varios ms por redibujado.
+    private readonly Dictionary<GameObject, object> pendingActions = new Dictionary<GameObject, object>();
+
+    private void FillActions(GameObject g, object entry)
+    {
         (Sprite sprite, int action)[] buttons = { (MinusSprite(), -1), (PlusSprite(), 1), (TrashSprite(), 0) };
         foreach ((Sprite sprite, int action) in buttons)
         {
@@ -692,8 +717,6 @@ internal class QueueHud : MonoBehaviour
             le.minHeight = le.preferredHeight = sprite.rect.height;
             actionButtons[img] = (entry, action);
         }
-        g.SetActive(false);
-        headers.Add((head, g, title));
     }
 
     // Botones − + basura de cada tarea.
@@ -1085,6 +1108,8 @@ internal class QueueHud : MonoBehaviour
         panel.DetachChildren();
         guides.Clear();
         headers.Clear();
+        pendingActions.Clear();
+        glows.Clear();
         actionButtons.Clear();
         cycleButtons.Clear();
         navRows.Clear();
@@ -1372,6 +1397,7 @@ internal class QueueHud : MonoBehaviour
             Image gi = glow.GetComponent<Image>();
             gi.color = new Color(1f, 0.9f, 0.5f, 0.28f);
             gi.raycastTarget = false;
+            glows.Add(glow);
         }
         HorizontalLayoutGroup hh = head.GetComponent<HorizontalLayoutGroup>();
         hh.padding = new RectOffset((int)U(4f), (int)U(5f), (int)U(1f), (int)U(1f));
