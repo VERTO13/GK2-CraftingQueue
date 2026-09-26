@@ -210,6 +210,10 @@ internal static class GameData
         }
         catch
         {
+            // La fórmula necesitaba algo que esa estación no tiene (p. ej. una de prueba): se
+            // calcula con la receta base en vez de mostrar 1.
+            if (station != null)
+                return RawOutput(craft, key, null);
         }
         return 1;
     }
@@ -240,7 +244,11 @@ internal static class GameData
                 key = n.Id;
             }
             int count = 1;
-            try { count = n.GetCount(station); } catch { }
+            try { count = n.GetCount(station); }
+            catch
+            {
+                try { count = n.GetCount(); } catch { } // sin estación: la cantidad base
+            }
             if (count > 0)
                 result.Add((key, count));
         }
@@ -345,8 +353,48 @@ internal static class GameData
         {
             best = null;
         }
+        // Sin ninguna construida: se calcula como si la tuvieras (la mejora más alta que ya puedes
+        // construir), con tus talentos y ventajas. Así una estación mejor que todavía no construyes
+        // no aparenta rendir menos que la que ya tienes.
+        if (best == null)
+        {
+            string output = MainOutput(r.craft);
+            foreach (string stationId in r.stations.Where(StationAvailable))
+            {
+                WgoData preview = PreviewStation(stationId);
+                int n = preview != null ? RawOutput(r.craft, output, preview) : int.MinValue;
+                if (n > bestOutput)
+                {
+                    best = preview;
+                    bestOutput = n;
+                }
+            }
+        }
         stationCache[cacheKey] = (Time.unscaledTime, best);
         return best;
+    }
+
+    // Estación "de prueba" para calcular fórmulas: vacía, solo con su tipo. No se pone en el mundo,
+    // no se registra en ningún lado y no toca la partida (el constructor normal sí: suma calidad
+    // del pueblo y la mete en grupos de personajes, por eso no se usa).
+    private static readonly Dictionary<string, WgoData> previews = new Dictionary<string, WgoData>();
+
+    private static WgoData PreviewStation(string stationId)
+    {
+        if (previews.TryGetValue(stationId, out WgoData w))
+            return w;
+        try
+        {
+            w = new WgoData { id = stationId, isTempObject = true };
+            if (w.Definition == null)
+                w = null;
+        }
+        catch
+        {
+            w = null;
+        }
+        previews[stationId] = w;
+        return w;
     }
 
     // ¿Tienes esa estación o puedes construirla? Construida en cualquier lugar: sí. Si se construye
