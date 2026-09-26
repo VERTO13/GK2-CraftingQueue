@@ -177,7 +177,7 @@ internal class HoverRecipe : MonoBehaviour
     private static string Where(CraftDef craft, string id)
     {
         int output = GameData.OutputCount(craft, id);
-        return GameData.Station(craft) + Prefs.Yield(output);
+        return GameData.StationList(craft) + Prefs.Yield(output); // aquí hay espacio: la lista completa
     }
 
     private void Row(int depth, string itemId, string text)

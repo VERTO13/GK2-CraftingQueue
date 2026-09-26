@@ -1582,7 +1582,8 @@ internal class QueueHud : MonoBehaviour
         return row;
     }
 
-    // Nombre del ingrediente al pasar sobre él en el estilo compacto (ahí no se escribe). Sale a un
+    // Texto extra al pasar el mouse: el nombre del ingrediente en el estilo compacto (ahí no se
+    // escribe) o todas las estaciones de una receta ("Yunque de madera +1"). Sale a un
     // lado del panel, a la altura del ingrediente, sin tapar nada. Depende de qué elemento está
     // "enfocado", no de dónde está el mouse: lo mismo servirá para el gamepad.
     private readonly Dictionary<RectTransform, string> tipTargets = new Dictionary<RectTransform, string>();
@@ -1650,7 +1651,7 @@ internal class QueueHud : MonoBehaviour
         }
         tipBox.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset((int)U(4f), (int)U(4f), (int)U(1f), (int)U(1f));
         tipText.fontSize = fontSize;
-        tipText.text = GameData.Name(key);
+        tipText.text = key; // el texto a mostrar (nombre del ingrediente, lista de estaciones…)
         tipBox.gameObject.SetActive(true);
         LayoutRebuilder.ForceRebuildLayoutImmediate(tipBox);
 
@@ -1699,7 +1700,7 @@ internal class QueueHud : MonoBehaviour
         Fill(chip.transform, nid, null, label, null, color, color, withCell: true, stretch: false);
         if (!fuel)
             EndBinding();
-        tipTargets[(RectTransform)chip.transform] = nid;
+        tipTargets[(RectTransform)chip.transform] = GameData.Name(nid);
         return (RectTransform)chip.transform;
     }
 
@@ -1743,6 +1744,10 @@ internal class QueueHud : MonoBehaviour
         h.childForceExpandWidth = h.childForceExpandHeight = false;
         row.GetComponent<LayoutElement>().minHeight = fontSize + U(1f);
         AddNav((RectTransform)row.transform, "s:" + id + ":" + depth, recipeOf: id);
+        // "Yunque de madera +1": al pasar el mouse, todas las estaciones donde se hace.
+        string allStations = GameData.StationList(craft);
+        if (allStations != GameData.Station(craft))
+            tipTargets[(RectTransform)row.transform] = allStations;
         // Nombre de la mesa en una ventanita: si no cabe, se desliza como carrusel para leerlo
         // completo; el "×N" y las flechas quedan fijos a la derecha.
         GameObject view = new GameObject("Mesa", typeof(RectTransform), typeof(RectMask2D), typeof(LayoutElement));

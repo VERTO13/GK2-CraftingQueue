@@ -235,14 +235,30 @@ internal static class GameData
     // Cuánto da la receta por cada vez que se hace, con tu estación real (talentos y mejoras incluidos).
     public static int OutputCount(CraftDef craft, string key) => RawOutput(craft, key, StationOf(craft));
 
-    // Dónde se hace: todas las estaciones, separadas con " / ", con las mejoras de una misma
-    // estación (I, II, III…) juntas en un solo nombre, y primero la que tienes construida y rinde
-    // más. Ej.: "Yunque de madera / Yunque de hierro". Si no cabe, el panel lo desliza (carrusel).
+    // Dónde se hace, corto para el panel: la estación que tienes (la que más rinde) y cuántas más
+    // hay, ej. "Yunque de madera +1". La lista completa, con StationList (al pasar el mouse / Alt).
     public static string Station(CraftDef craft)
+    {
+        List<string> names = StationNames(craft);
+        if (names.Count == 0)
+            return "?";
+        return names.Count > 1 ? $"{names[0]} +{names.Count - 1}" : names[0];
+    }
+
+    // Todas las estaciones, separadas con " / ": "Yunque de madera / Yunque de hierro".
+    public static string StationList(CraftDef craft)
+    {
+        List<string> names = StationNames(craft);
+        return names.Count > 0 ? string.Join(" / ", names) : "?";
+    }
+
+    // Las estaciones donde se hace, con las mejoras de una misma estación (I, II, III…) juntas en
+    // un solo nombre, y primero la que tienes construida y rinde más.
+    private static List<string> StationNames(CraftDef craft)
     {
         List<string> ids = craft?.craftsIn?.Where(s => !string.IsNullOrEmpty(s)).Distinct().ToList() ?? new List<string>();
         if (ids.Count == 0)
-            return "?";
+            return new List<string>();
         string built = StationOf(craft)?.id;
         if (built != null && ids.Remove(built))
             ids.Insert(0, built);
@@ -254,7 +270,7 @@ internal static class GameData
             if (name.Length > 0 && !names.Any(n => WithoutTier(n) == baseName))
                 names.Add(ids.Count > 1 && id != built ? baseName : name);
         }
-        return names.Count > 0 ? string.Join(" / ", names) : "?";
+        return names;
     }
 
     // "Mesa de montaje II" → "Mesa de montaje": las mejoras de una estación cuentan como una.
