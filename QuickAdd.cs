@@ -16,6 +16,7 @@ namespace CraftQueue;
 //  - un requisito de misión                                 -> el objeto, con la cantidad que pide
 //  - lo que desbloquea el árbol tecnológico                 -> la receta o el objeto
 //  - lo que te pide un personaje en un diálogo              -> el objeto, con la cantidad que pide
+//  - un pedido/encargo de un comerciante                    -> el objeto, con la cantidad del encargo
 // Mientras Ctrl está presionado, el clic derecho no hace lo que el juego hace normalmente
 // (cerrar la ventana de crafteo o abrir el menú del objeto).
 internal class QuickAdd : MonoBehaviour
@@ -63,8 +64,10 @@ internal class QuickAdd : MonoBehaviour
         // Ventanas donde el clic derecho las cierra.
         foreach (Type w in new[] { typeof(UICraftWindow), typeof(UIBuildingWindow), typeof(UICraftSelectionWindow),
                      typeof(UIFuelCraftWindow), typeof(UISingleCraftWindow),
-                     typeof(UIDialogWindow), typeof(UIQuestInfoWindow), typeof(CharacterWindow) })
-            Patch(harmony, AccessTools.Method(w, "GetGameKeyDelegates"), postfix: nameof(KeepWindowOpen));
+                     typeof(UIDialogWindow), typeof(UIQuestInfoWindow), typeof(CharacterWindow),
+                     typeof(UIVendorWindow), typeof(UIVendorOrdersWindow), typeof(UIVendorOrdersSelectionWindow) })
+            // Solo si la ventana define sus propias teclas (nunca la versión común de todas las ventanas).
+            Patch(harmony, AccessTools.DeclaredMethod(w, "GetGameKeyDelegates"), postfix: nameof(KeepWindowOpen));
         // Diálogo que pide un objeto con "tienes/necesitas": anotar cuál y cuántos.
         System.Reflection.ConstructorInfo askCtor = AccessTools.Constructor(typeof(UIDialogWindowData), new[]
         {
@@ -232,6 +235,12 @@ internal class QuickAdd : MonoBehaviour
             if (ld.ItemDef != null)
                 return Queue.Add(TaskKind.Item, ld.ItemDef.id, 1) != null;
         }
+
+        // Pedido de un comerciante: el objeto con la cantidad que pide el encargo.
+        UIVendorOrderWidget order = go.GetComponentInParent<UIVendorOrderWidget>();
+        var orderDef = order != null ? order.Data?.VendorOrderData?.Definition : null;
+        if (orderDef != null && !string.IsNullOrEmpty(orderDef.itemId))
+            return Queue.Add(TaskKind.Item, orderDef.itemId, Math.Max(1, orderDef.count)) != null;
 
         // Diálogo con un objeto (por ejemplo, lo que te pide un personaje): su celda con la cantidad.
         UIDialogWindow dlg = go.GetComponentInParent<UIDialogWindow>();
