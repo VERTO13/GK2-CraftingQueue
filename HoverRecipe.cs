@@ -133,7 +133,7 @@ internal class HoverRecipe : MonoBehaviour
             Destroy(panel.GetChild(i).gameObject);
         panel.DetachChildren();
 
-        List<CraftDef> recipes = GameData.RecipesFor(id);
+        List<GameData.Recipe> recipes = GameData.OptionsFor(id);
         // La misma receta que se ve en la cola y el panel (la elegida con ◂ ▸, o la mejor).
         int sel = Prefs.SelectedRecipe(id, recipes, 1);
         string title = $"<b>{GameData.Name(id)}</b>";
@@ -155,18 +155,18 @@ internal class HoverRecipe : MonoBehaviour
         LayoutRebuilder.ForceRebuildLayoutImmediate(panel);
     }
 
-    private void Ingredients(CraftDef craft, int depth, HashSet<string> visited)
+    private void Ingredients(GameData.Recipe recipe, int depth, HashSet<string> visited)
     {
-        foreach ((string nid, int n) in GameData.Needs(craft))
+        foreach ((string nid, int n) in GameData.Needs(recipe))
         {
             int have = GameData.Owned(nid);
             string count = GameData.IsFuel(nid)
                 ? ""
                 : $" <color={(have >= n ? Enough : Short)}>{have}/{n}</color>";
-            List<CraftDef> sub = depth < MaxDepth && !visited.Contains(nid) && !GameData.IsFuel(nid)
-                ? GameData.RecipesFor(nid)
-                : new List<CraftDef>();
-            CraftDef chosen = sub.Count > 0 ? sub[Prefs.SelectedRecipe(nid, sub, n)] : null;
+            List<GameData.Recipe> sub = depth < MaxDepth && !visited.Contains(nid) && !GameData.IsFuel(nid)
+                ? GameData.OptionsFor(nid)
+                : new List<GameData.Recipe>();
+            GameData.Recipe chosen = sub.Count > 0 ? sub[Prefs.SelectedRecipe(nid, sub, n)] : null;
             string where = chosen != null ? $"   <color={Dim}>{Where(chosen, nid)}</color>" : "";
             Row(depth, nid, $"{GameData.Name(nid)}{count}{where}");
             if (chosen != null)
@@ -174,10 +174,10 @@ internal class HoverRecipe : MonoBehaviour
         }
     }
 
-    private static string Where(CraftDef craft, string id)
+    private static string Where(GameData.Recipe recipe, string id)
     {
-        int output = GameData.OutputCount(craft, id);
-        return GameData.StationList(craft) + Prefs.Yield(output); // aquí hay espacio: la lista completa
+        int output = GameData.OutputCount(recipe, id);
+        return GameData.Station(recipe) + Prefs.Yield(output);
     }
 
     private void Row(int depth, string itemId, string text)

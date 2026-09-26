@@ -235,42 +235,103 @@ internal static class GameData
     // Cuánto da la receta por cada vez que se hace, con tu estación real (talentos y mejoras incluidos).
     public static int OutputCount(CraftDef craft, string key) => RawOutput(craft, key, StationOf(craft));
 
-    // Dónde se hace, corto para el panel: la estación que tienes (la que más rinde) y cuántas más
-    // hay, ej. "Yunque de madera +1". La lista completa, con StationList (al pasar el mouse / Alt).
-    public static string Station(CraftDef craft)
+    // ---------- Opciones de receta: receta + estación ----------
+    // Una receta del juego que se hace en varias estaciones da una opción por estación (se
+    // cambian con ◂ ▸). Las mejoras de una misma estación (I, II, III…) cuentan como una sola,
+    // y se usa la que tienes construida que más rinde. Cada opción calcula su propio ×N y lo que
+    // pide con esa estación (talentos, mejoras…).
+    internal sealed class Recipe
     {
-        List<string> names = StationNames(craft);
-        if (names.Count == 0)
-            return "?";
-        return names.Count > 1 ? $"{names[0]} +{names.Count - 1}" : names[0];
+        public CraftDef craft;
+        public List<string> stations = new List<string>(); // ids de la estación y sus mejoras
+        public string label;                                // nombre para mostrar
     }
 
-    // Todas las estaciones, separadas con " / ": "Yunque de madera / Yunque de hierro".
-    public static string StationList(CraftDef craft)
-    {
-        List<string> names = StationNames(craft);
-        return names.Count > 0 ? string.Join(" / ", names) : "?";
-    }
+    private static readonly Dictionary<string, (int stamp, List<Recipe> list)> optionsCache = new Dictionary<string, (int, List<Recipe>)>();
 
-    // Las estaciones donde se hace, con las mejoras de una misma estación (I, II, III…) juntas en
-    // un solo nombre, y primero la que tienes construida y rinde más.
-    private static List<string> StationNames(CraftDef craft)
+    public static List<Recipe> OptionsFor(string key)
     {
-        List<string> ids = craft?.craftsIn?.Where(s => !string.IsNullOrEmpty(s)).Distinct().ToList() ?? new List<string>();
-        if (ids.Count == 0)
-            return new List<string>();
-        string built = StationOf(craft)?.id;
-        if (built != null && ids.Remove(built))
-            ids.Insert(0, built);
-        List<string> names = new List<string>();
-        foreach (string id in ids)
+        int stamp = (StationsStamp * 31 + KnowledgeStamp) * 31 + (LLBase.CurrentLang?.GetHashCode() ?? 0);
+        if (optionsCache.TryGetValue(key, out var cached) && cached.stamp == stamp)
+            return cached.list;
+        List<Recipe> list = new List<Recipe>();
+        foreach (CraftDef craft in RecipesFor(key))
         {
-            string name = Plain(LLBase.HasL(id) ? LLBase.L(id) : id);
-            string baseName = WithoutTier(name);
-            if (name.Length > 0 && !names.Any(n => WithoutTier(n) == baseName))
-                names.Add(ids.Count > 1 && id != built ? baseName : name);
+            // Agrupa las estaciones por nombre sin la mejora ("Mesa de montaje II" → "Mesa de montaje").
+            List<Recipe> groups = new List<Recipe>();
+            foreach (string id in (craft.craftsIn ?? new List<string>()).Where(s => !string.IsNullOrEmpty(s)).Distinct())
+            {
+                string baseName = WithoutTier(StationName(id));
+                Recipe g = groups.FirstOrDefault(x => x.label == baseName);
+                if (g == null)
+                    groups.Add(g = new Recipe { craft = craft, label = baseName });
+                g.stations.Add(id);
+            }
+            if (groups.Count == 0)
+                groups.Add(new Recipe { craft = craft, label = "?" });
+            foreach (Recipe g in groups)
+            {
+                string built = BestBuilt(g)?.id;
+                if (built != null)
+                    g.label = StationName(built); // la mejora que tienes: "Mesa de montaje II"
+            }
+            list.AddRange(groups);
         }
-        return names;
+        optionsCache[key] = (stamp, list);
+        return list;
+    }
+
+    public static int OutputCount(Recipe r, string key) => RawOutput(r.craft, key, BestBuilt(r));
+
+    public static List<(string key, int count)> Needs(Recipe r) => Needs(r.craft?.needItems, BestBuilt(r));
+
+    public static string Station(Recipe r) => r?.label ?? "?";
+
+    // La estación construida de esa opción (o sus mejoras) que más rinde; null si no tienes ninguna.
+    private static WgoData BestBuilt(Recipe r)
+    {
+        if (r?.craft == null)
+            return null;
+        string cacheKey = r.craft.id + "@" + string.Join(",", r.stations);
+        int stamp = StationsStamp;
+        if (stamp != stationStamp)
+        {
+            stationStamp = stamp;
+            stationCache.Clear();
+        }
+        if (stationCache.TryGetValue(cacheKey, out var cached))
+            return cached.station;
+        WgoData best = null;
+        int bestOutput = int.MinValue;
+        try
+        {
+            WorldData world = MainGame.WorldData;
+            string output = MainOutput(r.craft);
+            foreach (string stationId in r.stations)
+                foreach (WgoData wgo in world?.GetWgoDataList(stationId) ?? new List<WgoData>())
+                {
+                    if (wgo == null)
+                        continue;
+                    int n = RawOutput(r.craft, output, wgo);
+                    if (n > bestOutput)
+                    {
+                        best = wgo;
+                        bestOutput = n;
+                    }
+                }
+        }
+        catch
+        {
+            best = null;
+        }
+        stationCache[cacheKey] = (Time.unscaledTime, best);
+        return best;
+    }
+
+    private static string StationName(string id)
+    {
+        string name = Plain(LLBase.HasL(id) ? LLBase.L(id) : id);
+        return name.Length > 0 ? name : id;
     }
 
     // "Mesa de montaje II" → "Mesa de montaje": las mejoras de una estación cuentan como una.

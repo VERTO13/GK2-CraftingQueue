@@ -556,13 +556,13 @@ internal class QueueHud : MonoBehaviour
     {
         if (depth > Prefs.MaxDepth + 2)
             return;
-        List<CraftDef> recipes = GameData.RecipesFor(id);
+        List<GameData.Recipe> recipes = GameData.OptionsFor(id);
         if (recipes.Count == 0)
             return;
-        CraftDef craft = recipes[Prefs.SelectedRecipe(id, recipes, Mathf.Max(1, need), preferred)];
-        int output = Mathf.Max(1, GameData.OutputCount(craft, id));
+        GameData.Recipe recipe = recipes[Prefs.SelectedRecipe(id, recipes, Mathf.Max(1, need), preferred)];
+        int output = Mathf.Max(1, GameData.OutputCount(recipe, id));
         int crafts = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(0, need) / (float)output));
-        foreach ((string nid, int n) in GameData.Needs(craft))
+        foreach ((string nid, int n) in GameData.Needs(recipe))
         {
             bool done = Complete(nid, n * crafts);
             m.Add(nid);
@@ -1262,7 +1262,7 @@ internal class QueueHud : MonoBehaviour
                 if (craft != null)
                 {
                     amount = e.need * GameData.OutputCount(craft, item);
-                    preferred = GameData.RecipesFor(item).IndexOf(craft);
+                    preferred = GameData.OptionsFor(item).FindIndex(o => o.craft == craft); // su primera estación
                 }
             }
             if (item == null)
@@ -1482,23 +1482,24 @@ internal class QueueHud : MonoBehaviour
     // si no la mejor. Dos estilos (F4): una línea compacta, o línea + ingredientes.
     private void RecipeRows(Transform body, string id, int need, string path, int depth, int preferred)
     {
-        List<CraftDef> recipes = GameData.RecipesFor(id);
+        // Cada opción es receta + estación: si se hace en varias estaciones, se cambia con ◂ ▸.
+        List<GameData.Recipe> recipes = GameData.OptionsFor(id);
         if (recipes.Count == 0)
             return;
         int sel = Prefs.SelectedRecipe(id, recipes, Mathf.Max(1, need), preferred);
-        CraftDef craft = recipes[sel];
-        int output = GameData.OutputCount(craft, id);
+        GameData.Recipe recipe = recipes[sel];
+        int output = GameData.OutputCount(recipe, id);
         int crafts = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(0, need) / (float)Mathf.Max(1, output)));
         if (Plugin.CompactRecipes)
         {
-            CompactRecipe(body, depth, id, sel, recipes.Count, output, craft, crafts);
+            CompactRecipe(body, depth, id, sel, recipes.Count, output, recipe, crafts);
             return;
         }
-        // Con varias recetas: "1/2 · Mesa ×N ◂ ▸". Con una sola que dé más de 1: "Mesa ×N" (sin
+        // Con varias opciones: "1/2 · Mesa ×N ◂ ▸". Con una sola que dé más de 1: "Mesa ×N" (sin
         // flechas), para saber cuánto sale por vez (y ver al momento si un talento lo sube).
         if (recipes.Count > 1 || output > 1)
-            RecipeSwitcher(body, depth, id, sel, recipes.Count, output, craft);
-        foreach ((string nid, int n) in GameData.Needs(craft))
+            RecipeSwitcher(body, depth, id, sel, recipes.Count, output, recipe);
+        foreach ((string nid, int n) in GameData.Needs(recipe))
         {
             string childPath = path + "/" + nid;
             Item(body, depth, nid, n * crafts, childPath);
@@ -1510,11 +1511,11 @@ internal class QueueHud : MonoBehaviour
     // Estilo compacto: los ingredientes como ícono + "tienes/necesitas" (nombre al pasar el mouse),
     // hasta 3 por renglón. Con varias recetas, arriba "◂ 1/2 ▸ · rinde 4"; con una sola que
     // rinda más de 1, "· rinde N" al final de los ingredientes.
-    private void CompactRecipe(Transform body, int depth, string id, int sel, int count, int output, CraftDef craft, int crafts)
+    private void CompactRecipe(Transform body, int depth, string id, int sel, int count, int output, GameData.Recipe recipe, int crafts)
     {
-        List<(string nid, int want)> needs = GameData.Needs(craft).Select(x => (x.key, x.count * crafts)).ToList();
+        List<(string nid, int want)> needs = GameData.Needs(recipe).Select(x => (x.key, x.count * crafts)).ToList();
         // Mesa y cuánto da: "· Sierra circular ×4" (con varias recetas, junto a "◂ 1/2 ▸").
-        string yields = count > 1 || output > 1 ? $"<color={Dim}>· {GameData.Station(craft)}{Prefs.Yield(output)}</color>" : null;
+        string yields = count > 1 || output > 1 ? $"<color={Dim}>· {GameData.Station(recipe)}{Prefs.Yield(output)}</color>" : null;
 
         if (count > 1)
         {
@@ -1726,7 +1727,7 @@ internal class QueueHud : MonoBehaviour
         new Dictionary<Image, (string, int, int, int)>();
 
     // "1/2 · Sierra circular ×4  ◂ ▸", alineado con los íconos de sus ingredientes.
-    private void RecipeSwitcher(Transform body, int depth, string id, int sel, int count, int output, CraftDef craft)
+    private void RecipeSwitcher(Transform body, int depth, string id, int sel, int count, int output, GameData.Recipe recipe)
     {
         if (rows >= Plugin.HudMaxRows)
         {
@@ -1744,10 +1745,6 @@ internal class QueueHud : MonoBehaviour
         h.childForceExpandWidth = h.childForceExpandHeight = false;
         row.GetComponent<LayoutElement>().minHeight = fontSize + U(1f);
         AddNav((RectTransform)row.transform, "s:" + id + ":" + depth, recipeOf: id);
-        // "Yunque de madera +1": al pasar el mouse, todas las estaciones donde se hace.
-        string allStations = GameData.StationList(craft);
-        if (allStations != GameData.Station(craft))
-            tipTargets[(RectTransform)row.transform] = allStations;
         // Nombre de la mesa en una ventanita: si no cabe, se desliza como carrusel para leerlo
         // completo; el "×N" y las flechas quedan fijos a la derecha.
         GameObject view = new GameObject("Mesa", typeof(RectTransform), typeof(RectMask2D), typeof(LayoutElement));
@@ -1757,7 +1754,7 @@ internal class QueueHud : MonoBehaviour
         vle.preferredWidth = 0f;
         vle.minWidth = 20f;
         vle.minHeight = vle.preferredHeight = fontSize + U(1f);
-        string place = Prefs.RecipePlace(sel, count, craft);
+        string place = Prefs.RecipePlace(sel, count, recipe);
         TMP_Text caption = MakeText(view.transform, $"<color={Dim}>{place}</color>", Text, TextAlignmentOptions.MidlineLeft, wrap: false);
         RectTransform crt = caption.rectTransform;
         crt.anchorMin = new Vector2(0f, 0f);

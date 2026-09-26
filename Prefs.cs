@@ -48,7 +48,7 @@ internal static class Prefs
     }
 
     // La elegida con ◂ ▸; si no, la que se usó al agregarla desde una mesa; si no, la mejor.
-    public static int SelectedRecipe(string key, List<CraftDef> recipes, int need, int preferred = -1)
+    public static int SelectedRecipe(string key, List<GameData.Recipe> recipes, int need, int preferred = -1)
     {
         if (recipes.Count <= 1)
             return 0;
@@ -60,7 +60,7 @@ internal static class Prefs
     }
 
     // La que ya puedes completar; si ninguna, la que deja menos faltantes; en empate, la que da más.
-    private static int BestRecipe(string key, List<CraftDef> recipes, int need)
+    private static int BestRecipe(string key, List<GameData.Recipe> recipes, int need)
     {
         int best = 0, bestMissing = int.MaxValue, bestOutput = 0;
         for (int r = 0; r < recipes.Count; r++)
@@ -90,12 +90,12 @@ internal static class Prefs
     }
 
     // "1/2 · Sierra circular ×4": en qué receta vas, en qué mesa se hace y cuánto da por vez.
-    public static string RecipeCaption(int index, int count, int output, CraftDef craft) =>
-        RecipePlace(index, count, craft) + Yield(output);
+    public static string RecipeCaption(int index, int count, int output, GameData.Recipe recipe) =>
+        RecipePlace(index, count, recipe) + Yield(output);
 
     // Solo "1/2 · Sierra circular" (el panel pone el "×4" aparte para que nunca se recorte).
-    public static string RecipePlace(int index, int count, CraftDef craft) =>
-        (count > 1 ? (index + 1) + "/" + count + " · " : "") + GameData.Station(craft);
+    public static string RecipePlace(int index, int count, GameData.Recipe recipe) =>
+        (count > 1 ? (index + 1) + "/" + count + " · " : "") + GameData.Station(recipe);
 
     public static string Yield(int output) => output > 1 ? " ×" + output : "";
 
