@@ -235,14 +235,36 @@ internal static class GameData
     // Cuánto da la receta por cada vez que se hace, con tu estación real (talentos y mejoras incluidos).
     public static int OutputCount(CraftDef craft, string key) => RawOutput(craft, key, StationOf(craft));
 
-    // Nombre de la estación básica donde se hace (las mejoras I/II/III ocupaban mucho).
+    // Dónde se hace: todas las estaciones, separadas con " / ", con las mejoras de una misma
+    // estación (I, II, III…) juntas en un solo nombre, y primero la que tienes construida y rinde
+    // más. Ej.: "Yunque de madera / Yunque de hierro". Si no cabe, el panel lo desliza (carrusel).
     public static string Station(CraftDef craft)
     {
-        string first = craft?.craftsIn?.FirstOrDefault(s => !string.IsNullOrEmpty(s));
-        if (first == null)
+        List<string> ids = craft?.craftsIn?.Where(s => !string.IsNullOrEmpty(s)).Distinct().ToList() ?? new List<string>();
+        if (ids.Count == 0)
             return "?";
-        string name = Plain(LLBase.HasL(first) ? LLBase.L(first) : first);
-        return name.Length > 0 ? name : "?";
+        string built = StationOf(craft)?.id;
+        if (built != null && ids.Remove(built))
+            ids.Insert(0, built);
+        List<string> names = new List<string>();
+        foreach (string id in ids)
+        {
+            string name = Plain(LLBase.HasL(id) ? LLBase.L(id) : id);
+            string baseName = WithoutTier(name);
+            if (name.Length > 0 && !names.Any(n => WithoutTier(n) == baseName))
+                names.Add(ids.Count > 1 && id != built ? baseName : name);
+        }
+        return names.Count > 0 ? string.Join(" / ", names) : "?";
+    }
+
+    // "Mesa de montaje II" → "Mesa de montaje": las mejoras de una estación cuentan como una.
+    private static string WithoutTier(string name)
+    {
+        string[] tiers = { " I", " II", " III", " IV", " V" };
+        foreach (string t in tiers.OrderByDescending(t => t.Length))
+            if (name.EndsWith(t, StringComparison.Ordinal))
+                return name.Substring(0, name.Length - t.Length);
+        return name;
     }
 
     // El objeto que produce una receta (para agregarla a la cola como "hacer esto").
