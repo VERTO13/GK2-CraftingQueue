@@ -818,6 +818,32 @@ internal class QueueHud : MonoBehaviour
 
     internal static QueueHud Instance;
 
+    // Para la vista con Alt: qué objeto hay en el renglón (o ficha compacta) bajo el mouse.
+    internal bool ItemAt(Vector2 mouse, out string item, out RectTransform row)
+    {
+        item = null;
+        row = null;
+        if (box == null || !box.gameObject.activeInHierarchy || !Inside(frame, mouse))
+            return false;
+        foreach (KeyValuePair<RectTransform, string> c in chipItems)
+            if (c.Key != null && Inside(c.Key, mouse))
+            {
+                item = c.Value;
+                row = c.Key;
+                return true;
+            }
+        foreach (NavRow r in navRows)
+            if (r.rt != null && r.recipeOf != null && Inside(r.rt, mouse))
+            {
+                item = r.recipeOf;
+                row = r.rt;
+                return true;
+            }
+        return false;
+    }
+
+    private readonly Dictionary<RectTransform, string> chipItems = new Dictionary<RectTransform, string>();
+
     private sealed class NavRow
     {
         public RectTransform rt;
@@ -1116,6 +1142,7 @@ internal class QueueHud : MonoBehaviour
         arrows.Clear();
         countBindings.Clear();
         markMakers.Clear();
+        chipItems.Clear();
         pendingBinding = null;
         tipTargets.Clear();
         ShowDetail(null, null);
@@ -1728,6 +1755,7 @@ internal class QueueHud : MonoBehaviour
         if (!fuel)
             EndBinding();
         tipTargets[(RectTransform)chip.transform] = GameData.Name(nid);
+        chipItems[(RectTransform)chip.transform] = nid;
         return (RectTransform)chip.transform;
     }
 

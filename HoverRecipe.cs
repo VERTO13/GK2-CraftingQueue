@@ -38,23 +38,44 @@ internal class HoverRecipe : MonoBehaviour
 
     private void Show()
     {
-        // Con el mouse: Alt sobre la celda. Con el control: mantener R3 sobre la celda seleccionada.
-        UIItemCell pad = GamepadInput.RecipeCell;
-        UIItemCell cell = Plugin.HoverHeld() ? CellUnderMouse() : pad;
-        anchorCell = cell != null && cell == pad ? (RectTransform)pad.transform : null;
-        Item item = cell != null ? cell.DisplayingItem : null;
-        if (item == null || item.IsEmpty)
+        // Con el mouse: Alt sobre una celda del juego, o sobre una tarea/ingrediente del panel de la
+        // cola. Con el control: mantener R3 sobre la celda seleccionada.
+        string id = null;
+        Component source = null;
+        anchorCell = null;
+        if (Plugin.HoverHeld())
+        {
+            UIItemCell cell = CellUnderMouse();
+            if (cell != null && cell.DisplayingItem != null && !cell.DisplayingItem.IsEmpty)
+            {
+                id = cell.DisplayingItem.id;
+                source = cell;
+            }
+            else if (QueueHud.Instance != null && QueueHud.Instance.ItemAt(Input.mousePosition, out string rowItem, out RectTransform row))
+            {
+                id = rowItem;
+                source = row;
+                anchorCell = row; // al lado del panel, sin taparlo
+            }
+        }
+        else if (GamepadInput.RecipeCell is UIItemCell pad && pad.DisplayingItem != null && !pad.DisplayingItem.IsEmpty)
+        {
+            id = pad.DisplayingItem.id;
+            source = pad;
+            anchorCell = (RectTransform)pad.transform;
+        }
+        if (id == null)
         {
             Hide();
             return;
         }
         try
         {
-            Ensure(cell);
-            if (item.id != shownId)
+            Ensure(source);
+            if (id != shownId)
             {
-                Build(item.id);
-                shownId = item.id;
+                Build(id);
+                shownId = id;
             }
             panel.gameObject.SetActive(true);
             Place();
@@ -90,7 +111,7 @@ internal class HoverRecipe : MonoBehaviour
         return null;
     }
 
-    private void Ensure(UIItemCell cell)
+    private void Ensure(Component cell)
     {
         GameStyle.TryInit();
         if (canvas == null)
@@ -225,17 +246,25 @@ internal class HoverRecipe : MonoBehaviour
     {
         float s = canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f;
         Vector2 m = (Vector2)Input.mousePosition / s;
+        Vector2 size = panel.rect.size;
+        Vector2 screen = new Vector2(Screen.width, Screen.height) / s;
         if (anchorCell != null)
         {
-            // Con el control no hay mouse: junto a la celda seleccionada.
+            // Junto al elemento (celda seleccionada con el control, o renglón del panel de la cola):
+            // a su izquierda si cabe, si no a su derecha; nunca encima de él.
             Canvas c = anchorCell.GetComponentInParent<Canvas>();
             Camera cam = c != null && c.renderMode != RenderMode.ScreenSpaceOverlay ? c.worldCamera : null;
             Vector3[] corners = new Vector3[4];
             anchorCell.GetWorldCorners(corners);
-            m = RectTransformUtility.WorldToScreenPoint(cam, corners[1]) / s;
+            Vector2 bl = RectTransformUtility.WorldToScreenPoint(cam, corners[0]) / s;
+            Vector2 tr = RectTransformUtility.WorldToScreenPoint(cam, corners[2]) / s;
+            bool toLeft = bl.x - 4f - size.x >= 4f;
+            panel.pivot = new Vector2(toLeft ? 1f : 0f, 1f);
+            float ax = toLeft ? bl.x - 4f : Mathf.Min(tr.x + 4f, screen.x - size.x - 4f);
+            float ay = Mathf.Clamp(tr.y, size.y + 4f, screen.y - 4f);
+            panel.anchoredPosition = new Vector2(Mathf.Round(ax), Mathf.Round(ay));
+            return;
         }
-        Vector2 size = panel.rect.size;
-        Vector2 screen = new Vector2(Screen.width, Screen.height) / s;
         bool left = m.x - 18f - size.x >= 4f;
         panel.pivot = new Vector2(left ? 1f : 0f, 1f);
         float x = left ? m.x - 18f : Mathf.Min(m.x + 28f, screen.x - size.x - 4f);
