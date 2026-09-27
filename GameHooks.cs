@@ -34,6 +34,45 @@ internal static class GameState
         }
     }
 
+    // La partida cargada como objeto: al empezar otra partida el juego crea uno nuevo, y si solo
+    // cambia de nombre (las de la demo, al guardarse por primera vez) es el mismo.
+    public static SaveSlotData SlotData
+    {
+        get
+        {
+            try
+            {
+                if (MainGame.Instance == null || MainGame.PlayerData == null)
+                    return null;
+                return MainGame.Instance.SaveSlotData;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
+    // ¿El juego tiene guardada una partida con ese nombre? null = no se sabe. Se lee la lista que el
+    // juego ya cargó, de su campo: la propiedad SaveSlotDataList la vuelve a leer del disco si falta.
+    // (Sin parches de Harmony a MainGame ni a SaveSystem: parchear StartNewGameWithSlotName hacía
+    // que el juego armara PlayerSkinHelper antes de tiempo, fallaba y el juego ya no arrancaba.)
+    private static readonly FieldInfo SavedSlots = AccessTools.Field(typeof(SaveSystem), "saveSlotDataList");
+
+    public static bool? IsSaved(string slot)
+    {
+        try
+        {
+            if (!(SavedSlots?.GetValue(null) is List<SaveSlotData> saved))
+                return null;
+            return saved.Any(s => s != null && s.slotName == slot);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     // En la preparación de una pelea y durante la pelea: el panel tapaba a tus escuadras, y R3
     // (terminar la preparación) es del juego. Se lee el campo del singleton y no su Instance: esa
     // crea el controlador si todavía no existe (p. ej. en el menú principal).
@@ -179,57 +218,3 @@ internal static class GameHooks
     }
 }
 
-// La cola va con el nombre de la ranura ("Steam_1"), y el juego reusa esos nombres: al borrar una
-// partida y empezar otra, la nueva toma el primer número libre. Sin esto, la partida nueva
-// heredaba la cola de la borrada.
-internal static class SlotHooks
-{
-    public static void Apply(Harmony harmony)
-    {
-        Patch(harmony, AccessTools.Method(typeof(MainGame), "StartNewGameWithSlotName", new[] { typeof(string), typeof(bool) }),
-            prefix: nameof(BeforeNewGame));
-        Patch(harmony, AccessTools.Method(typeof(SaveSystem), "Remove", new[] { typeof(SaveSlotData), typeof(Action) }),
-            postfix: nameof(AfterRemove));
-        Patch(harmony, AccessTools.Method(typeof(SaveSystem), "Save"), prefix: nameof(BeforeSave), postfix: nameof(AfterSave));
-    }
-
-    private static void Patch(Harmony harmony, MethodInfo target, string prefix = null, string postfix = null)
-    {
-        if (target == null)
-        {
-            Plugin.Log.LogWarning($"Colas por partida: no se encontró el punto del juego para {prefix ?? postfix}.");
-            return;
-        }
-        try
-        {
-            harmony.Patch(target,
-                prefix: prefix != null ? new HarmonyMethod(typeof(SlotHooks), prefix) : null,
-                postfix: postfix != null ? new HarmonyMethod(typeof(SlotHooks), postfix) : null);
-        }
-        catch (Exception e)
-        {
-            Plugin.Log.LogWarning($"Colas por partida ({prefix ?? postfix}): {e.Message}");
-        }
-    }
-
-    // El juego eligió un nombre libre para la partida nueva: una cola con ese nombre es de una
-    // partida que ya no existe (borrada antes de tener este mod, o fuera del juego).
-    private static void BeforeNewGame(string slotName) => Queue.Retire(slotName, "partida nueva");
-
-    private static void AfterRemove(SaveSlotData slotData, bool __result)
-    {
-        if (__result)
-            Queue.Retire(slotData?.slotName, "partida borrada");
-    }
-
-    // Las partidas de la demo reciben un nombre nuevo al guardarse por primera vez en el juego
-    // completo: su cola se muda con ellas.
-    private static void BeforeSave(SaveSlotData slotData, out string __state) => __state = slotData?.slotName;
-
-    private static void AfterSave(SaveSlotData slotData, string __state)
-    {
-        if (slotData != null && !string.IsNullOrEmpty(__state) && slotData.slotName != __state
-            && ReferenceEquals(slotData, MainGame.Instance?.SaveSlotData))
-            Queue.Rename(__state, slotData.slotName);
-    }
-}

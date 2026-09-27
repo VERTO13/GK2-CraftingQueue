@@ -63,10 +63,18 @@ Se está haciendo la **0.5.0**. En esta rama (sin publicar, **versión aún 0.4.
 4. **"Adelante con todo"** (2026-09-27, falta que el usuario lo pruebe):
    - **Guardado seguro** de la cola: `.tmp` completo (termina en `# end`) → `File.Replace` con `.bak`; al cargar, si
      falta el archivo, se recupera del `.tmp` o `.bak` completos.
-   - **Partida nueva / borrada** (`SlotHooks` en `GameHooks.cs`): el juego reusa nombres de ranura
-     (`GetNameForNewSlot` da el primer `Steam_N` libre), así que la cola de una partida borrada, o la que hubiera con
-     el nombre de una partida nueva, se aparta a `CraftingQueue/anteriores/` (se guardan las 20 más recientes).
-     Las partidas de la demo cambian de nombre al guardarse: la cola se muda (`Queue.Rename`).
+   - **Partida nueva** (`Plugin.SlotChanged`, sin parches al juego): el juego reusa nombres de ranura
+     (`GetNameForNewSlot` da el primer `Steam_N` libre). Al cargar una partida que es otro objeto
+     `SaveSlotData` y que el juego no tiene guardada (`GameState.IsSaved`, lee el campo `saveSlotDataList`), una
+     cola con su nombre es de una partida borrada o no guardada y se aparta a `CraftingQueue/anteriores/` (se
+     guardan las 20 más recientes). Mismo objeto con otro nombre (la demo, al guardarse): la cola se muda.
+   - **Lección (2026-09-27):** la primera versión parchaba `MainGame.StartNewGameWithSlotName`, `SaveSystem.Remove`
+     y `SaveSystem.Save` con Harmony y **rompió el juego**: al parchar, Mono compila el método y, como su cuerpo lee
+     `PlayerSkinHelper.playerStandardCustomizationData` (clase `beforefieldinit`), corre ese constructor estático en
+     ese momento, antes de que el juego cargue sus datos; falla, la clase queda inservible toda la sesión
+     (`TypeInitializationException`) y `MainGame.Awake` ya no crea al personaje (pantalla de "Error" con la
+     interfaz en ruso y "ver. 0.000"). En el log de BepInEx solo se ve `IL Compile Error` en el parche. **No parchar
+     métodos cuyo cuerpo lea campos estáticos de clases del juego que dependen de datos** (revisar su IL antes).
    - **Peleas:** el panel se oculta en la preparación y en la pelea (`GameState.InFight`), y el control no usa R3
      ahí (en la preparación, R3 = "terminar preparación" en `UIBuildingWindow`; antes además agregaba el edificio
      enfocado a la cola).
@@ -94,6 +102,7 @@ Se está haciendo la **0.5.0**. En esta rama (sin publicar, **versión aún 0.4.
 - [ ] Bote: primer clic rojo + globo "otra vez", segundo clic vacía; a los 4 s se desarma. Botón del menú Mods igual.
 - [ ] Shift en − + ▲ ▼. Globos de todos los botones (y que no tapen nada).
 - [ ] Partida nueva después de borrar una: empieza sin cola, y la vieja queda en `CraftingQueue/anteriores/`.
+- [ ] El juego arranca normal y el log de BepInEx no muestra `IL Compile Error` (ver la lección de arriba).
 - [ ] Pelea: el panel se oculta en la preparación y vuelve al terminar; R3 termina la preparación sin agregar nada.
 - [ ] Encargo con parte entregada: Ctrl + clic pide solo lo que falta.
 - [ ] `OcultarSiVacia` y `SoloMochila` desde el menú Mods.
@@ -163,7 +172,7 @@ dotnet build FrameworkBridge -c Release
 | `QuickAdd.cs` | Ctrl + clic derecho en todos lados (parches Harmony, diálogos de NPC, encargos). |
 | `HoverRecipe.cs` | Vista rápida con Alt. |
 | `GamepadInput.cs` | Control (Rewired). |
-| `GameHooks.cs` | Parches: crafteo terminado, construcción, obras del pueblo; `SlotHooks` (partida nueva, borrada, renombrada); `GameState` (partida, escenas, peleas). |
+| `GameHooks.cs` | Parches: crafteo terminado, construcción, obras del pueblo; `GameState` (partida, si está guardada, escenas, peleas). |
 | `GameStyle.cs`, `GameWindows.cs` | Estilo del juego (botones/fuente) y medición de ventanas abiertas. |
 | `Prefs.cs`, `Lang.cs`, `Perf.cs`, `Diagnostics.cs` | Preferencias (flechas/recetas elegidas), 16 idiomas, rendimiento, diagnóstico. |
 | `FrameworkBridge/` | Puente opcional con GK2 Mod Framework (0.5.0, en pruebas). |

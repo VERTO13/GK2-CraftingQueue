@@ -110,6 +110,8 @@ public class Plugin : BaseUnityPlugin
 
     private static bool started;
     private string lastSlot;
+    private SaveSlotData lastSlotData; // la última partida cargada (objeto) y su nombre
+    private string lastLoadedSlot;
     private static string dataFolder;
 
     private void Awake()
@@ -132,7 +134,6 @@ public class Plugin : BaseUnityPlugin
 
         Harmony harmony = new Harmony(Guid);
         GameHooks.Apply(harmony);
-        SlotHooks.Apply(harmony); // la cola no pasa de una partida borrada a una nueva
         QuickAdd.Apply(harmony);
         GameStyle.Apply(harmony); // botones del juego: se guardan cuando el juego los crea
 
@@ -151,6 +152,7 @@ public class Plugin : BaseUnityPlugin
         string slot = GameState.Slot;
         if (slot != lastSlot)
         {
+            SlotChanged(slot);
             lastSlot = slot;
             if (slot != null)
             {
@@ -164,6 +166,28 @@ public class Plugin : BaseUnityPlugin
     }
 
     private void LateUpdate() => Perf.EndFrame(Time.unscaledDeltaTime);
+
+    // El juego reusa los nombres de ranura (una partida nueva toma el primer "Steam_N" libre), así
+    // que antes de cargar la cola de una partida:
+    //  - la misma partida con otro nombre (las de la demo, al guardarse por primera vez): la cola se muda;
+    //  - otra partida que el juego no tiene guardada (nueva): una cola con su nombre es de una partida
+    //    borrada, o de una nueva que no se llegó a guardar, y se aparta.
+    // (Volver a la misma partida tras un parpadeo del nombre no hace nada: es el mismo objeto.)
+    private void SlotChanged(string slot)
+    {
+        if (slot == null)
+            return;
+        SaveSlotData data = GameState.SlotData;
+        if (data == null)
+            return;
+        bool samePlay = ReferenceEquals(data, lastSlotData);
+        if (samePlay && lastLoadedSlot != null && lastLoadedSlot != slot)
+            Queue.Rename(lastLoadedSlot, slot);
+        else if (!samePlay && GameState.IsSaved(slot) == false)
+            Queue.Retire(slot, "partida nueva");
+        lastSlotData = data;
+        lastLoadedSlot = slot;
+    }
 
     private void BindConfig()
     {

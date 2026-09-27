@@ -42,7 +42,7 @@ internal class QueueTask
 //
 // El juego reusa los nombres de ranura: si borras Steam_1 y empiezas otra partida, la nueva
 // también se llama Steam_1. Por eso la cola de una partida borrada, o la que ya hubiera con el
-// nombre de una partida nueva, se aparta a "anteriores" (ver SlotHooks) y no se hereda.
+// nombre de una partida nueva, se aparta a "anteriores" (ver Plugin.SlotChanged) y no se hereda.
 internal static class Queue
 {
     private const string Header = "# Crafting Queue 1";
@@ -210,12 +210,7 @@ internal static class Queue
         try
         {
             if (slot == loadedSlot)
-            {
-                loadedSlot = null; // SyncSlot la vuelve a cargar (ya vacía) en el siguiente cuadro
-                Tasks.Clear();
-                Pins.Clear();
-                Touch(save: false);
-            }
+                return; // la cola en uso nunca se aparta
             string path = PathFor(slot);
             string retired = null;
             if (File.Exists(path))
