@@ -47,6 +47,12 @@ internal class QueueHud : MonoBehaviour
     private RectTransform box;     // todo el panel (se posiciona y se arrastra)
     private RectTransform strip;   // barrita de arriba
     private Image lockIcon, marksIcon, eyeIcon;
+    private Image gripIcon;                  // agarre para cambiar el tamaño (con el candado abierto)
+    private RectTransform sizeBox;           // "240 × 300" junto al cursor mientras se arrastra
+    private TMP_Text sizeText;
+    private Vector2 resizeFrom;
+    private float resizeWidth, resizeHeight, nextResizeBuild;
+    private bool resizeHeightTouched;
 
     // Para las marcas en los cofres: los materiales que el panel muestra ahora mismo y la escala.
     internal static readonly HashSet<string> Materials = new HashSet<string>();
@@ -98,7 +104,7 @@ internal class QueueHud : MonoBehaviour
     private int hiddenRows;
     private float fontSize, rowHeight, iconSize;
     private float scrollY, contentHeight, viewHeight;
-    private bool pressing, dragging, scrolling, pressOnBar, pressOnTitle;
+    private bool pressing, dragging, scrolling, pressOnBar, pressOnTitle, resizing, pressOnGrip;
     private TMP_Text titleText;
     private Vector2 pressPos, lastMouse;
     private Image hovered;
@@ -250,6 +256,7 @@ internal class QueueHud : MonoBehaviour
             {
                 signature = null; // al volver a mostrarse, se redibuja con los datos al día
                 pressing = dragging = scrolling = false;
+                EndResize(save: false);
             }
         }
     }
@@ -279,18 +286,26 @@ internal class QueueHud : MonoBehaviour
     {
         if (canvas == null)
             Create();
-        // El lienzo del juego se busca una vez (buscar entre todos cuesta); después solo se lee su
-        // escala. Si desaparece (cambio de escena), se vuelve a buscar, como mucho cada 5 s.
-        if ((gameCanvas == null || !gameCanvas.isActiveAndEnabled) && Time.unscaledTime >= nextScale)
+        // La escala de la interfaz del juego sale de LazyUI: el juego la pone con su PixelSize al
+        // aplicar la resolución (2 a 1080p y a 1440p "x2", 4 en 4K). Buscar "el lienzo del juego"
+        // entre todos podía dar con el de otro mod (uno con base de 640x360 va a ×3 en 1080p y a ×4
+        // en 1440p): a 1080p el tope de PanelScale lo tapaba, pero a 1440p el panel salía a ×3 con
+        // el juego en ×2. La búsqueda queda solo de respaldo, por si LazyUI aún no tiene escala.
+        if (LazyUI.ScaleFactor > 0.001f)
+            GameScale = gameScale = LazyUI.ScaleFactor;
+        else
         {
-            nextScale = Time.unscaledTime + 5f;
-            gameCanvas = FindObjectsByType<Canvas>(FindObjectsSortMode.None)
-                .Where(c => c != canvas && c.isRootCanvas && c.renderMode == RenderMode.ScreenSpaceOverlay && c.scaleFactor > 0f)
-                .OrderByDescending(c => c.GetComponent<CanvasScaler>() != null)
-                .FirstOrDefault();
+            if ((gameCanvas == null || !gameCanvas.isActiveAndEnabled) && Time.unscaledTime >= nextScale)
+            {
+                nextScale = Time.unscaledTime + 5f;
+                gameCanvas = FindObjectsByType<Canvas>(FindObjectsSortMode.None)
+                    .Where(c => c != canvas && c.isRootCanvas && c.renderMode == RenderMode.ScreenSpaceOverlay && c.scaleFactor > 0f)
+                    .OrderByDescending(c => c.GetComponent<CanvasScaler>() != null)
+                    .FirstOrDefault();
+            }
+            if (gameCanvas != null && gameCanvas.scaleFactor > 0f)
+                GameScale = gameScale = gameCanvas.scaleFactor;
         }
-        if (gameCanvas != null && gameCanvas.scaleFactor > 0f)
-            GameScale = gameScale = gameCanvas.scaleFactor;
         // Escala entera (pixeles exactos): la fuente y los íconos pixelados solo se ven nítidos así.
         float panelScale = GameStyle.PanelScale(gameScale);
         canvas.scaleFactor = panelScale;
@@ -416,6 +431,12 @@ internal class QueueHud : MonoBehaviour
         barHandle.pivot = new Vector2(0.5f, 1f);
         h.GetComponent<Image>().color = new Color(0.64f, 0.59f, 0.51f, 0.9f);
 
+        // Agarre en la esquina de abajo del lado de adentro: el último hijo, encima del contenido.
+        GameObject gr = new GameObject("Agarre", typeof(RectTransform), typeof(Image));
+        gr.transform.SetParent(box, false);
+        gripIcon = gr.GetComponent<Image>();
+        gr.SetActive(false);
+
         foreach (Graphic g in root.GetComponentsInChildren<Graphic>(true))
             g.raycastTarget = g == blocker;
     }
@@ -427,6 +448,7 @@ internal class QueueHud : MonoBehaviour
         if (box == null || !box.gameObject.activeInHierarchy)
         {
             pressing = dragging = scrolling = false;
+            EndResize(save: false);
             SetHover(null);
             UpdateTooltip(Vector2.zero, false);
             return;
@@ -435,14 +457,18 @@ internal class QueueHud : MonoBehaviour
         {
             // Con el control manda la selección (UpdateNavMark), no el mouse.
             pressing = dragging = scrolling = false;
+            EndResize(save: false);
+            if (gripIcon != null)
+                gripIcon.gameObject.SetActive(false);
             SetHover(null);
             UpdateTooltip(Vector2.zero, false);
             return;
         }
         Vector2 m = Input.mousePosition;
         bool over = Inside(box, m);
-        UpdateHoverMarks(m, over && fit != FitMode.Folded);
-        UpdateTooltip(m, over && !dragging && !scrolling && Inside(frame, m));
+        UpdateGrip(m, over);
+        UpdateHoverMarks(m, over && fit != FitMode.Folded && !resizing);
+        UpdateTooltip(m, over && !dragging && !scrolling && !resizing && Inside(frame, m));
         float s = canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f;
 
         if (over && Input.mouseScrollDelta.y != 0f && contentHeight > viewHeight + 0.5f)
@@ -452,8 +478,8 @@ internal class QueueHud : MonoBehaviour
         }
 
         // Los botones − + basura aparecen en la barra de la tarea que tiene el mouse encima.
-        ShowActionsFor(dragging || scrolling || !over || !Inside(frame, m) ? null : HeaderAt(m));
-        SetHover(dragging || scrolling || !over ? null : ClickableAt(m));
+        ShowActionsFor(dragging || scrolling || resizing || !over || !Inside(frame, m) ? null : HeaderAt(m));
+        SetHover(dragging || scrolling || resizing || !over ? null : ClickableAt(m));
 
         if (Input.GetMouseButtonDown(0) && over)
         {
@@ -461,6 +487,7 @@ internal class QueueHud : MonoBehaviour
             pressPos = lastMouse = m;
             pressOnBar = barTrack.gameObject.activeSelf && Inside(barTrack, m);
             pressOnTitle = Inside(strip, m);
+            pressOnGrip = GripAt(m);
         }
         if (!pressing)
             return;
@@ -468,6 +495,15 @@ internal class QueueHud : MonoBehaviour
         if (Input.GetMouseButton(0))
         {
             bool overflow = contentHeight > viewHeight + 0.5f;
+            // Desde el agarre, cambiar el tamaño (con 2 px basta: es un control chiquito).
+            if (!dragging && !scrolling && !resizing && pressOnGrip && (m - pressPos).sqrMagnitude > 4f)
+                StartResize();
+            if (resizing)
+            {
+                lastMouse = m;
+                Resize(m, s);
+                return;
+            }
             if (!dragging && !scrolling && (m - pressPos).sqrMagnitude > 36f)
             {
                 // Mantener y deslizar: desde el título se mueve el panel (si el candado está
@@ -495,9 +531,11 @@ internal class QueueHud : MonoBehaviour
         }
 
         // Se soltó el botón.
-        if (dragging)
+        if (resizing)
+            EndResize(save: true);
+        else if (dragging)
             SavePosition(s);
-        else if (!scrolling)
+        else if (!scrolling && !pressOnGrip)
             Click(m);
         pressing = dragging = scrolling = false;
     }
@@ -553,13 +591,14 @@ internal class QueueHud : MonoBehaviour
         return new Plan.Row { id = id, want = want, avail = GameData.Owned(id), fuel = GameData.IsFuel(id) };
     }
 
-    // "· Patio: 7": si aquí no te alcanza y en otra zona tienes, dónde y cuánto (en gris).
-    private static string ElsewhereHint(string id, Plan.Row r)
+    // "Patio: 7": si aquí no te alcanza y en otra zona tienes, dónde y cuánto. Sale en el globo al
+    // pasar el mouse por la tarea o el renglón; pegado al nombre lo hacía bajar dos o tres renglones.
+    private static string ElsewhereTip(string id, Plan.Row r)
     {
         if (r.fuel || r.Missing == 0)
-            return "";
+            return null;
         (string zone, int count) = GameData.Elsewhere(id);
-        return count > 0 && !string.IsNullOrEmpty(zone) ? $" <color={Dim}>· {zone}: {count}</color>" : "";
+        return count > 0 && !string.IsNullOrEmpty(zone) ? $"{zone}: {count}" : null;
     }
 
     // La forma del plan (qué renglones hay y cuánto pide cada uno): si cambia, hay que redibujar;
@@ -1144,6 +1183,150 @@ internal class QueueHud : MonoBehaviour
         Plugin.SetHudPosition(left, Mathf.Round(side), Mathf.Round(top));
     }
 
+    // --- Agarre: cambiar el tamaño arrastrando, con el candado abierto ---
+    // Se ve con el mouse sobre el panel, en la esquina de abajo del lado de adentro (abajo a la
+    // izquierda si el panel va a la derecha). Mientras se arrastra, todo se reacomoda en vivo:
+    // Layout() al momento para el texto y los íconos, y un Build() unas 8 veces por segundo para
+    // repartir de nuevo los ingredientes por renglón. El .cfg se escribe una sola vez, al soltar.
+
+    private void UpdateGrip(Vector2 m, bool over)
+    {
+        if (gripIcon == null)
+            return;
+        bool show = resizing || (over && Plugin.HudMovable && fit == FitMode.Normal && !dragging && !scrolling);
+        if (gripIcon.gameObject.activeSelf != show)
+            gripIcon.gameObject.SetActive(show);
+        if (!show)
+            return;
+        bool left = Plugin.HudLeft;
+        Sprite sp = Grip(left, resizing ? 2 : GripAt(m) ? 1 : 0);
+        if (gripIcon.sprite != sp)
+        {
+            gripIcon.sprite = sp;
+            RectTransform g = (RectTransform)gripIcon.transform;
+            g.sizeDelta = sp.rect.size;
+            // Panel a la derecha: esquina de abajo a la izquierda; a la izquierda: abajo a la derecha.
+            g.anchorMin = g.anchorMax = g.pivot = new Vector2(left ? 1f : 0f, 0f);
+            g.anchoredPosition = new Vector2(left ? -1f : 1f, 1f);
+        }
+    }
+
+    // El agarre con 3 unidades de margen alrededor: es chiquito y hay que poder atinarle.
+    private bool GripAt(Vector2 m)
+    {
+        if (gripIcon == null || !gripIcon.gameObject.activeInHierarchy)
+            return false;
+        Vector3[] c = new Vector3[4];
+        ((RectTransform)gripIcon.transform).GetWorldCorners(c);
+        float pad = 3f * (canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f);
+        return m.x >= c[0].x - pad && m.x <= c[2].x + pad && m.y >= c[0].y - pad && m.y <= c[2].y + pad;
+    }
+
+    private void StartResize()
+    {
+        resizing = true;
+        resizeFrom = pressPos;
+        resizeWidth = Plugin.HudWidth;
+        // El alto parte de lo que se ve: si la cola es más corta que el máximo, subir el agarre
+        // achica el panel desde el primer pixel. El máximo guardado solo cambia si el mouse se
+        // mueve de verdad en vertical (así ajustar el ancho no pisa un alto máximo más grande).
+        resizeHeight = barShown ? Plugin.HudMaxHeight : Mathf.Round(viewHeight);
+        resizeHeightTouched = false;
+        nextResizeBuild = 0f;
+    }
+
+    private void Resize(Vector2 m, float s)
+    {
+        float screenW = Screen.width / s, screenH = Screen.height / s;
+        Vector2 d = (m - resizeFrom) / s;
+        float w = resizeWidth + (Plugin.HudLeft ? d.x : -d.x);
+        w = Mathf.Clamp(Mathf.Round(w), 100f, Mathf.Min(800f, screenW - Plugin.HudSideOffset));
+        if (!resizeHeightTouched && Mathf.Abs(d.y) >= 3f)
+            resizeHeightTouched = true;
+        float? h = null;
+        if (resizeHeightTouched)
+            h = Mathf.Clamp(Mathf.Round(resizeHeight - d.y), 60f, Mathf.Min(1000f, screenH - Plugin.HudTop - stripHeight - 4f));
+        if (w != Plugin.LiveHudWidth || h != Plugin.LiveHudMaxHeight)
+        {
+            Plugin.LiveHudWidth = w;
+            Plugin.LiveHudMaxHeight = h;
+            Layout(); // texto e íconos al momento; Fit() lo reacomoda contra su orilla
+            if (Time.unscaledTime >= nextResizeBuild)
+            {
+                nextResizeBuild = Time.unscaledTime + 0.12f;
+                nextCheck = 0f; // el siguiente Tick lo rearma: los ingredientes se reparten por renglón al armar
+            }
+        }
+        ShowSize(m, s, w, h ?? Plugin.HudMaxHeight);
+    }
+
+    private void EndResize(bool save)
+    {
+        if (!resizing)
+            return;
+        resizing = false;
+        float w = Plugin.HudWidth, h = Plugin.HudMaxHeight; // con los valores en vivo
+        Plugin.LiveHudWidth = Plugin.LiveHudMaxHeight = null;
+        if (save)
+            Plugin.SetHudSize(w, h);
+        if (sizeBox != null)
+            sizeBox.gameObject.SetActive(false);
+        Dirty = true; // rearmar con el tamaño guardado (o el de antes, si se canceló)
+    }
+
+    // "ancho × alto" en las mismas unidades del .cfg y del menú, junto al cursor y del lado de afuera.
+    private void ShowSize(Vector2 m, float s, float w, float h)
+    {
+        if (sizeBox == null)
+        {
+            GameObject t = new GameObject("Tamaño", typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
+            t.transform.SetParent(canvas.transform, false);
+            sizeBox = (RectTransform)t.transform;
+            sizeBox.anchorMin = sizeBox.anchorMax = sizeBox.pivot = Vector2.zero;
+            Image bg = t.GetComponent<Image>();
+            bg.color = new Color(0.1f, 0.08f, 0.07f, 0.95f);
+            bg.raycastTarget = false;
+            HorizontalLayoutGroup hl = t.GetComponent<HorizontalLayoutGroup>();
+            hl.childControlWidth = hl.childControlHeight = true;
+            hl.childForceExpandWidth = hl.childForceExpandHeight = false;
+            ContentSizeFitter f = t.GetComponent<ContentSizeFitter>();
+            f.horizontalFit = f.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            sizeText = MakeText(t.transform, "", Text, TextAlignmentOptions.MidlineLeft, wrap: false);
+        }
+        sizeBox.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset((int)U(4f), (int)U(4f), (int)U(1f), (int)U(1f));
+        sizeText.fontSize = fontSize;
+        sizeText.text = $"{w:0} × {h:0}";
+        sizeBox.gameObject.SetActive(true);
+        sizeBox.SetAsLastSibling();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(sizeBox);
+        Vector2 size = sizeBox.rect.size, p = m / s;
+        float x = Plugin.HudLeft ? p.x + 8f : p.x - size.x - 8f;
+        float y = p.y - size.y - 6f;
+        x = Mathf.Clamp(x, 0f, Mathf.Max(0f, Screen.width / s - size.x));
+        y = Mathf.Clamp(y, 0f, Mathf.Max(0f, Screen.height / s - size.y));
+        sizeBox.anchoredPosition = new Vector2(Mathf.Round(x), Mathf.Round(y));
+    }
+
+    // Puntos grises como los íconos apagados; crema con el mouse encima; mientras se arrastra,
+    // dorado con borde oscuro como el pin prendido. Para el panel a la izquierda, en espejo.
+    private static readonly Sprite[] grips = new Sprite[6];
+
+    private static Sprite Grip(bool left, int state)
+    {
+        int i = (left ? 3 : 0) + state;
+        if (grips[i] != null)
+            return grips[i];
+        string[] dots = { "o......", ".......", "o.o....", ".......", "o.o.o..", ".......", "o.o.o.o" };
+        string[] drag = { "#o.......", "###......", "#o#o.....", "#####....", "#o#o#o...", "#######..", "#o#o#o#o.", "#########" };
+        string[] rows = state == 2 ? drag : dots;
+        if (left)
+            rows = rows.Select(r => new string(r.Reverse().ToArray())).ToArray();
+        Color off = new Color(0.62f, 0.58f, 0.52f), cream = new Color(0.93f, 0.86f, 0.74f);
+        return grips[i] = state == 2
+            ? PixelSprite(rows, new Color(0.98f, 0.78f, 0.26f), new Color(0.30f, 0.19f, 0.07f), Color.clear)
+            : PixelSprite(rows, state == 1 ? cream : off, Color.clear, Color.clear);
+    }
+
     private void ApplyScroll()
     {
         float max = Mathf.Max(0f, contentHeight - viewHeight);
@@ -1188,7 +1371,11 @@ internal class QueueHud : MonoBehaviour
         // Un solo recuadro para todos los íconos, calculado sobre el tamaño estándar de los íconos del
         // juego (48 px). Antes se calculaba ícono por ícono con su lado más largo y los dibujos anchos
         // (p. ej. 86×48) salían de otro tamaño y hacían los renglones más altos.
-        iconSize = GameStyle.IconUnitsForNative(48f, Plugin.HudIconSize * Plugin.HudScale, canvas.scaleFactor);
+        // Y se adapta al ancho: "Tamaño de íconos" (por la escala) es el máximo, y en un panel angosto
+        // se achica para dejarles sitio a los nombres. El 0.11 del ancho respeta el tamaño normal (16)
+        // con el ancho normal (170); IconUnitsForNative lo lleva al paso nítido más cercano.
+        float iconTarget = Mathf.Min(Plugin.HudIconSize * Plugin.HudScale, Mathf.Max(12f, Plugin.HudWidth * 0.11f));
+        iconSize = GameStyle.IconUnitsForNative(48f, iconTarget, canvas.scaleFactor);
         if (!loggedSizes && sample != null)
         {
             loggedSizes = true;
@@ -1248,10 +1435,13 @@ internal class QueueHud : MonoBehaviour
                 string itemFold = "~" + item;
                 bool showRecipe = head.Missing > 0 && GameData.OptionsFor(item).Count > 0;
                 BeginBinding(new CountBinding { key = item, want = g.total, path = Plan.HeaderPath(item) });
-                Transform body = Block(item, null, GameData.Name(item) + ElsewhereHint(item, head), $"{head.avail}/{g.total}",
+                Transform body = Block(item, null, GameData.Name(item), $"{head.avail}/{g.total}",
                     head.Missing == 0, showRecipe ? itemFold : null, inverted: true, flash: g.ids.Any(flashIds.Contains),
                     entry: entry, focusId: g.Key);
                 EndBinding();
+                string headTip = ElsewhereTip(item, head);
+                if (headTip != null && body.parent.Find("Titulo") is RectTransform headRow)
+                    tipTargets[headRow] = headTip;
                 if (showRecipe && !Prefs.Expanded.Contains(itemFold))
                     RecipeRows(body, item, head.Missing, item, 1, g.preferred);
                 FinishBody(body);
@@ -1482,10 +1672,12 @@ internal class QueueHud : MonoBehaviour
         bool ok = r.Missing == 0;
         // La flecha solo si falta algo: lo que ya tienes no hay que hacerlo.
         string arrow = !ok && Expandable(id, path, depth) ? path : null;
-        string hint = depth == 1 ? ElsewhereHint(id, r) : "";
+        string zoneTip = depth == 1 ? ElsewhereTip(id, r) : null;
         BeginBinding(new CountBinding { key = id, want = want, path = path });
-        Line(body, depth, id, name + hint, $"{r.avail}/{want}", ok ? Done : Text, ok ? Done : Short, arrow);
+        RectTransform line = Line(body, depth, id, name, $"{r.avail}/{want}", ok ? Done : Text, ok ? Done : Short, arrow);
         EndBinding();
+        if (zoneTip != null && line != null)
+            tipTargets[line] = zoneTip;
     }
 
     // Tiene flecha si hay receta conocida, no es combustible, no repite un material de más arriba

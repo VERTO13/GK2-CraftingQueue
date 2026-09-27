@@ -120,8 +120,9 @@ internal static class GameStyle
     private static bool AtlasIsSdf => AtlasPointSize >= 0f && atlasIsSdf;
 
     // Escala de nuestros paneles: siempre un entero (pixeles exactos, nítido) y según el alto de
-    // la pantalla, no la del juego (a 1080p el juego usa ×3 y el panel quedaba enorme):
-    // 720p y 1080p → ×2, 1440p → ×3, 4K → ×4. Nunca más grande que la del juego.
+    // la pantalla: 720p y 1080p → ×2, 1440p → ×3, 4K → ×4. Nunca más grande que la del juego
+    // (LazyUI.ScaleFactor: ×2 a 1080p y a 1440p "x2", ×4 en 4K). El "×3 a 1080p" que se veía antes
+    // era el lienzo de otro mod, no el del juego (ver QueueHud.Ensure).
     public static float PanelScale(float gameScale)
     {
         float s = Mathf.Max(1f, Mathf.Round(Screen.height / 480f));

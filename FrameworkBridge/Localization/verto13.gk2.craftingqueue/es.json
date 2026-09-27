@@ -32,8 +32,8 @@
   "settings.Panel en pantalla.AltoMaximo.description": "Si la cola no cabe, se desplaza.",
   "settings.Panel en pantalla.OpacidadFondo.name": "Opacidad del fondo",
   "settings.Panel en pantalla.OpacidadFondo.description": "0 = fondo invisible, 1 = fondo sólido.",
-  "settings.Panel en pantalla.TamanoIconos.name": "Tamaño de íconos",
-  "settings.Panel en pantalla.TamanoIconos.description": "Tamaño de los íconos del panel.",
+  "settings.Panel en pantalla.TamanoIconos.name": "Tamaño máximo de íconos",
+  "settings.Panel en pantalla.TamanoIconos.description": "En un panel angosto se achican solos para dejarles sitio a los nombres.",
   "settings.Panel en pantalla.Escala.name": "Escala de márgenes",
   "settings.Panel en pantalla.Escala.description": "Achica o agranda íconos y márgenes; la letra se queda en el tamaño nítido del juego."
 }

@@ -98,8 +98,8 @@ public sealed class FrameworkBridgePlugin : BaseUnityPlugin
                 "A longer queue scrolls.", 10f, order++);
             s.AddFloatSlider(P, "OpacidadFondo", 0.55f, 0f, 1f, "Background opacity",
                 "0 = invisible background, 1 = solid.", 0.05f, order++);
-            s.AddFloatSlider(P, "TamanoIconos", 16f, 10f, 48f, "Icon size",
-                "Size of the icons in the panel.", 1f, order++);
+            s.AddFloatSlider(P, "TamanoIconos", 16f, 10f, 48f, "Maximum icon size",
+                "On a narrow panel the icons shrink on their own to leave room for the names.", 1f, order++);
             s.AddFloatSlider(P, "Escala", 1f, 0.3f, 2f, "Spacing scale",
                 "Makes icons and spacing smaller or bigger; text stays at the game's crisp size.", 0.1f, order++);
         }

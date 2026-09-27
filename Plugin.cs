@@ -43,8 +43,11 @@ public class Plugin : BaseUnityPlugin
                                     || hudSide.Value.StartsWith("Left", StringComparison.OrdinalIgnoreCase);
     internal static float HudTop => hudTop.Value;
     internal static float HudSideOffset => hudSideOffset.Value;
-    internal static float HudWidth => hudWidth.Value;
-    internal static float HudMaxHeight => hudMaxHeight.Value;
+    // Mientras se arrastra el agarre del panel, el tamaño nuevo se ve en vivo sin escribir el .cfg
+    // en cada cuadro; al soltar se guarda una sola vez (SetHudSize).
+    internal static float? LiveHudWidth, LiveHudMaxHeight;
+    internal static float HudWidth => LiveHudWidth ?? hudWidth.Value;
+    internal static float HudMaxHeight => LiveHudMaxHeight ?? hudMaxHeight.Value;
     internal static float HudTextSize => hudTextSize.Value;
     internal static float HudIconSize => hudIconSize.Value;
     internal static float HudScale => hudScale.Value;
@@ -73,6 +76,13 @@ public class Plugin : BaseUnityPlugin
         hudSide.Value = left ? "Izquierda" : "Derecha";
         hudSideOffset.Value = Mathf.Max(0f, side);
         hudTop.Value = Mathf.Max(0f, top);
+    }
+
+    // Los mismos límites que el .cfg y el menú del framework (Ancho 100–800, AltoMaximo 60–1000).
+    internal static void SetHudSize(float width, float maxHeight)
+    {
+        hudWidth.Value = Mathf.Clamp(Mathf.Round(width), 100f, 800f);
+        hudMaxHeight.Value = Mathf.Clamp(Mathf.Round(maxHeight), 60f, 1000f);
     }
 
     private static bool started;
@@ -169,7 +179,7 @@ public class Plugin : BaseUnityPlugin
         hudTextSize = Config.Bind(P, "TamanoLetra", 0f,
             new ConfigDescription("Tamaño de letra. 0 = el mismo que usa el juego (el más nítido).", new AcceptableValueRange<float>(0f, 40f)));
         hudIconSize = Config.Bind(P, "TamanoIconos", 16f,
-            new ConfigDescription("Tamaño de los íconos.", new AcceptableValueRange<float>(10f, 48f)));
+            new ConfigDescription("Tamaño máximo de los íconos: en un panel angosto se achican solos para dejarles sitio a los nombres.", new AcceptableValueRange<float>(10f, 48f)));
         hudScale = Config.Bind(P, "Escala", 1f,
             new ConfigDescription("Achica o agranda íconos y márgenes (la letra se queda en el tamaño nítido del juego).", new AcceptableValueRange<float>(0.3f, 2f)));
         hudOpacity = Config.Bind(P, "OpacidadFondo", 0.55f,

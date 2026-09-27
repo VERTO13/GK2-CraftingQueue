@@ -72,7 +72,10 @@ internal class QuickAdd : MonoBehaviour
                      typeof(UIDialogWindow), typeof(UIQuestInfoWindow), typeof(CharacterWindow),
                      typeof(UIVendorWindow), typeof(UIVendorOrdersWindow), typeof(UIVendorOrdersSelectionWindow) })
             // Solo si la ventana define sus propias teclas (nunca la versión común de todas las ventanas).
-            Patch(harmony, AccessTools.DeclaredMethod(w, "GetGameKeyDelegates"), postfix: nameof(KeepWindowOpen));
+            // Con GetMethod y no AccessTools.DeclaredMethod: esa avisa en el log cuando la ventana no lo define,
+            // y desde la 1.006 las dos de encargos usan la común (que no cierra con clic derecho).
+            Patch(harmony, w.GetMethod("GetGameKeyDelegates", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public
+                | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly), postfix: nameof(KeepWindowOpen));
         // Diálogo que pide un objeto con "tienes/necesitas": anotar cuál y cuántos.
         System.Reflection.ConstructorInfo askCtor = AccessTools.Constructor(typeof(UIDialogWindowData), new[]
         {
