@@ -1,6 +1,6 @@
 # Crafting Queue para Graveyard Keeper 2
 
-[English](README.md) | **Español**
+[English](README.md) | **Español** · [Nexus Mods](https://www.nexusmods.com/graveyardkeeper2/mods/177)
 
 Un mod que mantiene una **cola de crafteo siempre a la vista**. Muestra qué quieres hacer, qué necesitas, qué ya tienes y en qué cofre está.
 
@@ -17,7 +17,7 @@ Solo se hace una vez. Cierra el juego antes de empezar.
 
 ### Paso 1: Descarga el mod
 
-Entra a [Releases](../../releases) y descarga **uno** de estos archivos:
+Entra a [Releases](../../releases) (o a la [página de Nexus Mods](https://www.nexusmods.com/graveyardkeeper2/mods/177)) y descarga **uno** de estos archivos:
 
 - **`CraftingQueue-x.y.z-with-BepInEx.zip`**: elige este si no estás seguro. Trae todo lo necesario.
 - `CraftingQueue-x.y.z.zip`: solo el mod, para quien ya juega con otros mods de BepInEx.

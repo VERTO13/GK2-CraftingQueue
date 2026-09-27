@@ -1,6 +1,6 @@
 # Crafting Queue for Graveyard Keeper 2
 
-**English** | [Español](README.es.md)
+**English** | [Español](README.es.md) · [Nexus Mods](https://www.nexusmods.com/graveyardkeeper2/mods/177)
 
 A mod that keeps a **crafting queue always on screen**. It shows what you want to make, what it takes, what you already have, and which chest it's in.
 
@@ -17,7 +17,7 @@ You only do this once. Close the game before you start.
 
 ### Step 1: Download the mod
 
-Go to [Releases](../../releases) and download **one** of these files:
+Go to [Releases](../../releases) (or the [Nexus Mods page](https://www.nexusmods.com/graveyardkeeper2/mods/177)) and download **one** of these files:
 
 - **`CraftingQueue-x.y.z-with-BepInEx.zip`**: get this one if you're not sure. It has everything you need.
 - `CraftingQueue-x.y.z.zip`: only the mod. Use it if you already play with other BepInEx mods.
