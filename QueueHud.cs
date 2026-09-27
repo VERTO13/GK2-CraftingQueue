@@ -47,6 +47,8 @@ internal class QueueHud : MonoBehaviour
     private RectTransform box;     // todo el panel (se posiciona y se arrastra)
     private RectTransform strip;   // barrita de arriba
     private Image lockIcon, marksIcon, eyeIcon;
+    private Image totalIcon, trashIcon;      // Σ (vista Total) y bote (vaciar la cola), a la izquierda del ojo
+    private RectTransform titleRect;
     private Image gripIcon;                  // agarre para cambiar el tamaño (con el candado abierto)
     private RectTransform sizeBox;           // "240 × 300" junto al cursor mientras se arrastra
     private TMP_Text sizeText;
@@ -178,8 +180,9 @@ internal class QueueHud : MonoBehaviour
             long tq = Perf.Start();
             List<QueueView.Entry> items = ShouldShow() ? QueueView.Items() : null;
             Perf.Stop("panel: leer cola", tq, top: false);
-            // Cola vacía: el panel se ve igual, con la ayuda de cómo agregar (así se sabe que el mod está activo).
-            if (items == null || (items.Count == 0 && !Queue.HasSlot))
+            // Cola vacía: el panel se ve igual, con la ayuda de cómo agregar (así se sabe que el mod está
+            // activo), salvo con "OcultarSiVacia".
+            if (items == null || (items.Count == 0 && (!Queue.HasSlot || Plugin.HudHideEmpty)))
             {
                 SetShown(false);
                 return;
@@ -274,6 +277,7 @@ internal class QueueHud : MonoBehaviour
             sb.Append(c.Key).Append('=').Append(c.Value).Append(','); // receta elegida con ◂ ▸
         sb.Append(Plugin.HudTextSize).Append(Plugin.HudIconSize).Append(Plugin.HudOpacity).Append(Plugin.HudWidth);
         sb.Append(Plugin.HudMaxRows).Append(Plugin.HudScale).Append(Plugin.HudMaxHeight).Append(Plugin.CompactRecipes);
+        sb.Append(Plugin.TotalView);
         sb.Append(LLBase.CurrentLang); // si cambias el idioma del juego, se redibuja traducido
         sb.Append('|').Append(GameData.KnowledgeStamp); // receta recién desbloqueada: aparece ya
         sb.Append('|').Append(GameData.PerksStamp);     // talento o tecnología nueva: el ×N al momento
@@ -367,6 +371,7 @@ internal class QueueHud : MonoBehaviour
         trt.offsetMin = new Vector2(5f, 0f);
         trt.offsetMax = new Vector2(-42f, 0f); // lugar para el ojo, el pin y el candado
         titleText = tt.GetComponent<TextMeshProUGUI>();
+        titleRect = trt;
         titleText.alignment = TextAlignmentOptions.MidlineLeft;
         titleText.textWrappingMode = TextWrappingModes.NoWrap;
         titleText.overflowMode = TextOverflowModes.Ellipsis;
@@ -393,6 +398,10 @@ internal class QueueHud : MonoBehaviour
         ert.anchoredPosition = new Vector2(-3f - 7f - 5f - 7f - 5f, 0f); // candado + pin + separaciones
         eyeIcon = ey.GetComponent<Image>();
         eyeIcon.raycastTarget = false;
+        // Más a la izquierda, con el mouse encima: la Σ (vista Total) y el bote (vaciar la cola).
+        // Su lugar lo pone UpdateStripIcons según cuáles se vean.
+        totalIcon = StripIcon("Vista total");
+        trashIcon = StripIcon("Vaciar cola");
 
         // Ventana que recorta el contenido (debajo de la barrita).
         GameObject f = new GameObject("Ventana", typeof(RectTransform), typeof(RectMask2D));
@@ -441,6 +450,59 @@ internal class QueueHud : MonoBehaviour
             g.raycastTarget = g == blocker;
     }
 
+    private Image StripIcon(string name)
+    {
+        GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
+        g.transform.SetParent(strip, false);
+        RectTransform rt = (RectTransform)g.transform;
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 0.5f);
+        Image img = g.GetComponent<Image>();
+        img.raycastTarget = false;
+        g.SetActive(false);
+        return img;
+    }
+
+    // Σ y bote: aparecen con el mouse sobre el panel. La Σ se queda a la vista (dorada) mientras la
+    // vista Total está puesta, y el bote mientras espera la confirmación (rojo). El título deja
+    // lugar solo para los que se ven.
+    private void UpdateStripIcons(bool over)
+    {
+        if (totalIcon == null)
+            return;
+        bool folded = fit == FitMode.Folded && !peeking;
+        bool armed = ClearConfirm.Armed;
+        bool showTotal = !folded && (over || Plugin.TotalView);
+        bool showTrash = !folded && (over || armed) && Queue.HasSlot && Queue.Tasks.Count > 0;
+        float right = -41f, left = -36f; // el ojo (9 px) termina en -36
+        if (SetStripIcon(totalIcon, showTotal, Plugin.TotalView ? TotalOn() : TotalOff(), right))
+        {
+            left = right - totalIcon.sprite.rect.width;
+            right = left - 5f;
+        }
+        if (SetStripIcon(trashIcon, showTrash, armed ? TrashArmed() : TrashOff(), right))
+            left = right - trashIcon.sprite.rect.width;
+        float reserve = -left + 6f;
+        if (titleRect != null && !Mathf.Approximately(titleRect.offsetMax.x, -reserve))
+            titleRect.offsetMax = new Vector2(-reserve, 0f);
+    }
+
+    private static bool SetStripIcon(Image icon, bool show, Sprite sprite, float right)
+    {
+        if (icon.gameObject.activeSelf != show)
+            icon.gameObject.SetActive(show);
+        if (!show)
+            return false;
+        if (icon.sprite != sprite)
+        {
+            icon.sprite = sprite;
+            ((RectTransform)icon.transform).sizeDelta = sprite.rect.size;
+        }
+        RectTransform rt = (RectTransform)icon.transform;
+        if (rt.anchoredPosition.x != right)
+            rt.anchoredPosition = new Vector2(right, 0f);
+        return true;
+    }
+
     // --- Mouse: arrastrar, rueda, clic en flechas y candado ---
 
     private void HandleMouse()
@@ -460,15 +522,17 @@ internal class QueueHud : MonoBehaviour
             EndResize(save: false);
             if (gripIcon != null)
                 gripIcon.gameObject.SetActive(false);
+            UpdateStripIcons(false);
             SetHover(null);
             UpdateTooltip(Vector2.zero, false);
             return;
         }
         Vector2 m = Input.mousePosition;
         bool over = Inside(box, m);
+        UpdateStripIcons(over && !dragging && !resizing);
         UpdateGrip(m, over);
         UpdateHoverMarks(m, over && fit != FitMode.Folded && !resizing);
-        UpdateTooltip(m, over && !dragging && !scrolling && !resizing && Inside(frame, m));
+        UpdateTooltip(m, over && !dragging && !scrolling && !resizing);
         float s = canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f;
 
         if (over && Input.mouseScrollDelta.y != 0f && contentHeight > viewHeight + 0.5f)
@@ -553,6 +617,10 @@ internal class QueueHud : MonoBehaviour
             return marksIcon;
         if (Inside(strip, m) && m.x >= LeftEdge(eyeIcon) - 3f * canvas.scaleFactor)
             return eyeIcon;
+        if (Inside(strip, m) && totalIcon.gameObject.activeSelf && m.x >= LeftEdge(totalIcon) - 3f * canvas.scaleFactor)
+            return totalIcon;
+        if (Inside(strip, m) && trashIcon.gameObject.activeSelf && m.x >= LeftEdge(trashIcon) - 3f * canvas.scaleFactor)
+            return trashIcon;
         if (!Inside(frame, m))
             return null;
         foreach (KeyValuePair<Image, (object entry, int action)> b in actionButtons)
@@ -772,10 +840,14 @@ internal class QueueHud : MonoBehaviour
 
     private const int ActionUp = 2, ActionDown = 3;
 
+    private static bool Shift => Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+
     // Botones de cada tarea.
     // Un bloque puede juntar varias tareas del mismo objeto: − y + cambian la última agregada,
     // la basura las quita todas, ▲ ▼ las mueven juntas.
-    private static void RunAction(object entry, int action)
+    // Con Shift: − + de 10 en 10 (− se detiene en 1; en 1, la quita como siempre) y ▲ ▼ hasta
+    // arriba o hasta abajo.
+    private static void RunAction(object entry, int action, bool shift = false)
     {
         List<object> entries = entry as List<object> ?? new List<object> { entry };
         if (entries.Count == 0)
@@ -784,10 +856,36 @@ internal class QueueHud : MonoBehaviour
             foreach (object e in entries)
                 Queue.Remove(e as QueueTask);
         else if (action == ActionUp || action == ActionDown)
-            MoveGroup(entries[0] as QueueTask, action == ActionUp ? -1 : 1);
+        {
+            if (shift)
+                MoveGroupToEdge(entries[0] as QueueTask, top: action == ActionUp);
+            else
+                MoveGroup(entries[0] as QueueTask, action == ActionUp ? -1 : 1);
+        }
         else
-            Queue.Change(entries[entries.Count - 1] as QueueTask, action);
+        {
+            QueueTask last = entries[entries.Count - 1] as QueueTask;
+            int delta = action;
+            if (shift && last != null)
+                delta = action > 0 ? 10 : -Math.Min(10, Math.Max(1, last.count - 1));
+            Queue.Change(last, delta);
+        }
         Dirty = true;
+    }
+
+    private static void MoveGroupToEdge(QueueTask task, bool top)
+    {
+        List<List<QueueTask>> groups = Plan.Groups.Select(g => g.tasks).ToList();
+        int i = groups.FindIndex(t => t.Contains(task));
+        if (i < 0)
+            return;
+        List<QueueTask> moved = groups[i];
+        groups.RemoveAt(i);
+        if (top)
+            groups.Insert(0, moved);
+        else
+            groups.Add(moved);
+        Queue.SetOrder(groups.SelectMany(t => t));
     }
 
     // Sube o baja un bloque entero de la cola (con todas sus tareas).
@@ -846,9 +944,20 @@ internal class QueueHud : MonoBehaviour
             RefreshMarksIcon();
             Dirty = true; // recalcular qué se marca en los cofres
         }
+        else if (target == totalIcon)
+        {
+            Plugin.TotalView = !Plugin.TotalView;
+            Dirty = true;
+        }
+        else if (target == trashIcon)
+        {
+            // Primer clic: se pone rojo y el globo pide otro; el segundo (antes de 4 s) vacía.
+            if (ClearConfirm.Press() > 0)
+                Dirty = true;
+        }
         else if (actionButtons.TryGetValue(target, out var act))
         {
-            RunAction(act.entry, act.action);
+            RunAction(act.entry, act.action, Shift);
         }
         else if (focusPins.TryGetValue(target, out var pin))
         {
@@ -996,6 +1105,13 @@ internal class QueueHud : MonoBehaviour
     {
         if (Focused?.entry != null)
             RunAction(Focused.entry, delta);
+    }
+
+    internal void GamepadToggleView()
+    {
+        Plugin.TotalView = !Plugin.TotalView;
+        Dirty = true;
+        try { LazyAudio.PlayAndForget("gui_click"); } catch { }
     }
 
     internal void GamepadPin()
@@ -1414,16 +1530,25 @@ internal class QueueHud : MonoBehaviour
                 Seen(r.id, GameData.Owned(r.id)); // se vigila aunque no se vea (tareas plegadas)
         Perf.Stop("panel: plan", tp, top: false);
 
+        // Lo que se marca en los cofres, de todas las tareas (aunque no quepan o estés en la vista Total).
         foreach (Plan.Group g in Plan.Groups)
+        {
+            Plan.Group group = g;
+            markMakers.Add((g.Key, () => Plan.MarksFor(group)));
+            blockMaterials[g.Key] = Plan.MarksFor(g);
+        }
+
+        // En la vista Total no se dibujan las tareas una por una: todo va en un solo bloque.
+        bool total = Plugin.TotalView && items.Count > 0;
+        if (total)
+            BuildTotal();
+        foreach (Plan.Group g in total ? Enumerable.Empty<Plan.Group>() : Plan.Groups)
         {
             if (rows >= Plugin.HudMaxRows)
             {
                 hiddenRows++;
                 continue;
             }
-            Plan.Group group = g;
-            markMakers.Add((g.Key, () => Plan.MarksFor(group)));
-            blockMaterials[g.Key] = Plan.MarksFor(g);
             List<object> entry = g.tasks.Cast<object>().ToList();
             if (g.item != null)
             {
@@ -1486,6 +1611,34 @@ internal class QueueHud : MonoBehaviour
 
         RecomputeMaterials();
         Layout();
+    }
+
+    // Vista Total: todo lo que pide la cola junto, un renglón por material, sumado de todas las
+    // tareas: lo que hay que conseguir, no lo que se craftea en medio (eso ya está desglosado).
+    // Primero lo que falta, en el orden de la cola; luego lo que ya tienes; al final los combustibles.
+    // En la barra, cuántos materiales ya están completos.
+    private void BuildTotal()
+    {
+        List<Plan.Total> totals = Plan.Totals();
+        int materials = totals.Count(t => !t.fuel), ready = totals.Count(t => !t.fuel && t.have >= t.want);
+        Transform body = Block(null, null, Lang.T("total"), $"{ready}/{materials}", ready == materials, null, false);
+        foreach (Plan.Total t in totals.Where(t => !t.fuel && t.have < t.want)
+                     .Concat(totals.Where(t => !t.fuel && t.have >= t.want))
+                     .Concat(totals.Where(t => t.fuel)))
+        {
+            string name = GameData.Name(t.id);
+            if (t.fuel)
+            {
+                Line(body, 1, t.id, $"{name} ×{t.want}", null, Text, Text, null);
+                continue;
+            }
+            bool ok = t.have >= t.want;
+            RectTransform line = Line(body, 1, t.id, name, $"{t.have}/{t.want}", ok ? Done : Text, ok ? Done : Short, null);
+            string tip = ElsewhereTip(t.id, new Plan.Row { id = t.id, want = t.want, avail = t.have });
+            if (tip != null && line != null)
+                tipTargets[line] = tip;
+        }
+        FinishBody(body);
     }
 
     // Lo que se marca en los cofres: pin general prendido = toda la cola; si no, solo las
@@ -1816,6 +1969,7 @@ internal class QueueHud : MonoBehaviour
     // "enfocado", no de dónde está el mouse: lo mismo servirá para el gamepad.
     private readonly Dictionary<RectTransform, string> tipTargets = new Dictionary<RectTransform, string>();
     private RectTransform tipBox, tipTarget;
+    private string tipKey;
     private TMP_Text tipText;
 
     private void UpdateTooltip(Vector2 m, bool active)
@@ -1823,13 +1977,18 @@ internal class QueueHud : MonoBehaviour
         RectTransform target = null;
         string key = null;
         if (active)
-            foreach (KeyValuePair<RectTransform, string> c in tipTargets)
-                if (c.Key != null && Inside(c.Key, m))
-                {
-                    target = c.Key;
-                    key = c.Value;
-                    break;
-                }
+        {
+            // Los botones primero (van dentro de la barra de la tarea, que puede tener su propio globo).
+            key = ButtonTip(ClickableAt(m), out target);
+            if (key == null && Inside(frame, m))
+                foreach (KeyValuePair<RectTransform, string> c in tipTargets)
+                    if (c.Key != null && Inside(c.Key, m))
+                    {
+                        target = c.Key;
+                        key = c.Value;
+                        break;
+                    }
+        }
         try
         {
             ShowDetail(target, key);
@@ -1849,18 +2008,51 @@ internal class QueueHud : MonoBehaviour
 
     private bool loggedTipError;
 
+    // Qué hace cada botón (y lo que cambia con Shift). Sale a la altura de su barra.
+    private string ButtonTip(Image i, out RectTransform at)
+    {
+        at = strip;
+        if (i == null)
+            return null;
+        if (i == lockIcon)
+            return Lang.T("lock_tip");
+        if (i == marksIcon)
+            return Lang.T("pin_tip");
+        if (i == eyeIcon)
+            return Lang.T("eye_tip");
+        if (i == totalIcon)
+            return Lang.T(Plugin.TotalView ? "view_tasks" : "view_total");
+        if (i == trashIcon)
+            return ClearConfirm.Armed ? Lang.T("clear_confirm", Queue.Tasks.Count) : Lang.T("clear");
+        string key = null;
+        if (focusPins.ContainsKey(i))
+            key = "pin_task_tip";
+        else if (actionButtons.TryGetValue(i, out var act))
+            key = act.action == -1 ? "btn_minus" : act.action == 1 ? "btn_plus" : act.action == ActionUp ? "btn_up"
+                : act.action == ActionDown ? "btn_down" : "btn_remove";
+        if (key == null)
+            return null;
+        Transform head = i.transform;
+        while (head != null && head.name != "Titulo")
+            head = head.parent;
+        at = head as RectTransform ?? (RectTransform)i.transform;
+        return Lang.T(key);
+    }
+
     private void ShowDetail(RectTransform target, string key)
     {
         if (target == null || key == null)
         {
             tipTarget = null;
+            tipKey = null;
             if (tipBox != null && tipBox.gameObject.activeSelf)
                 tipBox.gameObject.SetActive(false);
             return;
         }
-        if (target == tipTarget && tipBox != null && tipBox.gameObject.activeSelf)
+        if (target == tipTarget && key == tipKey && tipBox != null && tipBox.gameObject.activeSelf)
             return;
         tipTarget = target;
+        tipKey = key;
         if (tipBox == null)
         {
             GameObject t = new GameObject("Nombre", typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
@@ -2185,6 +2377,11 @@ internal class QueueHud : MonoBehaviour
         }
         if (!changed)
             return false;
+        if (Plugin.TotalView)
+        {
+            Dirty = true; // la vista Total es un solo bloque: se rearma entera con el reparto nuevo
+            return true;
+        }
 
         // Se reparte de nuevo. Si cambió qué renglones hay o cuánto pide cada uno (p. ej. ya no
         // falta un objeto y su receta se va), se redibuja; si no, solo cambian números y colores.
@@ -2273,6 +2470,32 @@ internal class QueueHud : MonoBehaviour
     {
         "..ooooo..", ".o.....o.", "o..ooo..o", "o..ooo..o", "o..ooo..o", ".o.....o.", "..ooooo.."
     }, new Color(0.62f, 0.58f, 0.52f), Color.clear, Color.clear);
+
+    // Vista Total: Σ dorada = puesta, gris = apagada.
+    private static Sprite totalOn, totalOff;
+    private static readonly string[] SigmaRows =
+    {
+        "ooooooo", ".o....o", "..o....", "...o...", "....o..", "...o...", "..o....", ".o....o", "ooooooo"
+    };
+
+    private static Sprite TotalOn() => totalOn != null ? totalOn : totalOn =
+        PixelSprite(SigmaRows, new Color(0.98f, 0.78f, 0.26f), Color.clear, Color.clear);
+
+    private static Sprite TotalOff() => totalOff != null ? totalOff : totalOff =
+        PixelSprite(SigmaRows, new Color(0.62f, 0.58f, 0.52f), Color.clear, Color.clear);
+
+    // Vaciar la cola: bote gris; esperando la confirmación, rojo como el botón de quitar.
+    private static Sprite trashOff, trashArmed;
+
+    private static Sprite TrashOff() => trashOff != null ? trashOff : trashOff = PixelSprite(new[]
+    {
+        "..ooo..", "ooooooo", ".o...o.", ".o.o.o.", ".o.o.o.", ".o.o.o.", ".o.o.o.", ".o...o.", ".ooooo."
+    }, new Color(0.62f, 0.58f, 0.52f), Color.clear, Color.clear);
+
+    private static Sprite TrashArmed() => trashArmed != null ? trashArmed : trashArmed = PixelSprite(new[]
+    {
+        "..ooo..", "ooooooo", ".o###o.", ".o#w#o.", ".o#w#o.", ".o#w#o.", ".o#w#o.", ".o###o.", ".ooooo."
+    }, BtnLine, BtnRed, BtnMark);
 
     // Marcar cofres: pin relleno = prendido, solo contorno = apagado.
     private static Sprite pinOn, pinOff;

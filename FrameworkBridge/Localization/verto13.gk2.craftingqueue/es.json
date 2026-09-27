@@ -18,6 +18,10 @@
   "settings.Panel en pantalla.MarcarCofres.description": "Burbujas sobre los cofres de tu zona con los materiales de tu cola que tiene cada uno.",
   "settings.Panel en pantalla.PinAlAgregar.name": "Pin al agregar",
   "settings.Panel en pantalla.PinAlAgregar.description": "Las tareas nuevas empiezan con su pin prendido: sus materiales se marcan en los cofres al momento.",
+  "settings.Panel en pantalla.OcultarSiVacia.name": "Ocultar si está vacía",
+  "settings.Panel en pantalla.OcultarSiVacia.description": "Oculta el panel mientras la cola está vacía; vuelve a salir al agregar algo.",
+  "settings.Panel en pantalla.SoloMochila.name": "Contar solo lo que llevas",
+  "settings.Panel en pantalla.SoloMochila.description": "Cuenta solo tu inventario. Si no, cuenta como el juego al craftear: lo que llevas más los cofres y almacenes de la zona donde estás.",
   "settings.Panel en pantalla.SiempreVisible.name": "Siempre visible",
   "settings.Panel en pantalla.SiempreVisible.description": "Con un cofre, mesa o el árbol abierto, el panel se ve completo en vez de recorrerse o plegarse.",
   "settings.Panel en pantalla.OcultarConVentanas.name": "Ocultar con menús",
@@ -35,5 +39,7 @@
   "settings.Panel en pantalla.TamanoIconos.name": "Tamaño máximo de íconos",
   "settings.Panel en pantalla.TamanoIconos.description": "En un panel angosto se achican solos para dejarles sitio a los nombres.",
   "settings.Panel en pantalla.Escala.name": "Escala de márgenes",
-  "settings.Panel en pantalla.Escala.description": "Achica o agranda íconos y márgenes; la letra se queda en el tamaño nítido del juego."
+  "settings.Panel en pantalla.Escala.description": "Achica o agranda íconos y márgenes; la letra se queda en el tamaño nítido del juego.",
+  "settings.Panel en pantalla.VaciarCola.name": "Vaciar la cola",
+  "settings.Panel en pantalla.VaciarCola.description": "Quita todas las tareas de la cola de la partida cargada. Pide un segundo clic para confirmar."
 }

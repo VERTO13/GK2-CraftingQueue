@@ -13,14 +13,16 @@ namespace CraftQueue;
 //  Jugando (sin ventanas):
 //    R3 -> entra al panel de la cola:
 //      cruceta ↑↓ moverse · → abrir · ← cerrar · LB/RB receta anterior/siguiente
-//      X restar · Y sumar · A pin (marcar en cofres) · B o R3 salir
+//      X restar · Y sumar · A pin (marcar en cofres) · View vista Total · B o R3 salir
+//  En la preparación de una pelea y durante la pelea el mod no usa R3: ahí es del juego
+//  (terminar la preparación) y el panel está oculto.
 // Los botones se leen igual que el juego (Rewired, jugador 0, mismos números de acción), así
 // que respetan el control que el juego tenga activo. Mientras estás en el panel, el juego no
 // recibe los botones (tu personaje no se mueve ni interactúa).
 internal class GamepadInput : MonoBehaviour
 {
     // Números de acción de Rewired que usa el juego (LazyBearTechnology.GamepadController).
-    private const int X = 2, Y = 3, A = 4, B = 5, LB = 6, RB = 7, DUp = 12, DDown = 13, DLeft = 14, DRight = 15, R3 = 19;
+    private const int X = 2, Y = 3, A = 4, B = 5, LB = 6, RB = 7, View = 10, DUp = 12, DDown = 13, DLeft = 14, DRight = 15, R3 = 19;
     private const float HoldTime = 0.35f;
 
     internal static UIItemCell RecipeCell;   // mantener R3 en una ventana: su receta
@@ -148,6 +150,8 @@ internal class GamepadInput : MonoBehaviour
             hud.GamepadChange(1);
         if (Down(A))
             hud.GamepadPin();
+        if (Down(View))
+            hud.GamepadToggleView();
     }
 
     private bool Repeat(int action)

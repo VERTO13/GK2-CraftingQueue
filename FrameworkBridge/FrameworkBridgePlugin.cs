@@ -1,3 +1,5 @@
+using System;
+using System.Reflection;
 using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
@@ -30,10 +32,10 @@ public sealed class FrameworkBridgePlugin : BaseUnityPlugin
         }
         try
         {
-            FrameworkApi.RegisterMod(new Bridge(main.Metadata.Version.ToString()), main.Instance.Config);
+            FrameworkApi.RegisterMod(new Bridge(main.Metadata.Version.ToString(), main.Instance.GetType()), main.Instance.Config);
             Logger.LogInfo("Crafting Queue settings added to the GK2 Mod Framework Mods menu.");
         }
-        catch (System.Exception e)
+        catch (Exception e)
         {
             // Una API distinta del framework no debe afectar al mod: solo se pierde el menú.
             Logger.LogError("Could not register with GK2 Mod Framework: " + e.Message);
@@ -43,9 +45,11 @@ public sealed class FrameworkBridgePlugin : BaseUnityPlugin
     private sealed class Bridge : Gk2ModBase
     {
         private readonly Gk2ModMetadata metadata;
+        private readonly Type main;
 
-        internal Bridge(string version)
+        internal Bridge(string version, Type main)
         {
+            this.main = main;
             metadata = new Gk2ModMetadata(
                 MainGuid,
                 "Crafting Queue",
@@ -83,6 +87,11 @@ public sealed class FrameworkBridgePlugin : BaseUnityPlugin
                 "Bubbles over the chests in your zone show which queued materials each one holds.", order++);
             s.AddToggle(P, "PinAlAgregar", true, "Pin new tasks",
                 "New tasks start with their pin on, so their materials are marked on the chests right away.", order++);
+            s.AddToggle(P, "OcultarSiVacia", false, "Hide when empty",
+                "Hides the panel while the queue is empty; it comes back when you add something.", order++);
+            s.AddToggle(P, "SoloMochila", false, "Count only what you carry",
+                "Counts only your inventory. Otherwise it counts like the game does when crafting: what you carry plus " +
+                "the chests and storages of the zone you are in.", order++);
             s.AddToggle(P, "SiempreVisible", false, "Always visible",
                 "With a chest, station or the tech tree open, keep the panel fully visible instead of moving it aside or folding it.", order++);
             s.AddToggle(P, "OcultarConVentanas", true, "Hide with menus",
@@ -102,6 +111,17 @@ public sealed class FrameworkBridgePlugin : BaseUnityPlugin
                 "On a narrow panel the icons shrink on their own to leave room for the names.", 1f, order++);
             s.AddFloatSlider(P, "Escala", 1f, 0.3f, 2f, "Spacing scale",
                 "Makes icons and spacing smaller or bigger; text stays at the game's crisp size.", 0.1f, order++);
+
+            // Vaciar la cola, con confirmación (el primer clic pide otro). El texto y el clic los pone el
+            // mod: se toman por reflexión porque este puente no referencia CraftingQueue.dll. Con un
+            // Crafting Queue más viejo, que no los tiene, simplemente no sale el botón.
+            MethodInfo label = main?.GetMethod("ClearQueueLabel", BindingFlags.Public | BindingFlags.Static);
+            MethodInfo click = main?.GetMethod("ClearQueueClick", BindingFlags.Public | BindingFlags.Static);
+            if (label != null && click != null)
+                s.AddButton(P, "VaciarCola", "Clear the queue",
+                    "Removes every task from the queue of the loaded game. Click twice to confirm.",
+                    (Func<string>)Delegate.CreateDelegate(typeof(Func<string>), label),
+                    (Action)Delegate.CreateDelegate(typeof(Action), click), order++);
         }
     }
 }

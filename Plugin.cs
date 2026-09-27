@@ -25,8 +25,9 @@ public class Plugin : BaseUnityPlugin
     // desde su menú Mods). Un valor viejo como "LeftControl" se lee igual. Se usa solo la tecla principal.
     private static ConfigEntry<KeyboardShortcut> addModifier, hoverKey, hudKey, recipeStyleKey;
     private static ConfigEntry<float> hoverTextSize, hudTop, hudSideOffset, hudWidth, hudMaxHeight, hudTextSize, hudIconSize, hudScale, hudOpacity;
-    private static ConfigEntry<bool> hudVisible, hudHideWithWindows, hudInWorkWindows, hudMovable, chestMarks, measurePerf, hudAlwaysOpen, pinNewTasks;
-    private static ConfigEntry<string> hudSide, recipeStyle;
+    private static ConfigEntry<bool> hudVisible, hudHideWithWindows, hudInWorkWindows, hudMovable, chestMarks, measurePerf, hudAlwaysOpen, pinNewTasks,
+        hudHideEmpty, backpackOnly;
+    private static ConfigEntry<string> hudSide, recipeStyle, hudView;
     private static ConfigEntry<int> hudMaxRows;
 
     internal static KeyCode AddModifier => addModifier.Value.MainKey;
@@ -39,6 +40,14 @@ public class Plugin : BaseUnityPlugin
     internal static bool ChestMarks { get => chestMarks.Value; set => chestMarks.Value = value; }
     internal static bool HudAlwaysOpen { get => hudAlwaysOpen.Value; set => hudAlwaysOpen.Value = value; }
     internal static bool PinNewTasks => pinNewTasks.Value;
+    internal static bool HudHideEmpty => hudHideEmpty.Value;
+    internal static bool BackpackOnly => backpackOnly.Value;
+    // Vista Total: todo lo que pide la cola junto, un renglón por material (el Σ de la barra del panel).
+    internal static bool TotalView
+    {
+        get => hudView.Value.StartsWith("Total", StringComparison.OrdinalIgnoreCase);
+        set => hudView.Value = value ? "Total" : "Tareas";
+    }
     internal static bool HudLeft => hudSide.Value.StartsWith("Izq", StringComparison.OrdinalIgnoreCase)
                                     || hudSide.Value.StartsWith("Left", StringComparison.OrdinalIgnoreCase);
     internal static float HudTop => hudTop.Value;
@@ -84,6 +93,20 @@ public class Plugin : BaseUnityPlugin
         hudWidth.Value = Mathf.Clamp(Mathf.Round(width), 100f, 800f);
         hudMaxHeight.Value = Mathf.Clamp(Mathf.Round(maxHeight), 60f, 1000f);
     }
+
+    // Botón "Vaciar la cola" del menú Mods. El puente (FrameworkBridge) no referencia este DLL:
+    // llama estos dos por reflexión. Con confirmación: el primer clic pide otro antes de 4 segundos.
+    public static string ClearQueueLabel()
+    {
+        if (!Queue.HasSlot)
+            return Lang.T("no_game");
+        int n = Queue.Tasks.Count;
+        if (n == 0)
+            return Lang.T("queue_empty");
+        return ClearConfirm.Armed ? Lang.T("clear_confirm", n) : Lang.T("clear_n", n);
+    }
+
+    public static void ClearQueueClick() => ClearConfirm.Press();
 
     private static bool started;
     private string lastSlot;
@@ -170,6 +193,14 @@ public class Plugin : BaseUnityPlugin
             "Se cambia en el juego con el botón junto al candado.");
         pinNewTasks = Config.Bind(P, "PinAlAgregar", true,
             "Al agregar una tarea nueva, su pin se prende solo: sus materiales se marcan en los cofres al momento.");
+        hudHideEmpty = Config.Bind(P, "OcultarSiVacia", false,
+            "Oculta el panel mientras la cola está vacía; vuelve a salir al agregar algo. Si no, la cola vacía dice cómo agregar.");
+        backpackOnly = Config.Bind(P, "SoloMochila", false,
+            "Cuenta solo lo que llevas encima. Si no, cuenta como el juego al craftear: lo que llevas más los cofres y " +
+            "almacenes de la zona donde estás.");
+        hudView = Config.Bind(P, "Vista", "Tareas",
+            new ConfigDescription("Tareas: cada tarea con su receta. Total: todo lo que pide la cola junto, un renglón por material. " +
+                "Se cambia en el juego con la Σ de la barra del panel.", new AcceptableValueList<string>("Tareas", "Total")));
         hudAlwaysOpen = Config.Bind(P, "SiempreVisible", false,
             "Con un cofre, mesa o el árbol abierto: false = el panel se recorre o se pliega para no tapar la ventana " +
             "(al pasar el mouse se despliega); true = siempre se ve completo. Se cambia en el juego con el ojo de la barra del panel.");

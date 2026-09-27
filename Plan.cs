@@ -145,6 +145,49 @@ internal static class Plan
     // Cuántas veces hay que craftear la receta de esa ruta (0 si ya no falta nada).
     public static int CraftsAt(string path) => Crafts.TryGetValue(path, out int c) ? c : 0;
 
+    // ---------- Vista Total ----------
+    // Los renglones "hoja" del plan (lo que ya no se desglosa: materiales sin receta, lo que ya
+    // tienes, o donde se llegó al fondo), sumados por material en el orden de la cola.
+    // Necesitas = lo que pide cada renglón; tienes = lo que le tocó del reparto.
+
+    internal sealed class Total
+    {
+        public string id;
+        public int want, have;
+        public bool fuel;
+    }
+
+    public static List<Total> Totals()
+    {
+        HashSet<string> parents = new HashSet<string>();
+        foreach (string path in Rows.Keys)
+        {
+            int slash = path.LastIndexOf('/');
+            if (slash > 0)
+                parents.Add(path.Substring(0, slash));
+        }
+        List<Total> list = new List<Total>();
+        Dictionary<string, Total> byId = new Dictionary<string, Total>();
+        foreach (KeyValuePair<string, Row> kv in Rows)
+        {
+            // "#objeto" es la barra de una tarea: sus ingredientes cuelgan de "objeto/…".
+            string own = kv.Key[0] == '#' ? kv.Key.Substring(1) : kv.Key;
+            if (parents.Contains(own))
+                continue; // se desglosa: cuentan sus ingredientes
+            Row r = kv.Value;
+            if (!byId.TryGetValue(r.id, out Total t))
+            {
+                t = new Total { id = r.id, fuel = r.fuel };
+                byId[r.id] = t;
+                list.Add(t);
+            }
+            t.want += r.want;
+            if (!r.fuel)
+                t.have += Mathf.Min(r.avail, r.want);
+        }
+        return list;
+    }
+
     // Lo que se marca en los cofres para un grupo: el objeto (o los materiales de la construcción);
     // de lo que falte, sus ingredientes; más abajo, solo lo que tengas desplegado en el panel.
     public static HashSet<string> MarksFor(Group g)

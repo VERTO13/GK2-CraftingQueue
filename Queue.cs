@@ -329,6 +329,20 @@ internal static class Queue
         Touch();
     }
 
+    // Vaciar la cola entera (el bote de la barra del panel o el botón del menú Mods, los dos con
+    // confirmación: ver ClearConfirm). La cola anterior se queda en el ".bak" de la partida.
+    public static int Clear()
+    {
+        if (!HasSlot || Tasks.Count == 0)
+            return 0;
+        int n = Tasks.Count;
+        Tasks.Clear();
+        Pins.Clear();
+        Touch();
+        Plugin.Log.LogInfo($"Cola vaciada: {n} tareas.");
+        return n;
+    }
+
     private static void Touch(bool save = true)
     {
         // Pines de tareas que ya no están en la cola (terminadas o quitadas): fuera.
@@ -452,5 +466,32 @@ internal static class Queue
         if (task.count <= 0)
             Tasks.Remove(task);
         Touch();
+    }
+}
+
+// Vaciar la cola con confirmación: el primer toque la "arma" (el bote se pone rojo y avisa) y el
+// segundo, antes de 4 segundos, la vacía. Lo usan el bote del panel y el botón del menú Mods.
+internal static class ClearConfirm
+{
+    private const float Window = 4f;
+    private static float armedUntil = -1f;
+
+    public static bool Armed => Time.unscaledTime < armedUntil && Queue.HasSlot && Queue.Tasks.Count > 0;
+
+    // Devuelve cuántas tareas quitó (0 si solo se armó o no había nada que quitar).
+    public static int Press()
+    {
+        if (!Queue.HasSlot || Queue.Tasks.Count == 0)
+        {
+            armedUntil = -1f;
+            return 0;
+        }
+        if (!Armed)
+        {
+            armedUntil = Time.unscaledTime + Window;
+            return 0;
+        }
+        armedUntil = -1f;
+        return Queue.Clear();
     }
 }
