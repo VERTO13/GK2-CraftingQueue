@@ -1,0 +1,1 @@
+An on-screen crafting to-do list. Ctrl + right-click almost anything to add it; the panel shows what you have, what's missing, the recipe tree with station options and real yields, and bubbles over the chests that hold your materials.

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Optional integration with GK2 Mod Framework (https://github.com/SuperMan4eg/GK2-Mod-Framework).
+    This small plugin only loads when the framework is installed; without it BepInEx skips this DLL and
+    Crafting Queue works exactly the same. It does not reference CraftingQueue.dll: it reuses the main
+    plugin's ConfigFile at runtime, so the Mods menu edits the same values as the .cfg file.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>CraftingQueue.GK2Framework</AssemblyName>
+    <RootNamespace>CraftQueue.FrameworkBridge</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <Version>0.4.16</Version>
+  </PropertyGroup>
+  <PropertyGroup>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2</GameDir>
+    <BepInExDir>$(GameDir)\BepInEx</BepInExDir>
+    <FrameworkDll Condition="'$(FrameworkDll)' == ''">$(BepInExDir)\plugins\GK2.Framework.dll</FrameworkDll>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="BepInEx"><HintPath>$(BepInExDir)\core\BepInEx.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(GameDir)\GraveyardKeeper2_Data\Managed\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameDir)\GraveyardKeeper2_Data\Managed\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GK2.Framework"><HintPath>$(FrameworkDll)</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

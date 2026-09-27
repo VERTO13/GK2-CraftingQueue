@@ -21,15 +21,17 @@ public class Plugin : BaseUnityPlugin
 
     internal static ManualLogSource Log { get; private set; }
 
-    private static ConfigEntry<KeyCode> addModifier, hoverKey, hudKey, recipeStyleKey;
+    // Teclas como KeyboardShortcut (el formato de BepInEx que también usa GK2 Mod Framework para editarlas
+    // desde su menú Mods). Un valor viejo como "LeftControl" se lee igual. Se usa solo la tecla principal.
+    private static ConfigEntry<KeyboardShortcut> addModifier, hoverKey, hudKey, recipeStyleKey;
     private static ConfigEntry<float> hoverTextSize, hudTop, hudSideOffset, hudWidth, hudMaxHeight, hudTextSize, hudIconSize, hudScale, hudOpacity;
     private static ConfigEntry<bool> hudVisible, hudHideWithWindows, hudInWorkWindows, hudMovable, chestMarks, measurePerf, hudAlwaysOpen, pinNewTasks;
     private static ConfigEntry<string> hudSide, recipeStyle;
     private static ConfigEntry<int> hudMaxRows;
 
-    internal static KeyCode AddModifier => addModifier.Value;
+    internal static KeyCode AddModifier => addModifier.Value.MainKey;
     internal static float HoverTextSize => hoverTextSize.Value;
-    internal static KeyCode HudKey => hudKey.Value;
+    internal static KeyCode HudKey => hudKey.Value.MainKey;
     internal static bool HudVisible { get => hudVisible.Value; set => hudVisible.Value = value; }
     internal static bool HudHideWithWindows => hudHideWithWindows.Value;
     internal static bool HudInWorkWindows => hudInWorkWindows.Value;
@@ -48,7 +50,7 @@ public class Plugin : BaseUnityPlugin
     internal static float HudScale => hudScale.Value;
     internal static float HudOpacity => hudOpacity.Value;
     internal static int HudMaxRows => hudMaxRows.Value;
-    internal static KeyCode RecipeStyleKey => recipeStyleKey.Value;
+    internal static KeyCode RecipeStyleKey => recipeStyleKey.Value.MainKey;
     internal static bool CompactRecipes
     {
         get => recipeStyle.Value.StartsWith("Comp", StringComparison.OrdinalIgnoreCase);
@@ -57,7 +59,7 @@ public class Plugin : BaseUnityPlugin
 
     internal static bool HoverHeld()
     {
-        KeyCode k = hoverKey.Value;
+        KeyCode k = hoverKey.Value.MainKey;
         if (k == KeyCode.None)
             return false;
         if (k == KeyCode.LeftAlt || k == KeyCode.RightAlt)
@@ -105,7 +107,7 @@ public class Plugin : BaseUnityPlugin
         gameObject.AddComponent<HoverRecipe>();
         gameObject.AddComponent<ChestMarks>();
         gameObject.AddComponent<GamepadInput>();
-        Log.LogInfo($"Crafting Queue listo: {addModifier.Value} + clic derecho agrega, {hudKey.Value} muestra u oculta el panel. Colas en {data}");
+        Log.LogInfo($"Crafting Queue listo: {AddModifier} + clic derecho agrega, {HudKey} muestra u oculta el panel. Colas en {data}");
     }
 
     private void Update()
@@ -131,17 +133,17 @@ public class Plugin : BaseUnityPlugin
 
     private void BindConfig()
     {
-        addModifier = Config.Bind("Controles", "Modificador", KeyCode.LeftControl,
+        addModifier = Config.Bind("Controles", "Modificador", new KeyboardShortcut(KeyCode.LeftControl),
             "Mantén esta tecla y da clic derecho sobre un objeto, receta, construcción u obra del pueblo para agregarlo a la cola. " +
             "Si es LeftControl o RightControl, cualquiera de los dos Ctrl funciona.");
-        hoverKey = Config.Bind("Vista rápida", "Tecla", KeyCode.LeftAlt,
+        hoverKey = Config.Bind("Vista rápida", "Tecla", new KeyboardShortcut(KeyCode.LeftAlt),
             "Mantén esta tecla sobre cualquier objeto para ver su receta en un panel chico. None la apaga.");
         hoverTextSize = Config.Bind("Vista rápida", "TamanoLetra", 0f,
             new ConfigDescription("Tamaño de letra. 0 = el mismo que usa el juego (el más nítido).", new AcceptableValueRange<float>(0f, 40f)));
 
         const string P = "Panel en pantalla";
         hudVisible = Config.Bind(P, "Visible", true, "Muestra la cola en pantalla. La tecla de abajo lo cambia en el juego.");
-        hudKey = Config.Bind(P, "Tecla", KeyCode.F3, "Muestra u oculta el panel.");
+        hudKey = Config.Bind(P, "Tecla", new KeyboardShortcut(KeyCode.F3), "Muestra u oculta el panel.");
         hudHideWithWindows = Config.Bind(P, "OcultarConVentanas", true, "Lo oculta con menús, ajustes, diálogos y mapa.");
         hudInWorkWindows = Config.Bind(P, "MostrarEnCofresYMesas", true,
             "Lo sigue mostrando con cofres, mesas de crafteo, construcción, tiendas, zombis, estaciones y la página del personaje.");
@@ -177,7 +179,7 @@ public class Plugin : BaseUnityPlugin
         recipeStyle = Config.Bind(P, "EstiloReceta", "Detallada",
             new ConfigDescription("Detallada: línea + ingredientes con nombre. Compacta: una línea con lo que pide.",
                 new AcceptableValueList<string>("Detallada", "Compacta")));
-        recipeStyleKey = Config.Bind(P, "TeclaEstiloReceta", KeyCode.F4, "Cambia entre el estilo detallado y el compacto mientras juegas.");
+        recipeStyleKey = Config.Bind(P, "TeclaEstiloReceta", new KeyboardShortcut(KeyCode.F4), "Cambia entre el estilo detallado y el compacto mientras juegas.");
         measurePerf = Config.Bind("Diagnóstico", "MedirRendimiento", false,
             "Escribe en BepInEx\\LogOutput.log cuánto tarda cada parte del mod (cada 15 s) y los cuadros lentos. Solo para buscar problemas.");
     }

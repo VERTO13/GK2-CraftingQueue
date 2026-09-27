@@ -1,0 +1,7 @@
+{
+  "mod.name": "Crafting Queue",
+  "mod.description": "An on-screen crafting to-do list: what you need, what you have and which chest it's in.",
+  "sections.Controles": "Controls",
+  "sections.Vista rápida": "Recipe preview",
+  "sections.Panel en pantalla": "Queue panel"
+}
