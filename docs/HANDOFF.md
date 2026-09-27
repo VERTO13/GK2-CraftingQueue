@@ -52,6 +52,33 @@ Se está haciendo la **0.5.0**. En esta rama (sin publicar, **versión aún 0.4.
      traduce para el menú. Otros idiomas caen a `en`.
 2. **Teclas como `KeyboardShortcut`** en `Plugin.cs` (antes `KeyCode`). Requisito del framework (`AddKeybind`).
    Un valor guardado viejo como `LeftControl` se lee igual. El resto del mod usa `.Value.MainKey`.
+3. **Panel** (probado por el usuario en 1080p el 2026-09-27):
+   - Escala de la interfaz desde `LazyUI.ScaleFactor` (el juego: ×2 a 1080p y 1440p "x2", ×4 en 4K). Antes se
+     buscaba "el lienzo del juego" y a veces tomaba el de otro mod: a 1440p el panel salía ×3.
+   - **Agarre** en la esquina de abajo del lado de adentro (con el candado abierto): cambia ancho y alto en vivo;
+     el `.cfg` se escribe una vez al soltar (`Plugin.LiveHudWidth/LiveHudMaxHeight` mientras se arrastra).
+   - "Otra zona: N" pasó del nombre al **globo** al pasar el mouse (antes hacía bajar dos o tres renglones).
+   - Íconos que se adaptan al ancho: `TamanoIconos` es el máximo (`min(tamaño × escala, ancho × 0.11)`).
+   - Juego 1.006: `QuickAdd` busca `GetGameKeyDelegates` con `GetMethod(DeclaredOnly)` (sin avisos de HarmonyX).
+4. **"Adelante con todo"** (2026-09-27, falta que el usuario lo pruebe):
+   - **Guardado seguro** de la cola: `.tmp` completo (termina en `# end`) → `File.Replace` con `.bak`; al cargar, si
+     falta el archivo, se recupera del `.tmp` o `.bak` completos.
+   - **Partida nueva / borrada** (`SlotHooks` en `GameHooks.cs`): el juego reusa nombres de ranura
+     (`GetNameForNewSlot` da el primer `Steam_N` libre), así que la cola de una partida borrada, o la que hubiera con
+     el nombre de una partida nueva, se aparta a `CraftingQueue/anteriores/` (se guardan las 20 más recientes).
+     Las partidas de la demo cambian de nombre al guardarse: la cola se muda (`Queue.Rename`).
+   - **Peleas:** el panel se oculta en la preparación y en la pelea (`GameState.InFight`), y el control no usa R3
+     ahí (en la preparación, R3 = "terminar preparación" en `UIBuildingWindow`; antes además agregaba el edificio
+     enfocado a la cola).
+   - **Encargos (1.006):** Ctrl + clic en un encargo pide solo lo que falta (`GameData.OrderMissing`).
+   - **Vista Total** (Σ en la barra, ajuste `Vista`): renglones "hoja" del plan sumados por material (`Plan.Totals`).
+   - **Vaciar la cola:** bote en la barra (dos clics, `ClearConfirm`) y botón en el menú Mods (`Plugin.ClearQueueLabel/
+     ClearQueueClick`, que el puente llama por reflexión).
+   - **Shift** en − + (±10; − se detiene en 1) y en ▲ ▼ (hasta arriba/abajo). **Globos** en todos los botones.
+   - Ajustes nuevos: `OcultarSiVacia`, `SoloMochila` (cuenta solo el inventario; el globo de otras zonas incluye
+     entonces la zona actual), `Vista` (Tareas/Total). Los dos primeros también en el menú del framework.
+   - 17 textos nuevos en los 16 idiomas (`Lang.MoreKeys`/`Lang.More`).
+   - README (en/es) y `docs/nexus/description.bbcode` ya describen todo esto: subir la descripción a Nexus al publicar.
 
 ### Lo que falta probar (hazlo con el usuario, en su juego)
 - [ ] Con el framework instalado: ESC → **Mods** → **Crafting Queue** muestra las 3 secciones con nombres bien
@@ -63,6 +90,13 @@ Se está haciendo la **0.5.0**. En esta rama (sin publicar, **versión aún 0.4.
 - [ ] **Sin el framework** (quítalo temporalmente): el mod carga normal y el log dice que el puente se omitió.
 - [ ] Que un `.cfg` viejo (teclas guardadas como `KeyCode`) no pierda valores.
 - [ ] **Control / gamepad** (ver sección 6): es la primera vez que se prueba con control real.
+- [ ] Vista Total (Σ): sumas correctas, lo que falta primero, globo de otra zona; volver a Tareas.
+- [ ] Bote: primer clic rojo + globo "otra vez", segundo clic vacía; a los 4 s se desarma. Botón del menú Mods igual.
+- [ ] Shift en − + ▲ ▼. Globos de todos los botones (y que no tapen nada).
+- [ ] Partida nueva después de borrar una: empieza sin cola, y la vieja queda en `CraftingQueue/anteriores/`.
+- [ ] Pelea: el panel se oculta en la preparación y vuelve al terminar; R3 termina la preparación sin agregar nada.
+- [ ] Encargo con parte entregada: Ctrl + clic pide solo lo que falta.
+- [ ] `OcultarSiVacia` y `SoloMochila` desde el menú Mods.
 
 ### Decisiones pendientes para empaquetar la 0.5.0
 - El zip debe incluir `BepInEx/plugins/CraftingQueue/CraftingQueue.GK2Framework.dll` y las traducciones en
@@ -120,8 +154,8 @@ dotnet build FrameworkBridge -c Release
 | Archivo | Qué hace |
 |---|---|
 | `Plugin.cs` | Entrada BepInEx (GUID `verto13.gk2.craftingqueue`), config (secciones en español), arranque. |
-| `Queue.cs` | Tareas por partida, persistencia en texto (`task`/`pin`), pines, agregar (`oneMore`), reordenar. |
-| `Plan.cs` | Reparto de lo que tienes en orden de la cola; renglones por ruta; completado automático (`Tick`). |
+| `Queue.cs` | Tareas por partida, persistencia en texto (`task`/`pin`, guardado seguro con `.tmp`/`.bak`), pines, agregar (`oneMore`), reordenar, apartar/renombrar colas de ranuras, vaciar (`ClearConfirm`). |
+| `Plan.cs` | Reparto de lo que tienes en orden de la cola; renglones por ruta; completado automático (`Tick`); vista Total (`Totals`). |
 | `QueueView.cs` | Convierte tareas en entradas para el panel. |
 | `QueueHud.cs` | El panel (UGUI en tiempo real): bloques, árbol de recetas, botones ▲ ▼ − + 🗑, pines, ojo, plegado, navegación con control, actualización de números en su lugar. |
 | `GameData.cs` | Todo lo que se lee del juego: recetas (`OptionsFor`), rendimientos con talentos, estaciones disponibles, conteos (`Owned`), otras zonas (`Elsewhere`). |
@@ -129,7 +163,7 @@ dotnet build FrameworkBridge -c Release
 | `QuickAdd.cs` | Ctrl + clic derecho en todos lados (parches Harmony, diálogos de NPC, encargos). |
 | `HoverRecipe.cs` | Vista rápida con Alt. |
 | `GamepadInput.cs` | Control (Rewired). |
-| `GameHooks.cs` | Parches: crafteo terminado, construcción, obras del pueblo. |
+| `GameHooks.cs` | Parches: crafteo terminado, construcción, obras del pueblo; `SlotHooks` (partida nueva, borrada, renombrada); `GameState` (partida, escenas, peleas). |
 | `GameStyle.cs`, `GameWindows.cs` | Estilo del juego (botones/fuente) y medición de ventanas abiertas. |
 | `Prefs.cs`, `Lang.cs`, `Perf.cs`, `Diagnostics.cs` | Preferencias (flechas/recetas elegidas), 16 idiomas, rendimiento, diagnóstico. |
 | `FrameworkBridge/` | Puente opcional con GK2 Mod Framework (0.5.0, en pruebas). |
@@ -143,7 +177,21 @@ dotnet build FrameworkBridge -c Release
 - Estación disponible = construida en algún lado, o alguna `BuildingDef` con ese `wgoId` y modo distinto de
   `None/Remove` desbloqueada y no bloqueada (el `steel_anvil_r` en modo Remove engañaba antes).
 - Conteo "tienes" = inventario + almacenes de la zona actual (`MultiInventory(PlayerData, addCurrentPlayerWorldZone: true)`), igual que el juego al craftear.
-- Control (Rewired, jugador 0): X=2, Y=3, A=4, B=5, LB=6, RB=7, D-pad ↑12 ↓13 ←14 →15, R3=19.
+- Control (Rewired, jugador 0; tabla en `GamepadController..ctor`): X=2, Y=3, A=4, B=5, LB=6, RB=7, LT=8, RT=9,
+  View/Back=10, Start=11, D-pad ↑12 ↓13 ←14 →15, R3=19, L3=20 (stick derecho: ejes 16/17). Las acciones del juego
+  son `GameKey` (clase tipo enum en `LazyBearTechnology`) y cada una se asigna a un `GamepadButton` en el asset
+  `GameBindings` (no está en el código).
+- `LazySingleton<T>.Instance` **crea** el objeto si no existe: para leer uno que quizá no exista (p. ej.
+  `FightingGameController`), leer su campo estático `instance`. `FightState`: Disabled, InPreFight, ActiveFight.
+- Ranuras: `SaveSystem.GetNameForNewSlot` = primer `{plataforma}_{n}` libre desde 1; nueva partida →
+  `MainGame.StartNewGameWithSlotName` (privado); borrar → `SaveSystem.Remove(SaveSlotData, Action)`; la demo se
+  renombra dentro de `SaveSystem.Save` (si `isDemoSave`). Los autoguardados son la misma ranura con una marca.
+  `IsLimitedSaveSlotsEnabled` es `false` fijo en PC.
+- Encargos 1.006 (`VendorSystem.TryResolveOrders`): cuenta lo que hay en las tarimas (`interactionType` 31) de
+  `warehouse` y `warehouse_cellar`; los normales se entregan por partes (`VendorOrderData.Count`), los urgentes
+  completos o nada.
+- Escala de la interfaz: `LazyUI.ScaleFactor` (= `ResolutionConfig.PixelSize`, lo pone
+  `GUIElements.ApplyUiForResolution`).
 - Los mods oficiales del juego son solo idiomas/voces; el código se carga únicamente vía BepInEx.
 
 ---
@@ -154,7 +202,8 @@ Según el diseño:
 - **Tocar R3** sobre una casilla en una ventana → la agrega a la cola.
 - **Mantener R3** sobre una casilla → muestra su receta.
 - **R3 en el mundo** → entra a navegar el panel (se pausa la entrada del juego): cruceta ↑↓ moverse, → abrir,
-  ← cerrar, LB/RB cambiar receta, X/Y −/+, A pin, B salir.
+  ← cerrar, LB/RB cambiar receta, X/Y −/+, A pin, View vista Total, B salir.
+- En la preparación de una pelea y en la pelea el mod no usa R3 (el panel está oculto).
 - Falta: reordenar tareas (▲ ▼) con control.
 Anota todo lo que no funcione o se sienta raro y corrígelo con el usuario.
 
@@ -204,3 +253,12 @@ Misma versión en GitHub y Nexus. Siguiente: **0.5.0**; arreglos 0.5.1, 0.5.2…
   no aparecía todavía en la lista). El usuario ya activó el programa en su cuenta.
 - Subida automática a Nexus (sección 7).
 - Posible: más traducciones del menú del framework (hoy solo en/es).
+- Posible optimización: la vista Total se rearma entera cuando cambia lo que tienes (una vez por segundo como mucho,
+  solo con esa vista abierta); podría actualizar los números en su lugar como la vista de tareas.
+- Capturas/GIF nuevos para el README y Nexus: vista Total, bote, agarre (las de ahora muestran el aviso de zona
+  en gris, que ya no existe).
+- Competencia (revisada el 2026-09-27): **Shopping List** de Saint ArchI (Nexus 45, el más parecido; cuenta solo la
+  mochila, vista por tarea o sumada, pedidos del pueblo), su **Codex** y **Thoughtful Week**; Pin My Recipe, Queue
+  Count, Kebo, Keeper's Little Helpers. Saint ArchI mantiene la guía de Steam de mods de calidad de vida
+  (https://steamcommunity.com/sharedfiles/filedetails/?id=3806471142) e invita a sugerir mods en los comentarios:
+  el usuario puede comentar (borrador en la sesión del 2026-09-27; es acción pública, la hace él).

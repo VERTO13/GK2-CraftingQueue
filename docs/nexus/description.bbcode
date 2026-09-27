@@ -10,6 +10,7 @@ Ever walk up to the workbench and forget what the recipe needed, or which chest 
 [b]Add from almost anywhere[/b]
 [list]
 [*]Ctrl + right-click works on items, station recipes, buildings, town works, quest requirements, NPC requests, vendor orders and tech tree blueprints.
+[*]Vendor orders ask only for what the order still needs: goods already delivered or waiting on the pallets count.
 [*]If the panel is folded because a window is open, it unfolds for a moment so you can see the new task.
 [/list]
 [center][img]https://raw.githubusercontent.com/VERTO13/GK2-CraftingQueue/main/docs/images/remove-and-blueprints.gif[/img][/center]
@@ -27,9 +28,16 @@ Ever walk up to the workbench and forget what the recipe needed, or which chest 
 [list]
 [*]Little bubbles over the chests and storages in your zone show which of your materials each one holds.
 [*]Hover a task in the panel to preview where its materials are, or pin it to keep them marked.
-[*]Short here? The row tells you where else you have it, in grey: "· Yard: 7".
+[*]Short here? Hover the row to see where else you have it: "Yard: 7".
 [/list]
 [center][img]https://raw.githubusercontent.com/VERTO13/GK2-CraftingQueue/main/docs/images/chest-bubbles.png[/img][/center]
+
+[b]The whole list at a glance[/b]
+[list]
+[*][b]Σ Total view:[/b] everything the queue needs in one list, one row per material, added up across all your tasks, with what's missing first.
+[*][b]Clear the queue[/b] with the trash can in the title bar (click twice to confirm).
+[*]Hold [b]Shift[/b] on − + to change an amount by 10, or on ▲ ▼ to send a task to the top or the bottom.
+[/list]
 
 [b]Peek at any recipe[/b]
 [list]
@@ -41,9 +49,13 @@ Ever walk up to the workbench and forget what the recipe needed, or which chest 
 [list]
 [*]Tasks that share a material split it in queue order. Reorder them with ▲ ▼ to set priorities.
 [*]Tasks leave the list on their own once you craft, pick up or buy what was missing.
-[*]Stays out of the way: with a chest, station or the tech tree open, the panel moves aside or folds into a small tab. The eye icon keeps it always visible.
-[*]Pixel-crisp at 720p, 1080p, 1440p and 4K. Very light (about 0.1 ms per frame).
-[*]One queue per save slot. 16 languages, following the game's language.
+[*]Stays out of the way: with a chest, station or the tech tree open, the panel moves aside or folds into a small tab. The eye icon keeps it always visible. It also hides while you prepare and fight a battle.
+[*]Make it yours: open the lock, then drag the title to move the panel or its corner to resize it. Names and icons rearrange as you drag.
+[*]Every button explains itself when you hover it.
+[*]Options to hide the panel while the queue is empty, or to count only what you carry.
+[*]Settings in the game: with [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed, everything is in ESC → Mods → Crafting Queue.
+[*]One queue per save slot, saved safely. A new game never inherits the queue of a deleted save.
+[*]Pixel-crisp at 720p, 1080p, 1440p and 4K. Very light (about 0.1 ms per frame). 16 languages, following the game's language.
 [/list]
 
 [size=4][b][color=#ffd966]Controls[/color][/b][/size]
@@ -52,8 +64,9 @@ Ever walk up to the workbench and forget what the recipe needed, or which chest 
 [*][b]Alt[/b] (hold) – show a recipe
 [*][b]F3[/b] – show / hide the panel
 [*][b]F4[/b] – detailed / compact recipes
-[*]Hover a task – its ▲ ▼ − + and trash buttons, and its pin
-[*]Gamepad [i](experimental)[/i]: tap [b]R3[/b] on a slot to add it, hold R3 to see its recipe, R3 in the world to use the panel
+[*]Hover a task – its ▲ ▼ − + and trash buttons, and its pin ([b]Shift[/b]: by 10 / to the top or bottom)
+[*]Hover the panel – [b]Σ[/b] for the Total view and the trash can to clear the queue
+[*]Gamepad [i](experimental)[/i]: tap [b]R3[/b] on a slot to add it, hold R3 to see its recipe, R3 in the world to use the panel ([b]View[/b] switches to the Total view)
 [/list]
 
 [size=4][b][color=#ffd966]Installation[/color][/b][/size]
@@ -67,11 +80,18 @@ Pick [b]"with BepInEx"[/b] if this is your first BepInEx mod, or the [b]mod-only
 
 [b]Uninstall:[/b] delete [code]BepInEx\plugins\CraftingQueue[/code] in your game folder.
 
+[size=4][b][color=#ffd966]Requirements[/color][/b][/size]
+[list]
+[*]Graveyard Keeper 2 (tested on version 1.006).
+[*][url=https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5]BepInEx 5.4.23.x[/url] (included in the "with BepInEx" file).
+[*]Optional: [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] 0.1.14 or later, for the in-game settings menu.
+[/list]
+
 [size=4][b][color=#ffd966]Good to know[/color][/b][/size]
 [list]
-[*]Requires [url=https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5]BepInEx 5.4.23.x[/url] (included in the "with BepInEx" file).
 [*]No balance or gameplay changes, and your save is never touched: the queue lives in its own file per save slot.
 [*]While you hold Ctrl, right-click adds to the queue instead of doing its normal action.
+[*]"Have" counts what you carry plus the chests of the zone you're in, like the game does when you craft. Other zones only show up as a hint, and chest bubbles only cover the zone you're in.
 [*]No network access, no data collection, no game files or assets included.
 [*]Works alongside other mods.
 [*]Still in beta, so expect a few bugs. Gamepad support is experimental.

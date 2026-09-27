@@ -2,7 +2,7 @@
 
 **English** | [Español](README.es.md) · [Nexus Mods](https://www.nexusmods.com/graveyardkeeper2/mods/177)
 
-A mod that keeps a **crafting queue always on screen**. It shows what you want to make, what it takes, what you already have, and which chest it's in.
+Ever walk up to the workbench and forget what the recipe needed, or which chest the planks were in? **Crafting Queue** keeps a small to-do list always on screen: **Ctrl + right-click** anything to add it, and the panel shows what you want to make, what it takes, what you already have, and which chest it's in.
 
 > ⚠️ **Beta.** The mod is still being tested, so expect some bugs. Please [report them](#reporting-bugs). It really helps.
 > 🎮 **Gamepad support is even more experimental.** It has barely been tested yet.
@@ -88,10 +88,18 @@ To add something, hold **Ctrl** and right-click any item.
 - **A task asks to *have* that many.** What you already own counts, and the recipe below covers only what's missing. Ctrl + right-click on an item or a recipe asks for one more than you have; requests (NPCs, quests, orders, buildings) ask for their exact amount.
 - **Shared materials are split in queue order.** If two tasks need logs, the one on top takes what you have first and the next one gets what's left. Reorder tasks with ▲ ▼.
 - **Tasks finish on their own** when you craft, pick up or buy what was missing. Buildings and town works go down when you build them.
-- **Stock in other zones.** If you're short here but have some elsewhere, the row tells you where, in grey: `· Yard: 7`.
-- **Hover a task** to show its ▲ ▼ − + 🗑 buttons and its pin. Drag the title to move the panel; the lock pins it in place.
+- **Stock in other zones.** If you're short here but have some elsewhere, hover the row and it tells you where: `Yard: 7`.
+- **Hover a task** to show its ▲ ▼ − + 🗑 buttons and its pin. Hold **Shift** to change the amount by 10, or to send the task to the top or the bottom. Every button explains itself when you hover it.
+- **Move and resize it.** Open the lock, then drag the title to move the panel, or the grip in its lower corner to resize it. Names and icons rearrange as you drag, and icons shrink on their own when the panel is narrow.
 
 ![Task buttons](docs/images/task-buttons.png)
+
+### Total view and clearing the queue
+
+Hover the panel and two more buttons appear in its title bar:
+
+- **Σ** switches to the **Total** view: everything the queue needs in one list, one row per material, added up across all your tasks. It's what you still have to gather, with what's missing first.
+- **The trash can** clears the whole queue. Click it twice to confirm: it turns red after the first click.
 
 ### Add anything with Ctrl + right-click
 
@@ -105,7 +113,7 @@ Works on almost everything that shows an item or a recipe:
 | Quest requirements | The item, with the amount the quest asks for |
 | Tech tree | The recipe, item or building (blueprint) that a tech unlocks |
 | NPC conversations ("0/1" answers) and request pop-ups | The item they ask for, with the amount |
-| Vendor orders | The ordered item, with the order's amount |
+| Vendor orders | The ordered item, with what the order still needs (goods already delivered or on the pallets count) |
 
 If the panel is folded because a window is open, it unfolds for a moment so you can see the new task.
 
@@ -135,9 +143,12 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 ### And also
 
 - **Stays out of the way:** with a chest, station or the tech tree open, the panel moves aside on its own side, or folds into a small "Queue" tab that expands when you hover it. Prefer to always see it? Turn on the **eye** icon in the panel's title bar.
+- **Out of the way in battles:** the panel hides while you prepare and fight a battle.
 - **Pixel-crisp** at 720p, 1080p, 1440p and 4K.
 - **Light on performance.** Amounts update in place instead of redrawing the panel, and nothing heavy runs while you play (about 0.1 ms per frame on average).
-- **One queue per save slot.** It's saved in its own file and never touches your save.
+- **One queue per save slot,** in its own file, saved so a crash can't wipe it. A new game never inherits the queue of a deleted save (old queues are kept in the `anteriores` folder, just in case).
+- **Options:** hide the panel while the queue is empty, or count only what you carry instead of your bag plus the zone's chests.
+- **Settings in the game (optional):** with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, every setting is in the game's **Mods** menu (ESC), plus a button to clear the queue.
 - **16 languages.** All of the game's official languages; it follows the game's language live.
 
 ### What it changes / compatibility
@@ -146,6 +157,18 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 - **One thing works differently:** while you hold **Ctrl**, right-click adds to the queue instead of doing its normal action.
 - **No network access, no data collection, no game files or assets included.** Open source (MIT).
 - **Works alongside other mods.** It doesn't change how the game plays, so it's unlikely to clash with them.
+
+### Requirements
+
+- Graveyard Keeper 2 (tested on version 1.006).
+- [BepInEx](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5) 5.4.23.x, included in the *with-BepInEx* zip.
+- Optional: [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) 0.1.14 or later, for the in-game settings menu.
+
+### Known limitations
+
+- "Have" counts what you carry plus the chests and storages of the zone you're in, the same way the game does when you craft. Chests in other zones only show up as a hint when you hover a row.
+- Chest bubbles only cover the zone you're in.
+- Gamepad support is experimental, and it's still a beta: please [report bugs](#reporting-bugs).
 
 ## Controls
 
@@ -156,8 +179,12 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 | Show / hide panel | `F3` | – |
 | Detailed / compact recipes | `F4` | – |
 | See where a task's materials are | Hover the task in the panel | Select it in the panel |
-| Reorder tasks (priority) | Hover the task → ▲ ▼ | – |
-| Use the panel | Mouse | **R3** to enter · D-pad ↑↓ move · → open · ← close · LB/RB switch recipe · X/Y −/+ · A pin · B exit |
+| Reorder tasks (priority) | Hover the task → ▲ ▼ (**Shift**: to the top or bottom) | – |
+| Change an amount | Hover the task → − + (**Shift**: by 10) | X / Y in the panel |
+| Total view | **Σ** in the panel's title bar | **View** in the panel |
+| Clear the queue | Trash can in the panel's title bar (click twice) | – |
+| Move / resize the panel | Open the lock → drag the title / the corner grip | – |
+| Use the panel | Mouse | **R3** to enter · D-pad ↑↓ move · → open · ← close · LB/RB switch recipe · X/Y −/+ · A pin · View total · B exit |
 
 ## Reporting bugs
 
@@ -174,6 +201,8 @@ Open an [issue](../../issues/new/choose) and include:
 
 Settings live in `BepInEx\config\verto13.gk2.craftingqueue.cfg` (open it with Notepad while the game is closed). The file is created the first time you play, and every setting is explained inside it: panel side, width, height, icon size, opacity, recipe style…
 
+With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, the same settings are in the game: **ESC → Mods → Crafting Queue**. Changes apply right away.
+
 Your queues are saved in `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2\CraftingQueue\`.
 
 **Translations:** to fix a translation or add a language, copy `BepInEx\plugins\CraftingQueue\lang\_plantilla_en.txt` to `lang\<language code>.txt` and translate the right-hand side.
@@ -188,7 +217,7 @@ Your queues are saved in `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveya
 - **The panel doesn't appear:**
   1. Check that `BepInEx\LogOutput.log` exists in the game folder. If it doesn't, BepInEx isn't installed; use the *with-BepInEx* zip.
   2. If the log exists, look inside it for `Crafting Queue`.
-- **The panel is hidden:** press `F3`.
+- **The panel is hidden:** press `F3`. It also hides on purpose while you prepare and fight a battle, and while the queue is empty if you turned on that option.
 - **No chest bubbles:** turn on the pin next to the lock (or a task's pin), or hover a task in the panel. Bubbles only show chests in the zone you're in.
 - **A recipe doesn't show how to make it:** you probably haven't unlocked it yet. It appears on its own as soon as you do.
 
