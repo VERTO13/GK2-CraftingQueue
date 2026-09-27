@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using HarmonyLib;
@@ -63,6 +64,10 @@ internal static class GameState
     {
         try
         {
+            // Su archivo de guardado junto a los del juego: guardada, sin duda.
+            string dir = Application.persistentDataPath;
+            if (File.Exists(Path.Combine(dir, slot + ".dat")) || File.Exists(Path.Combine(dir, slot + ".info")))
+                return true;
             if (!(SavedSlots?.GetValue(null) is List<SaveSlotData> saved))
                 return null;
             return saved.Any(s => s != null && s.slotName == slot);
