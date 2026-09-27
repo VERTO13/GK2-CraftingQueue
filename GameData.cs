@@ -536,6 +536,29 @@ internal static class GameData
         }
     }
 
+    // Lo que le falta a un pedido del pueblo. Desde la 1.006 el juego toma la mercancía de las
+    // tarimas del almacén (y de su sótano) en cuanto la pones y cada noche, no solo en Pride:
+    // los pedidos normales se entregan por partes (VendorOrderData.Count lleva lo entregado) y los
+    // urgentes completos o nada (mientras, la mercancía espera en la tarima).
+    public static int OrderMissing(VendorOrderData order)
+    {
+        VendorOrderDef def = order?.Definition;
+        if (def == null)
+            return 0;
+        int delivered = def.isUrgent ? 0 : order.Count;
+        int onPallets = 0;
+        try
+        {
+            foreach (string zone in new[] { "warehouse", "warehouse_cellar" })
+                onPallets += MainGame.WorldData?.GetWorldZoneDataById(zone)?.CountItemsOnTownPalettes(def.itemId) ?? 0;
+        }
+        catch
+        {
+            onPallets = 0; // sin tarimas legibles: se pide lo que falta por entregar
+        }
+        return Math.Max(0, def.count - delivered - onPallets);
+    }
+
     // Los almacenes de la zona donde estás que el juego suma al craftear (los mismos que Owned).
     public static IEnumerable<WgoData> ZoneStorages() => ZoneStorages(MainGame.PlayerData?.CurrentWorldZoneData);
 

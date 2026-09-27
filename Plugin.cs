@@ -109,6 +109,7 @@ public class Plugin : BaseUnityPlugin
 
         Harmony harmony = new Harmony(Guid);
         GameHooks.Apply(harmony);
+        SlotHooks.Apply(harmony); // la cola no pasa de una partida borrada a una nueva
         QuickAdd.Apply(harmony);
         GameStyle.Apply(harmony); // botones del juego: se guardan cuando el juego los crea
 

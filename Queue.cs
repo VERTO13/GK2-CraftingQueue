@@ -37,10 +37,17 @@ internal class QueueTask
 // Formato: una línea por dato, campos separados por tabulador (\t, \n y \\ escapados):
 //   task <tipo> <id> <cantidad> <título> <ícono> <zona> <material:cantidad|material:cantidad…>
 //   pin  <id de tarea en el panel>
+// y al final "# end" (así se sabe que un archivo quedó completo).
 // (No se usa JsonUtility de Unity: con las clases del mod guardaba el archivo sin las tareas.)
+//
+// El juego reusa los nombres de ranura: si borras Steam_1 y empiezas otra partida, la nueva
+// también se llama Steam_1. Por eso la cola de una partida borrada, o la que ya hubiera con el
+// nombre de una partida nueva, se aparta a "anteriores" (ver SlotHooks) y no se hereda.
 internal static class Queue
 {
     private const string Header = "# Crafting Queue 1";
+    private const string End = "# end";
+    private const int KeepRetired = 20; // colas apartadas que se guardan en "anteriores"
 
     public static readonly List<QueueTask> Tasks = new List<QueueTask>();
     public static readonly HashSet<string> Pins = new HashSet<string>(); // tareas marcadas con el pin
@@ -68,9 +75,9 @@ internal static class Queue
         {
             try
             {
-                string path = PathFor(slot);
-                if (File.Exists(path))
-                    Load(File.ReadAllLines(path));
+                string[] lines = ReadSlot(slot);
+                if (lines != null)
+                    Load(lines);
                 Plugin.Log.LogInfo($"Cola de la partida {slot}: {Tasks.Count} tareas, {Pins.Count} con pin.");
             }
             catch (Exception e)
@@ -86,6 +93,36 @@ internal static class Queue
         foreach (char c in Path.GetInvalidFileNameChars())
             slot = slot.Replace(c, '_');
         return Path.Combine(folder, slot + ".txt");
+    }
+
+    // El archivo de la partida. Un ".tmp" completo que quedó ahí es el último guardado que no
+    // alcanzó a reemplazarlo (el juego se cerró justo en ese momento, u otro programa tenía abierto
+    // el archivo): si es más nuevo, manda. Si falta el archivo, se recupera de la copia anterior.
+    private static string[] ReadSlot(string slot)
+    {
+        string path = PathFor(slot), tmp = path + ".tmp", bak = path + ".bak";
+        bool hasMain = File.Exists(path);
+        if (File.Exists(tmp) && (!hasMain || File.GetLastWriteTimeUtc(tmp) > File.GetLastWriteTimeUtc(path))
+            && ReadComplete(tmp) is string[] fresh)
+        {
+            Plugin.Log.LogWarning($"Cola de la partida {slot}: se tomó el último guardado sin terminar ({Path.GetFileName(tmp)}).");
+            return fresh;
+        }
+        if (hasMain)
+            return File.ReadAllLines(path);
+        if (File.Exists(bak) && ReadComplete(bak) is string[] old)
+        {
+            Plugin.Log.LogWarning($"Cola de la partida {slot}: faltaba el archivo, se recuperó de {Path.GetFileName(bak)}.");
+            return old;
+        }
+        return null;
+    }
+
+    // Las líneas de un archivo que terminó de escribirse (acaba en "# end"); null si quedó a medias.
+    private static string[] ReadComplete(string file)
+    {
+        string[] lines = File.ReadAllLines(file);
+        return lines.Length > 0 && lines[lines.Length - 1] == End ? lines : null;
     }
 
     private static void Load(string[] lines)
@@ -133,17 +170,98 @@ internal static class Queue
                 }.Select(Escape)));
             foreach (string pin in Pins.OrderBy(p => p))
                 lines.Add("pin\t" + Escape(pin));
-            // Primero a un archivo temporal y luego se reemplaza: si el juego se cierra a medias,
-            // no se pierde la cola anterior.
-            string path = PathFor(loadedSlot), tmp = path + ".tmp";
+            lines.Add(End);
+            // Primero a un archivo temporal, que luego reemplaza al de la partida de una sola vez
+            // (File.Replace): nunca queda la partida sin archivo, y el anterior se queda en ".bak".
+            string path = PathFor(loadedSlot), tmp = path + ".tmp", bak = path + ".bak";
             File.WriteAllLines(tmp, lines, new System.Text.UTF8Encoding(false));
-            if (File.Exists(path))
-                File.Delete(path);
-            File.Move(tmp, path);
+            if (!File.Exists(path))
+                File.Move(tmp, path);
+            else
+            {
+                try
+                {
+                    File.Replace(tmp, path, bak, ignoreMetadataErrors: true);
+                }
+                catch (Exception e) when (!(e is UnauthorizedAccessException))
+                {
+                    // Otro programa tenía abierto el archivo (antivirus, un editor…): a la antigua,
+                    // pero con la copia hecha antes; si se corta entre borrar y mover, ReadSlot
+                    // recupera el ".tmp", que ya está completo.
+                    File.Copy(path, bak, overwrite: true);
+                    File.Delete(path);
+                    File.Move(tmp, path);
+                }
+            }
         }
         catch (Exception e)
         {
             Plugin.Log.LogWarning("No se pudo guardar la cola: " + e.Message);
+        }
+    }
+
+    // La cola de esa ranura ya no es de ninguna partida (se borró, o su nombre va a ser el de una
+    // partida nueva): se aparta a "anteriores/<ranura> <fecha>.txt" por si acaso, y con ella se
+    // van su ".tmp" y su ".bak" (si no, ReadSlot la recuperaría para la partida nueva).
+    public static void Retire(string slot, string why)
+    {
+        if (string.IsNullOrEmpty(slot) || folder == null)
+            return;
+        try
+        {
+            if (slot == loadedSlot)
+            {
+                loadedSlot = null; // SyncSlot la vuelve a cargar (ya vacía) en el siguiente cuadro
+                Tasks.Clear();
+                Pins.Clear();
+                Touch(save: false);
+            }
+            string path = PathFor(slot);
+            string retired = null;
+            if (File.Exists(path))
+            {
+                string old = Path.Combine(folder, "anteriores");
+                Directory.CreateDirectory(old);
+                retired = Path.Combine(old, $"{Path.GetFileNameWithoutExtension(path)} {DateTime.Now:yyyy-MM-dd HHmmss}.txt");
+                File.Move(path, retired);
+                File.SetLastWriteTime(retired, DateTime.Now); // para quedarse con las más recientes
+                foreach (FileInfo f in new DirectoryInfo(old).GetFiles("*.txt").OrderByDescending(f => f.LastWriteTime).Skip(KeepRetired))
+                    f.Delete();
+            }
+            foreach (string leftover in new[] { path + ".tmp", path + ".bak" })
+                if (File.Exists(leftover))
+                    File.Delete(leftover);
+            if (retired != null)
+                Plugin.Log.LogInfo($"Cola de {slot} apartada ({why}): {retired}");
+        }
+        catch (Exception e)
+        {
+            Plugin.Log.LogWarning($"No se pudo apartar la cola de {slot}: " + e.Message);
+        }
+    }
+
+    // La partida cargada cambió de nombre al guardarse (las de la demo reciben uno nuevo): la cola
+    // se va con ella.
+    public static void Rename(string from, string to)
+    {
+        if (folder == null || string.IsNullOrEmpty(from) || string.IsNullOrEmpty(to) || from == to)
+            return;
+        try
+        {
+            Retire(to, "el nombre pasa a otra partida"); // lo que hubiera con el nombre nuevo no es de esta
+            string src = PathFor(from);
+            if (File.Exists(src))
+                File.Move(src, PathFor(to));
+            foreach (string leftover in new[] { src + ".tmp", src + ".bak" })
+                if (File.Exists(leftover))
+                    File.Delete(leftover);
+            if (loadedSlot == from)
+                loadedSlot = to;
+            Plugin.Log.LogInfo($"La partida {from} ahora se llama {to}: la cola la sigue.");
+        }
+        catch (Exception e)
+        {
+            Plugin.Log.LogWarning($"No se pudo mover la cola de {from} a {to}: " + e.Message);
         }
     }
 

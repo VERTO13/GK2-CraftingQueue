@@ -279,11 +279,15 @@ internal class QuickAdd : MonoBehaviour
             return false;
         }
 
-        // Pedido de un comerciante: el objeto con la cantidad que pide el encargo.
+        // Pedido de un comerciante: el objeto, con lo que le falta al encargo (ver GameData.OrderMissing).
+        // Si ya no le falta nada, no se agrega (tampoco "uno más" del objeto de su celda).
         UIVendorOrderWidget order = go.GetComponentInParent<UIVendorOrderWidget>();
-        var orderDef = order != null ? order.Data?.VendorOrderData?.Definition : null;
-        if (orderDef != null && !string.IsNullOrEmpty(orderDef.itemId))
-            return Queue.Add(TaskKind.Item, orderDef.itemId, Math.Max(1, orderDef.count)) != null;
+        VendorOrderData orderData = order != null ? order.Data?.VendorOrderData : null;
+        if (orderData?.Definition != null && !string.IsNullOrEmpty(orderData.Definition.itemId))
+        {
+            int missing = GameData.OrderMissing(orderData);
+            return missing > 0 && Queue.Add(TaskKind.Item, orderData.Definition.itemId, missing) != null;
+        }
 
         // Diálogo con un objeto (por ejemplo, lo que te pide un personaje): su celda con la cantidad.
         UIDialogWindow dlg = go.GetComponentInParent<UIDialogWindow>();

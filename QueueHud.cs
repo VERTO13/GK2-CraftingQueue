@@ -235,7 +235,7 @@ internal class QueueHud : MonoBehaviour
     private bool ShouldShow()
     {
         workWindow = null;
-        if (!Plugin.HudVisible || MainGame.PlayerData == null || GameState.InCutscene)
+        if (!Plugin.HudVisible || MainGame.PlayerData == null || GameState.InCutscene || GameState.InFight)
             return false;
         bool? onlyWork = GameWindows.OnlyWorkWindows(out workWindow);
         NoWindows = onlyWork == null;

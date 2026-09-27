@@ -69,6 +69,13 @@ internal class GamepadInput : MonoBehaviour
             return;
         }
 
+        if (GameState.InFight)
+        {
+            r3Since = -1f;
+            RecipeCell = null;
+            return;
+        }
+
         bool inWindow = LazyWindowsStackController.ActiveWindow != null;
         if (Down(R3))
             r3Since = Time.unscaledTime;
@@ -116,7 +123,8 @@ internal class GamepadInput : MonoBehaviour
     {
         QueueHud hud = QueueHud.Instance;
         // Salir si se cerró/ocultó el panel, se abrió una ventana o empezó una escena.
-        if (hud == null || !QueueHud.Showing || LazyWindowsStackController.ActiveWindow != null || GameState.InCutscene
+        // (La pelea, sin esperar a que el panel se oculte: mientras navegas, el juego no recibe botones.)
+        if (hud == null || !QueueHud.Showing || LazyWindowsStackController.ActiveWindow != null || GameState.InCutscene || GameState.InFight
             || Down(B) || Down(R3))
         {
             ExitPanel();
