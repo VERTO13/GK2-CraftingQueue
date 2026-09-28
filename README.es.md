@@ -83,7 +83,7 @@ Para agregar algo, mantén **Ctrl** y da clic derecho sobre cualquier objeto.
 
 `tienes/necesitas` de cada material. Despliega cualquier material para ver cómo se hace, una receta a la vez, con la estación donde se hace y cuánto sale (`×N`).
 
-![Grasa derretida: dos recetas que se cambian con las flechas (cambian la cantidad y los ingredientes)](docs/images/multi-recipe.gif)
+![Cambiar de receta y de estación con ◂ ▸: cambian la estación, la cantidad y los ingredientes](docs/images/recipe-switch.gif)
 
 - **Una opción por receta y por estación.** Si un objeto tiene varias recetas, o una receta se hace en varias estaciones, cambias entre ellas con ◂ ▸. Cada opción muestra su estación, su cantidad y lo que pide.
 - **Solo lo que puedes usar.** Las recetas que aún no desbloqueas no aparecen, ni las estaciones que todavía no puedes construir. En cuanto las desbloqueas (árbol tecnológico, misiones…), aparecen solas.
@@ -114,6 +114,8 @@ Siete botones en las celdas de objeto del propio juego. Salen de la **esquina �
 - **El bote** vacía la cola completa. Se pone rojo al pasarle el mouse y, al primer clic, se vuelve una palomita dorada: clic en la palomita para confirmar.
 
 Los botones nunca se estiran ni se encogen con el panel: miden siempre 26 pixeles del juego, igual de nítidos que sus íconos. La esquina ⋮ va del lado del panel que mira al centro de la pantalla, y también sirve para arrastrar el panel. Si el panel está hasta abajo de la pantalla, la barra sube desde la esquina. Por encima del panel, un grupo de botones baja a un segundo renglón si el panel mide menos de 200 de ancho, y el panel baja con él.
+
+![Clic derecho en la esquina ⋮: la barra de botones cambia entre el costado y por encima del panel](docs/images/button-bar.gif)
 
 ### Agrega lo que sea con Ctrl + clic derecho
 

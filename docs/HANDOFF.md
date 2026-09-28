@@ -56,8 +56,8 @@ Probado por el usuario en 1080p el 2026-09-28 (incluida la actualización del ju
 - **Burbujas de los cofres con el pergamino del juego** (`hint-frame`, recreado con bordes de 4 px para que no
   imponga 40 × 40): letra café oscuro con la fuente de las etiquetas del juego, 85 % de opacidad (25 % con el mouse o
   el personaje encima), columna derecha a su medida. Si el sprite no está cargado, marco propio hasta que aparece.
-- **Medios nuevos** en `docs/images/` (add-and-panel, queue-controls, reorder, chest-bubbles.gif, add-anywhere,
-  mods-menu). Los viejos (usage, remove-and-blueprints, chest-bubbles.png, task-buttons) **siguen en el repo porque
+- **Medios nuevos** en `docs/images/` (add-and-panel, queue-controls, reorder, recipe-switch, button-bar, chest-bubbles.gif, add-anywhere,
+  mods-menu). Los viejos (usage, remove-and-blueprints, multi-recipe, chest-bubbles.png, task-buttons) **siguen en el repo porque
   la descripción publicada en Nexus los enlaza**: borrarlos solo después de actualizar Nexus.
 
 ## 2. Lo que trae la 0.5.0 (publicada el 2026-09-28)

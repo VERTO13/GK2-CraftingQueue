@@ -83,7 +83,7 @@ To add something, hold **Ctrl** and right-click any item.
 
 `have/need` for every material. Expand any material to see how it's made, one recipe at a time, with the station it's made in and how many it makes (`×N`).
 
-![Melted Fat: two recipes, switched with the arrows (yield and ingredients change)](docs/images/multi-recipe.gif)
+![Switching recipes and stations with ◂ ▸: the station, yield and ingredients change](docs/images/recipe-switch.gif)
 
 - **One option per recipe and per station.** If an item has several recipes, or one recipe can be made in several stations, switch between them with ◂ ▸. Each option shows its own station, yield and ingredients.
 - **Only what you can actually use.** Recipes you haven't unlocked stay hidden, and so do stations you can't build yet. As soon as you unlock them (tech tree, quests…), they show up on their own.
@@ -114,6 +114,8 @@ Seven buttons in the game's own item cells. They come out of the **⋮ corner**,
 - **The trash can** clears the whole queue. It turns red when you point at it, and after the first click it becomes a gold check mark: click the check to confirm.
 
 The buttons never stretch or shrink with the panel: they're always 26 game pixels, as crisp as the game's icons. The ⋮ corner sits on the side of the panel that faces the middle of the screen, and you can also drag the panel by it. If the panel is at the bottom of the screen, the bar slides up from the corner instead. Across the top, a group of buttons moves to a second row when the panel is narrower than 200, and the panel moves down with it.
+
+![Right-click the ⋮ corner: the button bar switches between down the side and across the top](docs/images/button-bar.gif)
 
 ### Add anything with Ctrl + right-click
 
