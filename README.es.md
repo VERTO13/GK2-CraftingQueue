@@ -150,9 +150,9 @@ Mantén **Alt** sobre cualquier objeto, en tu inventario, un cofre o el mismo pa
 ### Y además
 
 - **No estorba:** con un cofre, una mesa o el árbol tecnológico abierto, el panel se recorre de su lado o se pliega en una pestañita "Cola" que se despliega al pasar el mouse. ¿Lo prefieres siempre visible? Abre el **ojo** de la barra de botones.
-- **No estorba en las peleas:** el panel se oculta mientras preparas y peleas una batalla.
+- **No estorba cuando el juego despeja la pantalla:** el panel se oculta cuando el juego esconde su propia interfaz (escenas de historia, al colocar una construcción, al cargar una partida) y mientras preparas y peleas una batalla.
 - **Del tamaño de la interfaz del juego, en cualquier resolución.** El panel usa la misma escala que la interfaz del juego (×2 en 720p, 1080p y 1440p, ×4 en 4K…): su letra es del tamaño de la del juego y todo se ve nítido.
-- **Muy ligero.** Las cantidades se actualizan en su lugar en vez de redibujar el panel, y no corre nada pesado mientras juegas (unos 0.1 ms por cuadro en promedio).
+- **Muy ligero.** Las cantidades se actualizan en su lugar en vez de redibujar el panel, cerrar un menú o cambiar de zona no lo rearma, y no corre nada pesado mientras juegas (unos 0.1 ms por cuadro en promedio).
 - **Una cola por partida guardada,** en su propio archivo y guardada de forma que un cierre inesperado no la borre. Una partida nueva nunca hereda la cola de una partida borrada (las colas viejas se guardan en la carpeta `anteriores`, por si acaso).
 - **Opciones:** ocultar el panel mientras la cola está vacía; los botones por el costado o por encima del panel; cualquier tamaño de letra (0 = la del juego; 8, 16, 24 y 32 se ven perfectos).
 - **Ajustes dentro del juego (opcional):** con [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) instalado, todos los ajustes están en el menú **Mods** del juego (ESC), junto con un botón para vaciar la cola. Los que son elegir entre varias opciones muestran la elegida con palabras («Por el costado», «Solo lo que llevas»…); un clic pasa a la siguiente.
@@ -226,7 +226,7 @@ Tus colas se guardan en `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyar
 - **No aparece el panel:**
   1. Revisa que exista `BepInEx\LogOutput.log` en la carpeta del juego. Si no existe, BepInEx no quedó instalado; usa el zip *with-BepInEx*.
   2. Si el log existe, busca `Crafting Queue` adentro.
-- **El panel está oculto:** presiona `F3`. También se oculta a propósito mientras preparas y peleas una batalla, y con la cola vacía si prendiste esa opción.
+- **El panel está oculto:** presiona `F3`. También se oculta a propósito cuando el juego esconde su propia interfaz (escenas de historia, al colocar una construcción), mientras preparas y peleas una batalla, y con la cola vacía si prendiste esa opción.
 - **No salen burbujas en los cofres:** prende el pin de la barra de botones (o el de una tarea), o pasa el mouse sobre una tarea del panel. Las burbujas solo muestran los cofres de la zona donde estás.
 - **Una receta no dice cómo se hace:** seguramente aún no la desbloqueas. Aparece sola en cuanto lo hagas.
 

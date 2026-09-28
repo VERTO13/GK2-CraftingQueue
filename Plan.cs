@@ -261,6 +261,6 @@ internal static class Plan
                 lastVersion = Queue.Version;
             }
         }
-        finally { Perf.Stop("cola: completadas", t, top: false); }
+        finally { Perf.Stop("cola: completadas", t); } // va aparte de "partida y botones": cuenta en el cuadro
     }
 }

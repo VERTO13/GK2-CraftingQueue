@@ -12,9 +12,10 @@ namespace CraftQueue;
 // Estado del juego que el mod necesita saber.
 internal static class GameState
 {
-    private static Transform hud;
-    private static CanvasGroup hudGroup;
+    private static HUD hud;
     private static float nextHudLookup;
+    private static int hudFrame = -1, hudHiddenBy;
+    private static bool hudHidden;
 
     // Partida cargada ("Steam_1"…), o null en el menú principal.
     public static string Slot
@@ -99,21 +100,77 @@ internal static class GameState
         }
     }
 
-    // En escenas de historia el juego oculta su propia interfaz (HUD): el panel hace lo mismo.
-    public static bool InCutscene
+    // El juego esconde su HUD (HUD.SetDisableState) en las escenas de historia (Cinematic: las de
+    // franjas negras; CinematicsScene: las ilustradas), al colocar una construcción (BuildController)
+    // y en el menú principal y la carga (MainMenu): el panel y las burbujas se esconden con él. Se leen
+    // las mismas banderas del juego, sin parches. El HUD se toma de la lista de LazyUI (LazyUI.Get<HUD>
+    // lanza una excepción si todavía no existe) y se busca cada 2 s mientras no esté.
+    private static readonly FieldInfo GuiElements = AccessTools.Field(typeof(LazyUI), "guiElementsDictionary");
+    private static readonly FieldInfo HudFlags = AccessTools.Field(typeof(HUD), "disableStateType");
+    private static readonly HudStateType[] HudStates = (HudStateType[])Enum.GetValues(typeof(HudStateType));
+
+    public static bool HudHidden
     {
         get
         {
+            if (hudFrame == Time.frameCount)
+                return hudHidden;
+            hudFrame = Time.frameCount;
+            int by = HiddenBy();
+            if (by != hudHiddenBy)
+            {
+                // Una línea por cambio: así se puede confirmar después en el log que una escena lo escondió.
+                Plugin.Log.LogInfo(by != 0
+                    ? $"El juego escondió su HUD ({Reasons(by)}): el panel también se esconde."
+                    : "El juego volvió a mostrar su HUD: el panel también.");
+                hudHiddenBy = by;
+            }
+            hudHidden = by != 0;
+            return hudHidden;
+        }
+    }
+
+    private const int OtherReason = 1 << 30;
+
+    private static int Bit(HudStateType s) => 1 << ((int)s & 15);
+
+    private static string Reasons(int by)
+    {
+        List<string> names = HudStates.Where(s => (by & Bit(s)) != 0).Select(s => s.ToString()).ToList();
+        if ((by & OtherReason) != 0)
+            names.Add("otra razón");
+        return string.Join(", ", names);
+    }
+
+    // Las banderas que tienen escondido el HUD (0 = se ve). Sin HUD todavía (menú principal): 0.
+    private static int HiddenBy()
+    {
+        try
+        {
             if (hud == null && Time.unscaledTime >= nextHudLookup)
             {
-                nextHudLookup = Time.unscaledTime + 3f;
-                GameObject go = GameObject.Find("UIRoot/HUD") ?? GameObject.Find("HUD");
-                hud = go != null ? go.transform : null;
-                hudGroup = hud != null ? hud.GetComponent<CanvasGroup>() : null;
+                nextHudLookup = Time.unscaledTime + 2f;
+                hud = GuiElements?.GetValue(null) is Dictionary<Type, ILazyGUIElement> elements
+                      && elements.TryGetValue(typeof(HUD), out ILazyGUIElement e) ? e as HUD : null;
             }
             if (hud == null)
-                return false;
-            return !hud.gameObject.activeInHierarchy || (hudGroup != null && hudGroup.alpha < 0.1f);
+                return 0;
+            if (HudFlags?.GetValue(hud) is MultiFlagAND<HudStateType> flags)
+            {
+                if (flags.ResultFlag)
+                    return 0;
+                int by = 0;
+                foreach (HudStateType s in HudStates)
+                    if (!flags.GetFlag(s))
+                        by |= Bit(s);
+                return by != 0 ? by : OtherReason;
+            }
+            // Si una versión del juego cambiara las banderas: esconderlo es desactivar el HUD.
+            return hud.gameObject.activeInHierarchy ? 0 : OtherReason;
+        }
+        catch
+        {
+            return 0;
         }
     }
 }
@@ -197,8 +254,17 @@ internal static class GameHooks
         try
         {
             BuildData data = PointerBuildData?.GetValue(__instance) as BuildData;
-            if (data?.Definition != null && data.BuildingMode.ToString() != "Remove")
+            if (data?.Definition == null)
+                return;
+            if (data.BuildingMode.ToString() != "Remove")
                 Queue.OnBuilt(TaskKind.Build, data.Definition.id);
+            else
+            {
+                // Quitar una estación no descuenta ninguna tarea, pero cambia lo que rinden las recetas (y
+                // en qué estaciones se pueden hacer): recalcular ya, sin depender de verlo en la cuenta de la zona.
+                GameData.ResetStations();
+                QueueHud.Dirty = true;
+            }
         }
         catch (Exception e)
         {

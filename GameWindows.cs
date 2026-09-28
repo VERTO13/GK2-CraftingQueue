@@ -74,7 +74,8 @@ internal static class GameWindows
     }
 
     // Recién abierta, la ventana todavía está en su animación de entrada (se ve más chica):
-    // durante medio segundo se mide en cada cuadro, luego cada medio segundo.
+    // durante medio segundo se mide 30 veces por segundo, luego cada medio segundo. (Antes se medía
+    // en cada cuadro: recorrer todos los elementos de la ventana justo mientras el juego la anima.)
     public static void Remeasure()
     {
         nextOccupied = 0f;
@@ -88,12 +89,14 @@ internal static class GameWindows
     // Se recalcula cada medio segundo (recorrer los elementos de una ventana es caro).
     private static Rect? occupied;
     private static float nextOccupied;
+    private static readonly Vector3[] corners = new Vector3[4];
+    private static readonly List<UnityEngine.UI.Graphic> graphics = new List<UnityEngine.UI.Graphic>();
 
     public static Rect? Occupied()
     {
         if (Time.unscaledTime < nextOccupied)
             return occupied;
-        nextOccupied = Time.unscaledTime < fastUntil ? 0f : Time.unscaledTime + 0.5f;
+        nextOccupied = Time.unscaledTime + (Time.unscaledTime < fastUntil ? 1f / 30f : 0.5f);
         long t = Perf.Start();
         try { return MeasureOccupied(); }
         finally { Perf.Stop("ventanas: medir", t, top: false); }
@@ -102,13 +105,15 @@ internal static class GameWindows
     private static Rect? MeasureOccupied()
     {
         occupied = null;
-        Vector3[] c = new Vector3[4];
+        Vector3[] c = corners;
         float xMin = float.MaxValue, yMin = float.MaxValue, xMax = float.MinValue, yMax = float.MinValue;
         foreach (LazyWidgetBase w in Stack())
         {
             if (w == null || IsTransient(w) || !w.gameObject.activeInHierarchy)
                 continue;
-            foreach (UnityEngine.UI.Graphic g in w.GetComponentsInChildren<UnityEngine.UI.Graphic>())
+            graphics.Clear();
+            w.GetComponentsInChildren(false, graphics); // en una lista que se reusa: sin basura por medición
+            foreach (UnityEngine.UI.Graphic g in graphics)
             {
                 if (!g.enabled || g.color.a < 0.05f || g.canvas == null)
                     continue;
@@ -125,6 +130,7 @@ internal static class GameWindows
                 yMax = Mathf.Max(yMax, Mathf.Max(a.y, b.y));
             }
         }
+        graphics.Clear(); // no retener elementos de una ventana que se cierre
         if (xMax > xMin && yMax > yMin)
             occupied = Rect.MinMaxRect(Mathf.Max(0f, xMin), Mathf.Max(0f, yMin), Mathf.Min(Screen.width, xMax), Mathf.Min(Screen.height, yMax));
         return occupied;

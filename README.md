@@ -150,9 +150,9 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 ### And also
 
 - **Stays out of the way:** with a chest, station or the tech tree open, the panel moves aside on its own side, or folds into a small "Queue" tab that expands when you hover it. Prefer to always see it? Open the **eye** in the button bar.
-- **Out of the way in battles:** the panel hides while you prepare and fight a battle.
+- **Out of the way when the game clears the screen:** the panel hides whenever the game hides its own HUD (story scenes, placing a building, loading a save) and while you prepare and fight a battle.
 - **The same size as the game's interface, at any resolution.** The panel uses the game's own UI scale (×2 at 720p, 1080p and 1440p, ×4 at 4K…), so its text matches the game's and every pixel stays crisp.
-- **Light on performance.** Amounts update in place instead of redrawing the panel, and nothing heavy runs while you play (about 0.1 ms per frame on average).
+- **Light on performance.** Amounts update in place instead of redrawing the panel, closing a menu or changing zones doesn't rebuild it, and nothing heavy runs while you play (about 0.1 ms per frame on average).
 - **One queue per save slot,** in its own file, saved so a crash can't wipe it. A new game never inherits the queue of a deleted save (old queues are kept in the `anteriores` folder, just in case).
 - **Options:** hide the panel while the queue is empty; the buttons down the side or across the top; any text size (0 = the game's; 8, 16, 24 and 32 are pixel-perfect).
 - **Settings in the game (optional):** with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, every setting is in the game's **Mods** menu (ESC), plus a button to clear the queue. Settings that are a choice show the option you picked in words ("Down the side", "Only what you carry"…); click to switch to the next one.
@@ -226,7 +226,7 @@ Your queues are saved in `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveya
 - **The panel doesn't appear:**
   1. Check that `BepInEx\LogOutput.log` exists in the game folder. If it doesn't, BepInEx isn't installed; use the *with-BepInEx* zip.
   2. If the log exists, look inside it for `Crafting Queue`.
-- **The panel is hidden:** press `F3`. It also hides on purpose while you prepare and fight a battle, and while the queue is empty if you turned on that option.
+- **The panel is hidden:** press `F3`. It also hides on purpose while the game hides its own HUD (story scenes, placing a building), while you prepare and fight a battle, and while the queue is empty if you turned on that option.
 - **No chest bubbles:** turn on the pin in the button bar (or a task's pin), or hover a task in the panel. Bubbles only show chests in the zone you're in.
 - **A recipe doesn't show how to make it:** you probably haven't unlocked it yet. It appears on its own as soon as you do.
 

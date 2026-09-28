@@ -173,6 +173,13 @@ internal class QueueHud : MonoBehaviour
             GameWindows.Remeasure();
             lastFit = null;
         }
+        // El juego escondió o volvió a mostrar su HUD (una escena, colocar una construcción): igual, ya.
+        bool hudHidden = MainGame.PlayerData != null && GameState.HudHidden;
+        if (hudHidden != lastHudHidden)
+        {
+            lastHudHidden = hudHidden;
+            nextCheck = 0f;
+        }
 
         if (Time.unscaledTime < nextCheck)
             return;
@@ -208,29 +215,30 @@ internal class QueueHud : MonoBehaviour
             Perf.Stop("panel: firma", tg, top: false);
             // Activo ANTES de armarlo: con el panel oculto Unity no mide el texto.
             SetShown(true);
-            // Lo que tienes cambia al craftear o recoger sin que el juego avise al panel: cada
-            // segundo se revisan los materiales que el panel muestra.
-            if (Time.unscaledTime >= nextCountCheck)
-            {
-                nextCountCheck = Time.unscaledTime + 1f;
-                // Solo números y colores: se actualizan en su lugar, sin rehacer el panel.
-                long tc = Perf.Start();
-                if (signature != null)
-                    UpdateCounts();
-                Perf.Stop("panel: contar", tc, top: false);
-            }
             if (sig != signature)
             {
                 signature = sig;
                 long tb = Perf.Start();
-                Build(items);
+                Build(items); // ya con lo que tienes al día
                 Perf.Stop("panel: armar", tb, top: false);
+                nextCountCheck = Time.unscaledTime + 1f;
+            }
+            // Lo que tienes cambia al craftear o recoger sin que el juego avise al panel: cada
+            // segundo se revisan los materiales que el panel muestra (y en cuanto vuelve a verse).
+            else if (Time.unscaledTime >= nextCountCheck)
+            {
+                nextCountCheck = Time.unscaledTime + 1f;
+                // Solo números y colores: se actualizan en su lugar, sin rehacer el panel.
+                long tc = Perf.Start();
+                UpdateCounts();
+                Perf.Stop("panel: contar", tc, top: false);
             }
         }
         catch (Exception e)
         {
             Plugin.Log.LogWarning("Panel de la cola: " + (e.InnerException ?? e).Message);
             SetShown(false);
+            signature = null; // pudo quedar armado a medias: al volver, se arma de nuevo
             nextCheck = Time.unscaledTime + 5f;
         }
     }
@@ -240,7 +248,7 @@ internal class QueueHud : MonoBehaviour
     private bool ShouldShow()
     {
         workWindow = null;
-        if (!Plugin.HudVisible || MainGame.PlayerData == null || GameState.InCutscene || GameState.InFight)
+        if (!Plugin.HudVisible || MainGame.PlayerData == null || GameState.HudHidden || GameState.InFight)
             return false;
         bool? onlyWork = GameWindows.OnlyWorkWindows(out workWindow);
         NoWindows = onlyWork == null;
@@ -259,7 +267,10 @@ internal class QueueHud : MonoBehaviour
             box.gameObject.SetActive(shown);
             if (!shown)
             {
-                signature = null; // al volver a mostrarse, se redibuja con los datos al día
+                // Se queda armado mientras está oculto (un menú, un diálogo, una escena, cambiar de zona): al
+                // volver a verse solo se revisan los números, y se rearma únicamente si cambió la cola o el
+                // reparto. Antes se rearmaba entero, justo en el cuadro en que el juego cierra su ventana.
+                nextCountCheck = 0f;
                 pressing = dragging = scrolling = false;
                 EndResize(save: false);
             }
@@ -300,10 +311,15 @@ internal class QueueHud : MonoBehaviour
         // del juego. Mientras LazyUI no tenga escala, PanelScale usa la misma regla que el juego.
         GameScale = gameScale = LazyUI.ScaleFactor > 0.001f ? LazyUI.ScaleFactor : 0f;
         // Escala entera (pixeles exactos): la fuente y los íconos pixelados solo se ven nítidos así.
-        canvas.scaleFactor = GameStyle.PanelScale(gameScale);
+        // (Solo si cambia: esto corre cada 0.4 s y no hace falta tocar el lienzo si sigue igual.)
+        float scale = GameStyle.PanelScale(gameScale);
+        if (canvas.scaleFactor != scale)
+            canvas.scaleFactor = scale;
         // Jugando: por encima de toda la interfaz. Con un cofre/mesa abierta: justo encima de
         // esa ventana, pero debajo de los menús que se abran sobre ella (clic derecho, cantidad…).
-        canvas.sortingOrder = workWindow != null ? GameWindows.SortingAbove(workWindow, 30000) : 30000;
+        int order = workWindow != null ? GameWindows.SortingAbove(workWindow, 30000) : 30000;
+        if (canvas.sortingOrder != order)
+            canvas.sortingOrder = order;
         // La posición la pone Fit() cada cuadro (su lugar, o junto a la ventana abierta).
         bar.Refresh();
     }
@@ -1142,6 +1158,7 @@ internal class QueueHud : MonoBehaviour
     private enum FitMode { Normal, Moved, Folded }
 
     private int lastWindows;
+    private bool lastHudHidden;
     private static float peekUntil;
 
     // Recién agregaste algo: si el panel está plegado por una ventana, se muestra 2 segundos.
@@ -1564,9 +1581,11 @@ internal class QueueHud : MonoBehaviour
                     head.Missing == 0, showRecipe ? itemFold : null, inverted: true, flash: g.ids.Any(flashIds.Contains),
                     entry: entry, focusId: g.Key);
                 EndBinding();
-                string headTip = ElsewhereTip(item, head);
-                if (headTip != null && body.parent.Find("Titulo") is RectTransform headRow)
-                    tipTargets[headRow] = headTip;
+                if (body.parent.Find("Titulo") is RectTransform headRow)
+                {
+                    int asked = g.total;
+                    tipTargets[headRow] = () => ElsewhereTip(item, PlanRow(Plan.HeaderPath(item), item, asked));
+                }
                 if (showRecipe && !Prefs.Expanded.Contains(itemFold))
                     RecipeRows(body, item, head.Missing, item, 1, g.preferred);
                 FinishBody(body);
@@ -1634,9 +1653,10 @@ internal class QueueHud : MonoBehaviour
             }
             bool ok = t.have >= t.want;
             RectTransform line = Line(body, 1, t.id, name, $"{t.have}/{t.want}", ok ? Done : Text, ok ? Done : Short, null);
+            // (La vista Total se rearma entera cuando cambia lo que tienes: su globo se calcula al armarla.)
             string tip = ElsewhereTip(t.id, new Plan.Row { id = t.id, want = t.want, avail = t.have });
             if (tip != null && line != null)
-                tipTargets[line] = tip;
+                tipTargets[line] = () => tip;
         }
         FinishBody(body);
     }
@@ -1829,12 +1849,14 @@ internal class QueueHud : MonoBehaviour
         bool ok = r.Missing == 0;
         // La flecha solo si falta algo: lo que ya tienes no hay que hacerlo.
         string arrow = !ok && Expandable(id, path, depth) ? path : null;
-        string zoneTip = depth == 1 ? ElsewhereTip(id, r) : null;
         BeginBinding(new CountBinding { key = id, want = want, path = path });
         RectTransform line = Line(body, depth, id, name, $"{r.avail}/{want}", ok ? Done : Text, ok ? Done : Short, arrow);
         EndBinding();
-        if (zoneTip != null && line != null)
-            tipTargets[line] = zoneTip;
+        if (depth == 1 && line != null)
+        {
+            int wanted = want;
+            tipTargets[line] = () => ElsewhereTip(id, PlanRow(path, id, wanted));
+        }
     }
 
     // Tiene flecha si hay receta conocida, no es combustible, no repite un material de más arriba
@@ -1971,7 +1993,9 @@ internal class QueueHud : MonoBehaviour
     // escribe) o todas las estaciones de una receta ("Yunque de madera +1"). Sale a un
     // lado del panel, a la altura del ingrediente, sin tapar nada. Depende de qué elemento está
     // "enfocado", no de dónde está el mouse: lo mismo servirá para el gamepad.
-    private readonly Dictionary<RectTransform, string> tipTargets = new Dictionary<RectTransform, string>();
+    // El texto se pide al mostrarlo (null = ese renglón no tiene globo ahora): "Patio: 7" sale con lo
+    // que hay en este momento, aunque el panel no se haya vuelto a armar.
+    private readonly Dictionary<RectTransform, Func<string>> tipTargets = new Dictionary<RectTransform, Func<string>>();
     private RectTransform tipBox, tipTarget;
     private string tipKey;
     private TMP_Text tipText;
@@ -1985,11 +2009,11 @@ internal class QueueHud : MonoBehaviour
             // Los botones primero (van dentro de la barra de la tarea, que puede tener su propio globo).
             key = ButtonTip(ClickableAt(m), out target);
             if (key == null && Inside(frame, m))
-                foreach (KeyValuePair<RectTransform, string> c in tipTargets)
+                foreach (KeyValuePair<RectTransform, Func<string>> c in tipTargets)
                     if (c.Key != null && Inside(c.Key, m))
                     {
-                        target = c.Key;
-                        key = c.Value;
+                        key = c.Value();
+                        target = key != null ? c.Key : null;
                         break;
                     }
         }
@@ -2132,7 +2156,8 @@ internal class QueueHud : MonoBehaviour
         Fill(chip.transform, nid, null, label, null, color, color, withCell: true, stretch: false);
         if (!fuel)
             EndBinding();
-        tipTargets[(RectTransform)chip.transform] = GameData.Name(nid);
+        string chipName = GameData.Name(nid);
+        tipTargets[(RectTransform)chip.transform] = () => chipName;
         chipItems[(RectTransform)chip.transform] = nid;
         return (RectTransform)chip.transform;
     }

@@ -10,7 +10,9 @@ namespace CraftQueue;
 // Cada parte del mod mide cuánto tarda; cada 15 s se escribe en el log un resumen (promedio,
 // máximo y veces por parte, más cuánto dura un cuadro del juego) y, si en un cuadro el mod
 // tardó más de 3 ms, se anota ese cuadro con su desglose (máximo uno por segundo).
-// Apagado no mide nada: cada punto de medición es solo una comparación.
+// Apagado solo se suma lo de cada cuadro (dos lecturas del reloj por parte): si en un cuadro el mod
+// tardó más de 5 ms (un tirón que se nota), se anota una línea con la parte que más tardó, como mucho
+// una cada 30 s. Así se sabe después de jugar si el mod trabó algo, sin prender el diagnóstico.
 internal static class Perf
 {
     internal static bool On;
@@ -25,19 +27,38 @@ internal static class Perf
     private static readonly Dictionary<string, Stat> window = new Dictionary<string, Stat>();
     private static readonly Dictionary<string, double> frame = new Dictionary<string, double>();
     private static double frameOurs;
-    private static double windowStart = -1, lastSpikeLog;
+    private static double windowStart = -1, lastSpikeLog, lastHitchLog = -1000;
     private static int frames, gcAtStart;
     private static double frameTimeTotal, frameTimeMax;
-    private const double WindowSeconds = 15, SpikeMs = 3;
+    // Del cuadro en curso: la parte de primer nivel que más tardó y, dentro de las partes, la más lenta.
+    private static string heaviest, heaviestPart;
+    private static double heaviestMs, heaviestPartMs;
+    private const double WindowSeconds = 15, SpikeMs = 3, HitchMs = 5, HitchLogSeconds = 30;
 
-    public static long Start() => On ? clock.ElapsedTicks : 0;
+    public static long Start() => clock.ElapsedTicks + 1; // nunca 0 (0 = no se midió)
 
     // top = true para las partes de primer nivel (las que suman al costo del cuadro).
     public static void Stop(string name, long started, bool top = true)
     {
-        if (!On || started == 0)
+        if (started == 0)
             return;
-        double ms = (clock.ElapsedTicks - started) * 1000.0 / Stopwatch.Frequency;
+        double ms = (clock.ElapsedTicks + 1 - started) * 1000.0 / Stopwatch.Frequency;
+        if (top)
+        {
+            frameOurs += ms;
+            if (ms > heaviestMs)
+            {
+                heaviestMs = ms;
+                heaviest = name;
+            }
+        }
+        else if (ms > heaviestPartMs)
+        {
+            heaviestPartMs = ms;
+            heaviestPart = name;
+        }
+        if (!On)
+            return;
         if (!window.TryGetValue(name, out Stat s))
             window[name] = s = new Stat();
         s.total += ms;
@@ -45,15 +66,24 @@ internal static class Perf
         if (ms > s.max)
             s.max = ms;
         frame[name] = (frame.TryGetValue(name, out double f) ? f : 0) + ms;
-        if (top)
-            frameOurs += ms;
     }
 
     // Una vez por cuadro (desde el plugin): cierra el cuadro y, cada 15 s, escribe el resumen.
     public static void EndFrame(float unscaledDelta)
     {
         if (!On)
+        {
+            if (frameOurs > HitchMs && clock.Elapsed.TotalSeconds - lastHitchLog > HitchLogSeconds)
+            {
+                lastHitchLog = clock.Elapsed.TotalSeconds;
+                string part = heaviestPartMs > 0 ? $", por dentro {heaviestPart} {heaviestPartMs:0.0} ms" : "";
+                Plugin.Log.LogInfo($"[Rendimiento] cuadro pesado del mod: {frameOurs:0.0} ms; lo que más tardó: {heaviest} " +
+                                   $"{heaviestMs:0.0} ms{part} (cuadro del juego {unscaledDelta * 1000f:0.0} ms)");
+            }
+            frameOurs = heaviestMs = heaviestPartMs = 0;
             return;
+        }
+        heaviestMs = heaviestPartMs = 0;
         double now = clock.Elapsed.TotalSeconds;
         if (windowStart < 0)
         {

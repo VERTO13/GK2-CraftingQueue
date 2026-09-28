@@ -39,6 +39,7 @@ internal class ChestMarks : MonoBehaviour
     private readonly Dictionary<SGuid, Mark> marks = new Dictionary<SGuid, Mark>();
     private readonly List<(Mark mark, float x, float y)> placing = new List<(Mark, float, float)>();
     private readonly List<Rect> placed = new List<Rect>();
+    private readonly Vector3[] corners = new Vector3[4];
     private static readonly Comparison<(Mark mark, float x, float y)> ByHeight = (a, b) => a.y.CompareTo(b.y);
     private float nextScan;
     private string lastError;
@@ -67,7 +68,7 @@ internal class ChestMarks : MonoBehaviour
     {
         // Materials ya viene filtrado: toda la cola (pin general) o solo las recetas con pin.
         bool show = QueueHud.Showing && QueueHud.NoWindows && Wanted.Count > 0
-                    && MainGame.PlayerData != null && !GameState.InCutscene;
+                    && MainGame.PlayerData != null && !GameState.HudHidden;
         if (!show)
         {
             HideAll();
@@ -303,16 +304,22 @@ internal class ChestMarks : MonoBehaviour
         t.text = text;
     }
 
+    // Un solo texto vacío (no se ve) para medir: al llegar a una zona se arman todas sus burbujas juntas,
+    // y antes cada una creaba y destruía su propio texto para medirse.
+    private TextMeshProUGUI measurer;
+
     private float Measure(string text, float font)
     {
-        GameObject g = new GameObject("Medida", typeof(RectTransform), typeof(TextMeshProUGUI));
-        g.transform.SetParent(canvas.transform, false);
-        TextMeshProUGUI t = g.GetComponent<TextMeshProUGUI>();
-        GameStyle.Apply(t);
-        t.fontSize = font;
-        float w = t.GetPreferredValues(text).x;
-        Destroy(g);
-        return w;
+        if (measurer == null)
+        {
+            GameObject g = new GameObject("Medida", typeof(RectTransform), typeof(TextMeshProUGUI));
+            g.transform.SetParent(canvas.transform, false);
+            measurer = g.GetComponent<TextMeshProUGUI>();
+            measurer.raycastTarget = false;
+        }
+        GameStyle.Apply(measurer); // el estilo del juego pudo encontrarse después de la primera medida
+        measurer.fontSize = font;
+        return measurer.GetPreferredValues(text).x;
     }
 
     // Del mundo a pixeles de pantalla, con la misma cuenta que usa el juego para sus burbujas;
@@ -367,9 +374,8 @@ internal class ChestMarks : MonoBehaviour
                 && UIObjectBubbleManager.Instance.TryGetDisplayedBubble(mark.id, out UIObjectBubble theirs)
                 && theirs != null && theirs.gameObject.activeInHierarchy)
             {
-                Vector3[] c = new Vector3[4];
-                ((RectTransform)theirs.transform).GetWorldCorners(c);
-                y = Mathf.Max(y, c[1].y / s + 1f);
+                ((RectTransform)theirs.transform).GetWorldCorners(corners); // cada cuadro: sin crear arreglos
+                y = Mathf.Max(y, corners[1].y / s + 1f);
             }
             placing.Add((mark, x, y));
         }

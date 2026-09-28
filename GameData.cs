@@ -115,7 +115,13 @@ internal static class GameData
     private static int stationStamp;
 
     // Huella barata de lo que cambia cuánto rinde una receta: talentos activos, tecnologías
-    // investigadas y objetos de la zona (una estación nueva o mejorada cambia la lista).
+    // investigadas y tus estaciones. Una estación construida, mejorada o quitada cambia la cuenta de
+    // objetos de la zona donde estás; cambiar de zona no cambia nada (las estaciones se buscan en todo
+    // el mundo), así que solo importa si esa cuenta cambia sin haber cambiado de zona. Antes, cada cambio
+    // de zona volvía a calcular todas las recetas de la cola justo al llegar.
+    private static string stampZone;
+    private static int stampZoneCount, stationEdits;
+
     public static int StationsStamp
     {
         get
@@ -123,8 +129,13 @@ internal static class GameData
             GameSave save = MainGame.Instance?.GameSave;
             int perks = save?.perkSystemData?.activePerks?.Count ?? 0;
             int techs = save?.knowledgeSystem?.unlockedTechs?.Count ?? 0;
-            int zone = MainGame.PlayerData?.CurrentWorldZoneData?.wgoDataList?.Count ?? 0;
-            return perks * 1000003 + techs * 1009 + zone;
+            WorldZoneData zone = MainGame.PlayerData?.CurrentWorldZoneData;
+            int count = zone?.wgoDataList?.Count ?? 0;
+            if (zone?.id == stampZone && count != stampZoneCount)
+                stationEdits++;
+            stampZone = zone?.id;
+            stampZoneCount = count;
+            return perks * 1000003 + techs * 1009 + stationEdits;
         }
     }
 
@@ -144,7 +155,11 @@ internal static class GameData
     }
 
     // Se construyó o terminó una obra: recalcular ya (una mejora puede no cambiar la cuenta de objetos).
-    public static void ResetStations() => stationCache.Clear();
+    public static void ResetStations()
+    {
+        stationCache.Clear();
+        stationEdits++; // y las opciones de receta (su nombre lleva la mejora que tienes)
+    }
 
     private static WgoData StationOf(CraftDef craft)
     {
@@ -410,10 +425,7 @@ internal static class GameData
             if ((MainGame.WorldData?.GetWgoDataList(wgoId)?.Count ?? 0) > 0)
                 return true;
             KnowledgeSystem ks = MainGame.Instance?.GameSave?.knowledgeSystem;
-            // Solo las que la colocan: las de "quitar" (steel_anvil_r) no necesitan desbloqueo y
-            // hacían parecer disponible un yunque bloqueado. Misma regla que el menú de construir.
-            List<BuildingDef> builders = GameBalance.Me?.buildingDefs?.Where(b => b != null && b.wgoId == wgoId
-                && b.buildingMode != BuildingDef.BuildingMode.None && b.buildingMode != BuildingDef.BuildingMode.Remove).ToList();
+            List<BuildingDef> builders = BuildersOf(wgoId);
             if (ks == null || builders == null || builders.Count == 0)
                 return true;
             return builders.Any(b => (!b.isNeedsUnlock || ks.unlockedBuildings.Contains(b.id)) && !ks.lockedBuildings.Contains(b.id));
@@ -422,6 +434,35 @@ internal static class GameData
         {
             return true;
         }
+    }
+
+    // Las construcciones del menú de construir que colocan cada estación. Son datos fijos del juego: se
+    // agrupan una vez (antes se recorrían todas las construcciones del juego por cada estación revisada).
+    // Solo las que la colocan: las de "quitar" (steel_anvil_r) no necesitan desbloqueo y hacían parecer
+    // disponible un yunque bloqueado. Misma regla que el menú de construir.
+    private static Dictionary<string, List<BuildingDef>> buildersByStation;
+    private static GameBalance buildersFrom;
+
+    private static List<BuildingDef> BuildersOf(string wgoId)
+    {
+        GameBalance balance = GameBalance.Me;
+        if (balance?.buildingDefs == null || string.IsNullOrEmpty(wgoId))
+            return null;
+        if (buildersByStation == null || !ReferenceEquals(balance, buildersFrom))
+        {
+            buildersFrom = balance;
+            buildersByStation = new Dictionary<string, List<BuildingDef>>();
+            foreach (BuildingDef b in balance.buildingDefs)
+            {
+                if (b == null || string.IsNullOrEmpty(b.wgoId)
+                    || b.buildingMode == BuildingDef.BuildingMode.None || b.buildingMode == BuildingDef.BuildingMode.Remove)
+                    continue;
+                if (!buildersByStation.TryGetValue(b.wgoId, out List<BuildingDef> list))
+                    buildersByStation[b.wgoId] = list = new List<BuildingDef>();
+                list.Add(b);
+            }
+        }
+        return buildersByStation.TryGetValue(wgoId, out List<BuildingDef> found) ? found : null;
     }
 
     private static string StationName(string id)
@@ -588,9 +629,13 @@ internal static class GameData
 
     // Lo que hay en los almacenes de OTRAS zonas (desde aquí no se puede usar): la zona que más
     // tiene y cuánto, para avisar en el panel "Patio: 7". Con el cofre de la barra apagado también
-    // cuenta la zona donde estás (sus cofres no se suman). Los almacenes se revisan cada 2 s.
-    private static float elsewhereAt = -10f;
+    // cuenta la zona donde estás (sus cofres no se suman). Lo que tienen se vuelve a contar cada 2 s.
+    // Qué almacenes hay casi no cambia: esa lista se rearma solo si cambió la cuenta de objetos de
+    // alguna zona (se construyó o se quitó algo), si cambiaste de zona o de qué se cuenta, o cada 30 s.
+    // Antes se recorrían todos los objetos del mundo cada vez.
+    private static float elsewhereAt = -10f, elsewhereListsAt = -100f;
     private static bool elsewhereWithHere;
+    private static int elsewhereListsStamp;
     private static readonly List<(string zone, List<WgoData> storages)> otherZones = new List<(string, List<WgoData>)>();
     private static readonly Dictionary<string, (string zone, int count)> elsewhere = new Dictionary<string, (string, int)>();
 
@@ -599,22 +644,33 @@ internal static class GameData
         try
         {
             bool withHere = !Plugin.CountChests;
-            if (Time.unscaledTime - elsewhereAt > 2f || withHere != elsewhereWithHere)
+            float now = Time.unscaledTime;
+            if (now - elsewhereAt > 2f || withHere != elsewhereWithHere)
             {
-                elsewhereAt = Time.unscaledTime;
-                elsewhereWithHere = withHere;
+                elsewhereAt = now;
                 elsewhere.Clear();
-                otherZones.Clear();
                 WorldZoneData here = MainGame.PlayerData?.CurrentWorldZoneData;
-                foreach (GameSceneData scene in MainGame.WorldData?.gameSceneDataList ?? new List<GameSceneData>())
+                List<GameSceneData> scenes = MainGame.WorldData?.gameSceneDataList ?? new List<GameSceneData>();
+                int stamp = (withHere ? 1 : 0) * 31 + (here?.id?.GetHashCode() ?? 0);
+                foreach (GameSceneData scene in scenes)
                     foreach (WorldZoneData z in scene?.worldZones ?? new List<WorldZoneData>())
-                    {
-                        if (z == null || (!withHere && (z == here || (here != null && z.id == here.id))))
-                            continue;
-                        List<WgoData> storages = ZoneStorages(z).ToList();
-                        if (storages.Count > 0)
-                            otherZones.Add((ZoneName(z.id), storages));
-                    }
+                        stamp = stamp * 31 + (z?.wgoDataList?.Count ?? 0);
+                if (stamp != elsewhereListsStamp || now - elsewhereListsAt > 30f || withHere != elsewhereWithHere)
+                {
+                    elsewhereListsStamp = stamp;
+                    elsewhereListsAt = now;
+                    otherZones.Clear();
+                    foreach (GameSceneData scene in scenes)
+                        foreach (WorldZoneData z in scene?.worldZones ?? new List<WorldZoneData>())
+                        {
+                            if (z == null || (!withHere && (z == here || (here != null && z.id == here.id))))
+                                continue;
+                            List<WgoData> storages = ZoneStorages(z).ToList();
+                            if (storages.Count > 0)
+                                otherZones.Add((ZoneName(z.id), storages));
+                        }
+                }
+                elsewhereWithHere = withHere;
             }
             if (elsewhere.TryGetValue(key, out (string zone, int count) found))
                 return found;

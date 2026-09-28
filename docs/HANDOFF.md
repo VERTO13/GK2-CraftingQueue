@@ -135,8 +135,41 @@ Se está haciendo la **0.5.0**. En esta rama (sin publicar, **versión aún 0.4.
    - 30 textos nuevos (`count_bag_tip`, `count_chests_tip`, `bar_show`, `bar_hide`, `bar_turn` y 25 `opt_*` de las
      opciones del menú) en los 16 idiomas.
    - README (en/es) y `docs/nexus/description.bbcode` ya describen todo esto: subir la descripción a Nexus al publicar.
+6. **Escenas y rendimiento** (2026-09-27, falta que el usuario lo pruebe):
+   - **Se esconde cuando el juego esconde su HUD** (`GameState.HudHidden`, reemplaza a `InCutscene`, que buscaba
+     `GameObject.Find("UIRoot/HUD")` y nunca se comprobó que lo encontrara). Lee las banderas del propio juego sin
+     parches: el HUD se toma de `LazyUI.guiElementsDictionary` y su campo `disableStateType`
+     (`MultiFlagAND<HudStateType>`) dice por qué está escondido: `Cinematic` (escenas con franjas negras,
+     `UICinematic`), `CinematicsScene` (las ilustradas, `CinematicsSceneDisplayManager`), `BuildController` (colocando
+     una construcción) y `MainMenu` (menú principal y la carga, hasta que empieza la partida). El panel, las burbujas
+     y el control lo siguen al instante, y el log dice "El juego escondió su HUD (…)" / "volvió a mostrar" en cada
+     cambio: así se confirma una escena después de jugar. El juego también lo anota en `Player.log`
+     (`HUD: SetDisableState:[Cinematic] …`).
+   - **El panel ya no se rearma entero al volver a verse** (después de un menú, un diálogo, una escena, la carga o un
+     cambio de zona): se queda armado mientras está oculto y al volver solo se revisan los números (`UpdateCounts`, que
+     rearma si cambió la forma del plan). Los globos "Otra zona: N" se calculan al mostrarse (`tipTargets` guarda
+     funciones), así no quedan viejos.
+   - **Cambiar de zona ya no recalcula todas las recetas:** `GameData.StationsStamp` contaba los objetos de la zona
+     actual, así que cada cambio de zona vaciaba los cachés de estaciones y opciones de receta. Ahora solo cuenta un
+     cambio en esa cuenta sin cambiar de zona (se construyó o quitó algo) y `ResetStations`, que también se llama al
+     **quitar** una estación (`GameHooks.AfterBuild` en modo Remove; antes solo lo notaba la cuenta de la zona, y si
+     salías de la zona antes de la siguiente revisión, se quedaba con la estación quitada). Las estaciones se buscan
+     en todo el mundo (`WorldData.GetWgoDataList` usa un caché global por id), así que la zona no importa.
+   - `GameData.Elsewhere` ya no recorre todos los objetos del mundo cada vez: la lista de almacenes de otras zonas se
+     rearma solo si cambió la cuenta de objetos de alguna zona (o cada 30 s). `StationAvailable` usa las
+     construcciones agrupadas por estación una sola vez.
+   - Al abrir o cerrar una ventana, su área se mide 30 veces por segundo durante 0.6 s (antes, en cada cuadro) y sin
+     crear listas nuevas. Las burbujas de los cofres miden su texto con un solo objeto reusado.
+   - **Tirones anotados siempre:** con el diagnóstico apagado, si en un cuadro el mod tarda más de 5 ms, el log dice
+     `[Rendimiento] cuadro pesado del mod: …` con la parte que más tardó (máximo una línea cada 30 s).
 
 ### Lo que falta probar (hazlo con el usuario, en su juego)
+- [ ] **Escenas:** al colocar una construcción (mismo mecanismo que una escena), el panel y las burbujas se esconden y
+      vuelven al terminar; el log de BepInEx dice "El juego escondió su HUD (BuildController)" y "volvió a mostrar".
+      En la próxima escena de historia, buscar "(Cinematic)" o "(CinematicsScene)" en el log.
+- [ ] Al cargar una partida, el panel aparece cuando aparece el HUD del juego (no durante la carga).
+- [ ] Cerrar un menú o un diálogo, o cambiar de zona: el panel vuelve sin trabarse y con los números al día; buscar
+      `[Rendimiento] cuadro pesado` en el log después de jugar un rato.
 - [ ] Con el framework instalado: ESC → **Mods** → **Crafting Queue** muestra las 3 secciones con nombres bien
       traducidos (español si el juego está en español).
 - [ ] Cambiar una tecla en el menú (p. ej. F3 → F5) y que funcione **sin reiniciar**. Revisa también que el
@@ -217,7 +250,10 @@ dotnet build FrameworkBridge -c Release
 - **El juego bloquea las DLL mientras está abierto:** pide al usuario que lo cierre antes de copiar.
 - Log: `<juego>/BepInEx/LogOutput.log`. Config: `<juego>/BepInEx/config/verto13.gk2.craftingqueue.cfg`.
 - Diagnóstico: `[Diagnóstico] MedirRendimiento = true` escribe tiempos (cada 15 s) en el log. **Apágalo
-  después de probar.**
+  después de probar.** Apagado, igual se anota `[Rendimiento] cuadro pesado del mod` si un cuadro del mod pasa de
+  5 ms (máximo una línea cada 30 s).
+- Log del propio juego (sus `Debug.Log`, sin marcas de hora):
+  `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2\Player.log` (y `Player-prev.log`).
 
 ---
 
@@ -236,7 +272,7 @@ dotnet build FrameworkBridge -c Release
 | `QuickAdd.cs` | Ctrl + clic derecho en todos lados (parches Harmony, diálogos de NPC, encargos). |
 | `HoverRecipe.cs` | Vista rápida con Alt. |
 | `GamepadInput.cs` | Control (Rewired). |
-| `GameHooks.cs` | Parches: crafteo terminado, construcción, obras del pueblo; `GameState` (partida, si está guardada, escenas, peleas). |
+| `GameHooks.cs` | Parches: crafteo terminado, construcción, obras del pueblo; `GameState` (partida, si está guardada, HUD del juego escondido, peleas). |
 | `GameStyle.cs`, `GameWindows.cs` | Estilo del juego (botones/fuente) y medición de ventanas abiertas. |
 | `Prefs.cs`, `Lang.cs`, `Perf.cs`, `Diagnostics.cs` | Preferencias (flechas/recetas elegidas), 16 idiomas, rendimiento, diagnóstico. |
 | `FrameworkBridge/` | Puente opcional con GK2 Mod Framework (0.5.0, en pruebas). |
@@ -265,6 +301,14 @@ dotnet build FrameworkBridge -c Release
   completos o nada.
 - Escala de la interfaz: `LazyUI.ScaleFactor` (= `ResolutionConfig.PixelSize`, lo pone
   `GUIElements.ApplyUiForResolution`).
+- **HUD del juego escondido:** `HUD.SetDisableState(HudStateType, bool enabled, HUDData)` actualiza
+  `HUD.disableStateType` (`MultiFlagAND<HudStateType>`: el resultado es el AND de todas; las que faltan cuentan como
+  `true`) y, si queda en `false`, `Hide()` = `SetActive(false)`. `HudStateType`: MainMenu=0, Cinematic=1,
+  BuildController=2, AnimationTestingManager=3, CinematicsScene=4. Quién lo llama: `UICinematic.Enable/DisableCinematic`
+  (desde `Flow_Cinematic` y `Flow_SetControlActive` con `isAffectCinematic`), `CinematicsSceneDisplayManager`,
+  `BuildController.Enable/DisableBuildMode` y `MainGame` (menú y carga). El juego toma el HUD con `LazyUI.Get<HUD>()`,
+  que lanza una excepción si no está en `guiElementsDictionary`. El control del jugador tiene su propio
+  `MultiFlagAND<TakenControlType>` (`PlayerController.IsControlEnabledByType`, `ByCinematics`=11).
 - Los mods oficiales del juego son solo idiomas/voces; el código se carga únicamente vía BepInEx.
 
 ---

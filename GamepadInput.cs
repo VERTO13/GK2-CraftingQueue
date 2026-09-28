@@ -124,9 +124,9 @@ internal class GamepadInput : MonoBehaviour
     private void Panel()
     {
         QueueHud hud = QueueHud.Instance;
-        // Salir si se cerró/ocultó el panel, se abrió una ventana o empezó una escena.
+        // Salir si se cerró/ocultó el panel, se abrió una ventana o el juego escondió su HUD (una escena).
         // (La pelea, sin esperar a que el panel se oculte: mientras navegas, el juego no recibe botones.)
-        if (hud == null || !QueueHud.Showing || LazyWindowsStackController.ActiveWindow != null || GameState.InCutscene || GameState.InFight
+        if (hud == null || !QueueHud.Showing || LazyWindowsStackController.ActiveWindow != null || GameState.HudHidden || GameState.InFight
             || Down(B) || Down(R3))
         {
             ExitPanel();
