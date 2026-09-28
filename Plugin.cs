@@ -291,41 +291,68 @@ public class Plugin : BaseUnityPlugin
         lastLoadedSlot = slot;
     }
 
+    // Cada descripción del .cfg en inglés y en español, un renglón cada una (BepInEx pone "## " en cada renglón). Las
+    // secciones y claves siguen en español a propósito: cambiarlas borraría los ajustes guardados de los jugadores.
+    private static string Both(string en, string es) => en + "\n" + es; // el .cfg de BepInEx usa solo LF
+
     private void BindConfig()
     {
-        addModifier = Config.Bind("Controles", "Modificador", new KeyboardShortcut(KeyCode.LeftControl),
+        addModifier = Config.Bind("Controles", "Modificador", new KeyboardShortcut(KeyCode.LeftControl), Both(
+            "Hold this key and right-click an item, recipe, building or town work to add it to the queue. " +
+            "LeftControl or RightControl: either Ctrl works.",
             "Mantén esta tecla y da clic derecho sobre un objeto, receta, construcción u obra del pueblo para agregarlo a la cola. " +
-            "Si es LeftControl o RightControl, cualquiera de los dos Ctrl funciona.");
-        hoverKey = Config.Bind("Vista rápida", "Tecla", new KeyboardShortcut(KeyCode.LeftAlt),
-            "Mantén esta tecla sobre cualquier objeto para ver su receta en un panel chico. None la apaga.");
+            "Si es LeftControl o RightControl, cualquiera de los dos Ctrl funciona."));
+        hoverKey = Config.Bind("Vista rápida", "Tecla", new KeyboardShortcut(KeyCode.LeftAlt), Both(
+            "Recipe preview: hold this key over any item to see its recipe in a small panel. None turns it off.",
+            "Mantén esta tecla sobre cualquier objeto para ver su receta en un panel chico. None la apaga."));
         hoverTextSize = Config.Bind("Vista rápida", "TamanoLetra", 0f,
-            new ConfigDescription("Tamaño de letra. 0 = el mismo que usa el juego (el más nítido).", new AcceptableValueRange<float>(0f, 40f)));
+            new ConfigDescription(Both("Text size of the recipe preview. 0 = the game's own (the crispest).",
+                "Tamaño de letra. 0 = el mismo que usa el juego (el más nítido)."), new AcceptableValueRange<float>(0f, 40f)));
 
         const string P = "Panel en pantalla";
-        hudVisible = Config.Bind(P, "Visible", true, "Muestra la cola en pantalla. La tecla de abajo lo cambia en el juego.");
-        hudKey = Config.Bind(P, "Tecla", new KeyboardShortcut(KeyCode.F3), "Muestra u oculta el panel.");
-        hudHideWithWindows = Config.Bind(P, "OcultarConVentanas", true, "Lo oculta con menús, ajustes, diálogos y mapa.");
-        hudInWorkWindows = Config.Bind(P, "MostrarEnCofresYMesas", true,
-            "Lo sigue mostrando con cofres, mesas de crafteo, construcción, tiendas, zombis, estaciones y la página del personaje.");
+        hudVisible = Config.Bind(P, "Visible", true, Both(
+            "Shows the queue on screen. The key below toggles it in the game.",
+            "Muestra la cola en pantalla. La tecla de abajo lo cambia en el juego."));
+        hudKey = Config.Bind(P, "Tecla", new KeyboardShortcut(KeyCode.F3), Both(
+            "Shows or hides the panel.",
+            "Muestra u oculta el panel."));
+        hudHideWithWindows = Config.Bind(P, "OcultarConVentanas", true, Both(
+            "Hides it with menus, settings, dialogues and the map.",
+            "Lo oculta con menús, ajustes, diálogos y mapa."));
+        hudInWorkWindows = Config.Bind(P, "MostrarEnCofresYMesas", true, Both(
+            "Keeps showing it with chests, crafting tables, building, shops, zombies, stations and the character page.",
+            "Lo sigue mostrando con cofres, mesas de crafteo, construcción, tiendas, zombis, estaciones y la página del personaje."));
         hudSide = Config.Bind(P, "Lado", "Derecha",
-            new ConfigDescription("De qué lado de la pantalla va.", new AcceptableValueList<string>("Derecha", "Izquierda")));
+            new ConfigDescription(Both("Which side of the screen it goes on: Derecha = right, Izquierda = left.",
+                "De qué lado de la pantalla va."), new AcceptableValueList<string>("Derecha", "Izquierda")));
         hudTop = Config.Bind(P, "DistanciaArriba", 34f,
-            new ConfigDescription("Separación desde el borde de arriba (se ajusta sola al arrastrar el panel).", new AcceptableValueRange<float>(0f, 1000f)));
+            new ConfigDescription(Both("Distance from the top edge (set on its own when you drag the panel).",
+                "Separación desde el borde de arriba (se ajusta sola al arrastrar el panel)."), new AcceptableValueRange<float>(0f, 1000f)));
         hudSideOffset = Config.Bind(P, "DistanciaLado", 6f,
-            new ConfigDescription("Separación desde el borde del lado elegido (se ajusta sola al arrastrar el panel).", new AcceptableValueRange<float>(0f, 2000f)));
-        hudMovable = Config.Bind(P, "Movible", true, "Permite arrastrar el panel desde su título. Se cambia en el juego con el candado.");
-        chestMarks = Config.Bind(P, "MarcarCofres", true,
+            new ConfigDescription(Both("Distance from the edge of the chosen side (set on its own when you drag the panel).",
+                "Separación desde el borde del lado elegido (se ajusta sola al arrastrar el panel)."), new AcceptableValueRange<float>(0f, 2000f)));
+        hudMovable = Config.Bind(P, "Movible", true, Both(
+            "Lets you drag the panel by its title. Changed in the game with the lock.",
+            "Permite arrastrar el panel desde su título. Se cambia en el juego con el candado."));
+        chestMarks = Config.Bind(P, "MarcarCofres", true, Both(
+            "Over each chest or storage in the zone, a small bubble with the materials of your queue it holds. " +
+            "Changed in the game with the pin in the panel's button bar.",
             "Encima de cada cofre o almacén de la zona, una burbujita con los materiales de tu cola que tiene. " +
-            "Se cambia en el juego con el pin de la barra de botones del panel.");
-        pinNewTasks = Config.Bind(P, "PinAlAgregar", true,
-            "Al agregar una tarea nueva, su pin se prende solo: sus materiales se marcan en los cofres al momento.");
-        hudHideEmpty = Config.Bind(P, "OcultarSiVacia", false,
-            "Oculta el panel mientras la cola está vacía; vuelve a salir al agregar algo. Si no, la cola vacía dice cómo agregar.");
-        countCarried = Config.Bind(P, "ContarLoQueLlevas", true,
-            "Cuenta lo que llevas encima (la bolsa de la barra de botones del panel).");
-        countChests = Config.Bind(P, "ContarCofres", true,
+            "Se cambia en el juego con el pin de la barra de botones del panel."));
+        pinNewTasks = Config.Bind(P, "PinAlAgregar", true, Both(
+            "When you add a new task, its pin turns on by itself: its materials are marked on the chests right away.",
+            "Al agregar una tarea nueva, su pin se prende solo: sus materiales se marcan en los cofres al momento."));
+        hudHideEmpty = Config.Bind(P, "OcultarSiVacia", false, Both(
+            "Hides the panel while the queue is empty; it comes back when you add something. Otherwise the empty queue says how to add.",
+            "Oculta el panel mientras la cola está vacía; vuelve a salir al agregar algo. Si no, la cola vacía dice cómo agregar."));
+        countCarried = Config.Bind(P, "ContarLoQueLlevas", true, Both(
+            "Counts what you carry (the bag in the panel's button bar).",
+            "Cuenta lo que llevas encima (la bolsa de la barra de botones del panel)."));
+        countChests = Config.Bind(P, "ContarCofres", true, Both(
+            "Counts the chests and storages of the zone you're in (the chest in the button bar), like the game does when you craft. " +
+            "The two are never both off: turning off the only one that's on turns the other one on.",
             "Cuenta los cofres y almacenes de la zona donde estás (el cofre de la barra de botones), como el juego al craftear. " +
-            "Nunca se apagan las dos: si apagas la única prendida, se prende la otra.");
+            "Nunca se apagan las dos: si apagas la única prendida, se prende la otra."));
         // Desde el .cfg o el menú Mods también: nunca las dos apagadas.
         countCarried.SettingChanged += (_, _) =>
         {
@@ -337,37 +364,56 @@ public class Plugin : BaseUnityPlugin
             if (!countChests.Value && !countCarried.Value)
                 countCarried.Value = true;
         };
-        buttonsOnTop = Config.Bind(P, "BotonesArriba", false,
+        buttonsOnTop = Config.Bind(P, "BotonesArriba", false, Both(
+            "The panel's buttons (bag, chest, Total view, eye, pin, lock and trash can) come out of the panel's ⋮ corner: " +
+            "false = down its side; true = across the top of the panel (in two or three rows if it's narrow).",
             "Los botones del panel (bolsa, cofre, vista Total, ojo, pin, candado y bote) salen de la esquina ⋮ del panel: " +
-            "false = bajan por su costado; true = corren por encima del panel (en dos o tres renglones si es angosto).");
-        buttonsShown = Config.Bind(P, "MostrarBotones", true,
-            "true = la barra de botones afuera; false = guardada en su esquina ⋮. Se cambia en el juego con un clic en la esquina ⋮.");
+            "false = bajan por su costado; true = corren por encima del panel (en dos o tres renglones si es angosto)."));
+        buttonsShown = Config.Bind(P, "MostrarBotones", true, Both(
+            "true = the button bar out; false = tucked into its ⋮ corner. Changed in the game with a click on the ⋮ corner.",
+            "true = la barra de botones afuera; false = guardada en su esquina ⋮. Se cambia en el juego con un clic en la esquina ⋮."));
         hudView = Config.Bind(P, "Vista", "Tareas",
-            new ConfigDescription("Tareas: cada tarea con su receta. Total: todo lo que pide la cola junto, un renglón por material. " +
-                "Se cambia en el juego con la hoja de la barra de botones del panel.", new AcceptableValueList<string>("Tareas", "Total")));
-        hudAlwaysOpen = Config.Bind(P, "SiempreVisible", false,
+            new ConfigDescription(Both("Tareas = each task with its recipe. Total = everything the queue needs together, one row per material. " +
+                    "Changed in the game with the list in the panel's button bar.",
+                "Tareas: cada tarea con su receta. Total: todo lo que pide la cola junto, un renglón por material. " +
+                "Se cambia en el juego con la hoja de la barra de botones del panel."), new AcceptableValueList<string>("Tareas", "Total")));
+        hudAlwaysOpen = Config.Bind(P, "SiempreVisible", false, Both(
+            "With a chest, table or the tech tree open: false = the panel moves aside or folds so it doesn't cover the window " +
+            "(it unfolds when you point at it); true = always fully shown. Changed in the game with the eye in the button bar.",
             "Con un cofre, mesa o el árbol abierto: false = el panel se recorre o se pliega para no tapar la ventana " +
-            "(al pasar el mouse se despliega); true = siempre se ve completo. Se cambia en el juego con el ojo de la barra de botones.");
+            "(al pasar el mouse se despliega); true = siempre se ve completo. Se cambia en el juego con el ojo de la barra de botones."));
         hudWidth = Config.Bind(P, "Ancho", 170f,
-            new ConfigDescription("Ancho del panel; los nombres largos bajan de renglón.", new AcceptableValueRange<float>(100f, 800f)));
+            new ConfigDescription(Both("Panel width; long names wrap to the next line.",
+                "Ancho del panel; los nombres largos bajan de renglón."), new AcceptableValueRange<float>(100f, 800f)));
         hudMaxHeight = Config.Bind(P, "AltoMaximo", 200f,
-            new ConfigDescription("Alto máximo; si la cola no cabe, se desplaza.", new AcceptableValueRange<float>(60f, 1000f)));
+            new ConfigDescription(Both("Maximum height; if the queue doesn't fit, it scrolls.",
+                "Alto máximo; si la cola no cabe, se desplaza."), new AcceptableValueRange<float>(60f, 1000f)));
         hudTextSize = Config.Bind(P, "TamanoLetra", 0f,
-            new ConfigDescription("Tamaño de letra del panel. 0 = el mismo que usa el juego (16). Cualquier tamaño funciona; 8, 16, 24 y 32 " +
-                "se ven perfectos y los de en medio, con algunos trazos un poco más gruesos que otros.", new AcceptableValueRange<float>(0f, 40f)));
+            new ConfigDescription(Both("Panel text size. 0 = the game's own (16). Any size works; 8, 16, 24 and 32 look perfect, " +
+                    "and the ones in between have a few strokes slightly thicker than others.",
+                "Tamaño de letra del panel. 0 = el mismo que usa el juego (16). Cualquier tamaño funciona; 8, 16, 24 y 32 " +
+                "se ven perfectos y los de en medio, con algunos trazos un poco más gruesos que otros."), new AcceptableValueRange<float>(0f, 40f)));
         hudIconSize = Config.Bind(P, "TamanoIconos", 16f,
-            new ConfigDescription("Tamaño máximo de los íconos: en un panel angosto se achican solos para dejarles sitio a los nombres.", new AcceptableValueRange<float>(10f, 48f)));
+            new ConfigDescription(Both("Largest icon size: in a narrow panel they shrink on their own to leave room for the names.",
+                "Tamaño máximo de los íconos: en un panel angosto se achican solos para dejarles sitio a los nombres."), new AcceptableValueRange<float>(10f, 48f)));
         hudScale = Config.Bind(P, "Escala", 1f,
-            new ConfigDescription("Achica o agranda íconos y márgenes (la letra se queda en el tamaño nítido del juego).", new AcceptableValueRange<float>(0.3f, 2f)));
+            new ConfigDescription(Both("Makes icons and margins smaller or bigger (the text keeps the game's crisp size).",
+                "Achica o agranda íconos y márgenes (la letra se queda en el tamaño nítido del juego)."), new AcceptableValueRange<float>(0.3f, 2f)));
         hudOpacity = Config.Bind(P, "OpacidadFondo", 0.55f,
-            new ConfigDescription("0 = fondo invisible, 1 = fondo sólido.", new AcceptableValueRange<float>(0f, 1f)));
+            new ConfigDescription(Both("Background: 0 = invisible, 1 = solid.",
+                "0 = fondo invisible, 1 = fondo sólido."), new AcceptableValueRange<float>(0f, 1f)));
         hudMaxRows = Config.Bind(P, "MaxRenglones", 80,
-            new ConfigDescription("Renglones máximos que se arman.", new AcceptableValueRange<int>(3, 300)));
+            new ConfigDescription(Both("Most rows the panel builds.",
+                "Renglones máximos que se arman."), new AcceptableValueRange<int>(3, 300)));
         recipeStyle = Config.Bind(P, "EstiloReceta", "Detallada",
-            new ConfigDescription("Detallada: línea + ingredientes con nombre. Compacta: una línea con lo que pide.",
+            new ConfigDescription(Both("Detallada = detailed: a line plus the ingredients by name. Compacta = compact: one line with what it needs.",
+                "Detallada: línea + ingredientes con nombre. Compacta: una línea con lo que pide."),
                 new AcceptableValueList<string>("Detallada", "Compacta")));
-        recipeStyleKey = Config.Bind(P, "TeclaEstiloReceta", new KeyboardShortcut(KeyCode.F4), "Cambia entre el estilo detallado y el compacto mientras juegas.");
-        measurePerf = Config.Bind("Diagnóstico", "MedirRendimiento", false,
-            "Escribe en BepInEx\\LogOutput.log cuánto tarda cada parte del mod (cada 15 s) y los cuadros lentos. Solo para buscar problemas.");
+        recipeStyleKey = Config.Bind(P, "TeclaEstiloReceta", new KeyboardShortcut(KeyCode.F4), Both(
+            "Switches between the detailed and the compact style while you play.",
+            "Cambia entre el estilo detallado y el compacto mientras juegas."));
+        measurePerf = Config.Bind("Diagnóstico", "MedirRendimiento", false, Both(
+            "Writes to BepInEx\\LogOutput.log how long each part of the mod takes (every 15 s) and the slow frames. Only for tracking down problems.",
+            "Escribe en BepInEx\\LogOutput.log cuánto tarda cada parte del mod (cada 15 s) y los cuadros lentos. Solo para buscar problemas."));
     }
 }

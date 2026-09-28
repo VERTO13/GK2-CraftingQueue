@@ -38,6 +38,12 @@ El usuario la publicó sin terminar la lista de pruebas de abajo: hazlas con él
 imágenes del README y de Nexus todavía son de la 0.4.x (clips nuevos pendientes). Los dos zips llevan el puente y sus
 traducciones; sin el framework, BepInEx no carga el puente y el mod funciona igual.
 
+**El `.cfg` sin el framework:** hubo quejas de que estaba en español. Desde la 0.5.0 cada descripción va en inglés y
+en español (`Plugin.Both`, un renglón `##` por idioma; el .cfg de BepInEx usa solo LF). Las secciones, claves y
+valores (`Derecha`, `Tareas`…) siguen en español: cambiarlos borraría los ajustes guardados; la descripción en inglés
+explica los valores. Si algún día se pasan al inglés, hace falta migrar desde las entradas huérfanas de BepInEx y
+cambiar los mismos nombres en el puente y en `en.json`/`es.json`.
+
 1. **Integración opcional con GK2 Mod Framework** (https://github.com/SuperMan4eg/GK2-Mod-Framework, MIT,
    Nexus mod 42). El framework agrega un menú **Mods** (ESC y menú principal) con ajustes, teclas editables y
    navegación con control. Probado contra **Framework 0.1.14** (API "preview" 0.1.x).
