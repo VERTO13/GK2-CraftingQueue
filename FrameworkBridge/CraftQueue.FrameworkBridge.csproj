@@ -11,7 +11,7 @@
     <RootNamespace>CraftQueue.FrameworkBridge</RootNamespace>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
-    <Version>0.4.16</Version>
+    <Version>0.5.0</Version>
   </PropertyGroup>
   <PropertyGroup>
     <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2</GameDir>

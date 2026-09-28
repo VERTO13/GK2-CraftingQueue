@@ -12,7 +12,7 @@ cola de crafteo: qué quieres hacer, qué necesitas, qué tienes y en qué cofre
 
 - **GitHub (público):** https://github.com/VERTO13/GK2-CraftingQueue — licencia MIT.
 - **Nexus Mods:** https://www.nexusmods.com/graveyardkeeper2/mods/177 (autor en Nexus: LeBetoven).
-- **Versión publicada:** 0.4.16 (GitHub Release `v0.4.16` y Nexus). La siguiente será **0.5.0**.
+- **Versión publicada:** 0.5.0 (GitHub Release `v0.5.0` y Nexus, 2026-09-28). La siguiente será **0.5.1**.
 - **Anunciado** en el Discord oficial de Lazy Bear Games, foro `#gk2-modding`.
 
 ### Funciones principales (0.4.16)
@@ -32,9 +32,11 @@ cola de crafteo: qué quieres hacer, qué necesitas, qué tienes y en qué cofre
 
 ---
 
-## 2. Estado actual del trabajo (rama `feature/framework-bridge`)
+## 2. Lo que trae la 0.5.0 (publicada el 2026-09-28)
 
-Se está haciendo la **0.5.0**. En esta rama (sin publicar, **versión aún 0.4.16** a propósito):
+El usuario la publicó sin terminar la lista de pruebas de abajo: hazlas con él y los arreglos van en la 0.5.1. Las
+imágenes del README y de Nexus todavía son de la 0.4.x (clips nuevos pendientes). Los dos zips llevan el puente y sus
+traducciones; sin el framework, BepInEx no carga el puente y el mod funciona igual.
 
 1. **Integración opcional con GK2 Mod Framework** (https://github.com/SuperMan4eg/GK2-Mod-Framework, MIT,
    Nexus mod 42). El framework agrega un menú **Mods** (ESC y menú principal) con ajustes, teclas editables y
@@ -329,7 +331,7 @@ Anota todo lo que no funcione o se sienta raro y corrígelo con el usuario.
 ## 7. Publicar una versión
 
 **Regla de versiones:** el número **solo sube al publicar** (nada de subirlo en cada compilación de prueba).
-Misma versión en GitHub y Nexus. Siguiente: **0.5.0**; arreglos 0.5.1, 0.5.2…
+Misma versión en GitHub y Nexus. Siguiente: **0.5.1** (arreglos de la 0.5.0); después 0.5.2…
 
 1. Subir `<Version>` en `CraftQueue.csproj` y `FrameworkBridge/*.csproj`, y en `[BepInPlugin]` de `Plugin.cs` y
    del puente. Compilar ambos.
@@ -364,7 +366,7 @@ Misma versión en GitHub y Nexus. Siguiente: **0.5.0**; arreglos 0.5.1, 0.5.2…
 
 ## 9. Pendientes conocidos
 
-- Terminar y probar la integración con el framework → publicar **0.5.0**.
+- Probar la 0.5.0 con el usuario (lista de la sección 2) y arreglar en la **0.5.1**.
 - Probar el control a fondo.
 - Nexus: activar los **Donation Points de este mod** en la página "Opt In Your Mods" (el mod recién publicado
   no aparecía todavía en la lista). El usuario ya activó el programa en su cuenta.
