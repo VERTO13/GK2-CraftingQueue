@@ -12,7 +12,7 @@ cola de crafteo: qué quieres hacer, qué necesitas, qué tienes y en qué cofre
 
 - **GitHub (público):** https://github.com/VERTO13/GK2-CraftingQueue — licencia MIT.
 - **Nexus Mods:** https://www.nexusmods.com/graveyardkeeper2/mods/177 (autor en Nexus: LeBetoven).
-- **Versión publicada:** 0.5.0 (GitHub Release `v0.5.0` y Nexus, 2026-09-28). La siguiente será **0.5.1**.
+- **Versión publicada:** 0.5.1 (GitHub Release `v0.5.1` y Nexus, 2026-09-28). La siguiente será **0.5.2**.
 - **Anunciado** en el Discord oficial de Lazy Bear Games, foro `#gk2-modding`.
 
 ### Funciones principales (0.4.16)
@@ -32,7 +32,7 @@ cola de crafteo: qué quieres hacer, qué necesitas, qué tienes y en qué cofre
 
 ---
 
-## 2a. Lo que trae la 0.5.1 (sin publicar todavía)
+## 2a. Lo que trae la 0.5.1 (publicada el 2026-09-28)
 
 Probado por el usuario en 1080p el 2026-09-28 (incluida la actualización del juego de ese día: sin errores en el log).
 
@@ -57,8 +57,7 @@ Probado por el usuario en 1080p el 2026-09-28 (incluida la actualización del ju
   imponga 40 × 40): letra café oscuro con la fuente de las etiquetas del juego, 85 % de opacidad (25 % con el mouse o
   el personaje encima), columna derecha a su medida. Si el sprite no está cargado, marco propio hasta que aparece.
 - **Medios nuevos** en `docs/images/` (add-and-panel, queue-controls, reorder, recipe-switch, button-bar, chest-bubbles.gif, add-anywhere,
-  mods-menu). Los viejos (usage, remove-and-blueprints, multi-recipe, chest-bubbles.png, task-buttons) **siguen en el repo porque
-  la descripción publicada en Nexus los enlaza**: borrarlos solo después de actualizar Nexus.
+  mods-menu). Las imágenes viejas se borraron al actualizar Nexus.
 
 ## 2. Lo que trae la 0.5.0 (publicada el 2026-09-28)
 
@@ -366,7 +365,7 @@ Anota todo lo que no funcione o se sienta raro y corrígelo con el usuario.
 ## 7. Publicar una versión
 
 **Regla de versiones:** el número **solo sube al publicar** (nada de subirlo en cada compilación de prueba).
-Misma versión en GitHub y Nexus. Siguiente: **0.5.1** (arreglos de la 0.5.0); después 0.5.2…
+Misma versión en GitHub y Nexus. Siguiente: **0.5.2**.
 
 1. Subir `<Version>` en `CraftQueue.csproj` y `FrameworkBridge/*.csproj`, y en `[BepInPlugin]` de `Plugin.cs` y
    del puente. Compilar ambos **sin ruta de depuración** (si no, la DLL lleva la ruta de tu carpeta de usuario):
