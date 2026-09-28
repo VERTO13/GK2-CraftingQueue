@@ -81,7 +81,9 @@ Se está haciendo la **0.5.0**. En esta rama (sin publicar, **versión aún 0.4.
    - **Encargos (1.006):** Ctrl + clic en un encargo pide solo lo que falta (`GameData.OrderMissing`).
    - **Vista Total** (Σ en la barra, ajuste `Vista`): renglones "hoja" del plan sumados por material (`Plan.Totals`).
    - **Vaciar la cola:** bote en la barra (dos clics, `ClearConfirm`) y botón en el menú Mods (`Plugin.ClearQueueLabel/
-     ClearQueueClick`, que el puente llama por reflexión).
+     ClearQueueClick`, que el puente llama por reflexión). Íconos elegidos por el usuario (tablero 6 del lienzo de
+     mockups): bote gris con tapa separada, rojo con el mouse encima, palomita dorada tras el primer clic. El bote
+     rojo relleno de antes se leía como "!".
    - **Shift** en − + (±10; − se detiene en 1) y en ▲ ▼ (hasta arriba/abajo). **Globos** en todos los botones.
    - Ajustes nuevos: `OcultarSiVacia`, `SoloMochila` (cuenta solo el inventario; el globo de otras zonas incluye
      entonces la zona actual), `Vista` (Tareas/Total). Los dos primeros también en el menú del framework.
@@ -99,7 +101,8 @@ Se está haciendo la **0.5.0**. En esta rama (sin publicar, **versión aún 0.4.
 - [ ] Que un `.cfg` viejo (teclas guardadas como `KeyCode`) no pierda valores.
 - [ ] **Control / gamepad** (ver sección 6): es la primera vez que se prueba con control real.
 - [ ] Vista Total (Σ): sumas correctas, lo que falta primero, globo de otra zona; volver a Tareas.
-- [ ] Bote: primer clic rojo + globo "otra vez", segundo clic vacía; a los 4 s se desarma. Botón del menú Mods igual.
+- [ ] Bote: gris; rojo con el mouse encima; primer clic → palomita dorada + globo "otra vez"; clic en la palomita
+      vacía; a los 4 s vuelve el bote. Botón del menú Mods: dos clics (texto que cambia).
 - [ ] Shift en − + ▲ ▼. Globos de todos los botones (y que no tapen nada).
 - [ ] Partida nueva después de borrar una: empieza sin cola, y la vieja queda en `CraftingQueue/anteriores/`.
 - [ ] El juego arranca normal y el log de BepInEx no muestra `IL Compile Error` (ver la lección de arriba).

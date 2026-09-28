@@ -99,7 +99,7 @@ To add something, hold **Ctrl** and right-click any item.
 Hover the panel and two more buttons appear in its title bar:
 
 - **Σ** switches to the **Total** view: everything the queue needs in one list, one row per material, added up across all your tasks. It's what you still have to gather, with what's missing first.
-- **The trash can** clears the whole queue. Click it twice to confirm: it turns red after the first click.
+- **The trash can** clears the whole queue. It turns red when you point at it, and after the first click it becomes a check mark: click the check to confirm.
 
 ### Add anything with Ctrl + right-click
 

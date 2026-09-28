@@ -99,7 +99,7 @@ Para agregar algo, mantén **Ctrl** y da clic derecho sobre cualquier objeto.
 Al pasar el mouse por el panel aparecen dos botones más en su barra de título:
 
 - **Σ** cambia a la vista **Total**: todo lo que pide la cola en una sola lista, un renglón por material, sumado de todas tus tareas. Es lo que todavía tienes que conseguir, con lo que falta primero.
-- **El bote** vacía la cola completa. Da dos clics para confirmar: después del primero se pone rojo.
+- **El bote** vacía la cola completa. Se pone rojo al pasarle el mouse y, al primer clic, se vuelve una palomita: clic en la palomita para confirmar.
 
 ### Agrega lo que sea con Ctrl + clic derecho
 

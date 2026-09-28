@@ -463,8 +463,8 @@ internal class QueueHud : MonoBehaviour
     }
 
     // Σ y bote: aparecen con el mouse sobre el panel. La Σ se queda a la vista (dorada) mientras la
-    // vista Total está puesta, y el bote mientras espera la confirmación (rojo). El título deja
-    // lugar solo para los que se ven.
+    // vista Total está puesta, y el bote mientras espera la confirmación (ya como palomita). El
+    // título deja lugar solo para los que se ven.
     private void UpdateStripIcons(bool over)
     {
         if (totalIcon == null)
@@ -479,7 +479,8 @@ internal class QueueHud : MonoBehaviour
             left = right - totalIcon.sprite.rect.width;
             right = left - 5f;
         }
-        if (SetStripIcon(trashIcon, showTrash, armed ? TrashArmed() : TrashOff(), right))
+        Sprite trash = armed ? CheckGold() : hovered == trashIcon ? TrashRed() : TrashGrey();
+        if (SetStripIcon(trashIcon, showTrash, trash, right))
             left = right - trashIcon.sprite.rect.width;
         float reserve = -left + 6f;
         if (titleRect != null && !Mathf.Approximately(titleRect.offsetMax.x, -reserve))
@@ -914,7 +915,8 @@ internal class QueueHud : MonoBehaviour
         if (hovered != null)
             hovered.color = Color.white;
         hovered = i;
-        if (hovered != null)
+        // El bote no se tiñe: cambia de dibujo (rojo, o la palomita dorada; ver UpdateStripIcons).
+        if (hovered != null && hovered != trashIcon)
             hovered.color = Hover;
     }
 
@@ -2484,18 +2486,25 @@ internal class QueueHud : MonoBehaviour
     private static Sprite TotalOff() => totalOff != null ? totalOff : totalOff =
         PixelSprite(SigmaRows, new Color(0.62f, 0.58f, 0.52f), Color.clear, Color.clear);
 
-    // Vaciar la cola: bote gris; esperando la confirmación, rojo como el botón de quitar.
-    private static Sprite trashOff, trashArmed;
-
-    private static Sprite TrashOff() => trashOff != null ? trashOff : trashOff = PixelSprite(new[]
+    // Vaciar la cola: bote gris (tapa con asa separada del cuerpo, rayas, fondo redondeado); rojo
+    // con el mouse encima, "esto vacía la cola"; tras el primer clic, palomita dorada: el segundo
+    // clic confirma. (El bote relleno de rojo de antes se leía como un "!".)
+    private static Sprite trashGrey, trashRed, checkGold;
+    private static readonly string[] TrashRows =
     {
-        "..ooo..", "ooooooo", ".o...o.", ".o.o.o.", ".o.o.o.", ".o.o.o.", ".o.o.o.", ".o...o.", ".ooooo."
-    }, new Color(0.62f, 0.58f, 0.52f), Color.clear, Color.clear);
+        "...ooo...", "ooooooooo", ".........", ".ooooooo.", ".o.o.o.o.", ".o.o.o.o.", ".o.o.o.o.", ".o.o.o.o.", "..ooooo.."
+    };
 
-    private static Sprite TrashArmed() => trashArmed != null ? trashArmed : trashArmed = PixelSprite(new[]
+    private static Sprite TrashGrey() => trashGrey != null ? trashGrey : trashGrey =
+        PixelSprite(TrashRows, new Color(0.62f, 0.58f, 0.52f), Color.clear, Color.clear);
+
+    private static Sprite TrashRed() => trashRed != null ? trashRed : trashRed =
+        PixelSprite(TrashRows, new Color(0.88f, 0.31f, 0.24f), Color.clear, Color.clear);
+
+    private static Sprite CheckGold() => checkGold != null ? checkGold : checkGold = PixelSprite(new[]
     {
-        "..ooo..", "ooooooo", ".o###o.", ".o#w#o.", ".o#w#o.", ".o#w#o.", ".o#w#o.", ".o###o.", ".ooooo."
-    }, BtnLine, BtnRed, BtnMark);
+        ".......oo", "......oo.", "o....oo..", "oo..oo...", ".oooo....", "..oo....."
+    }, new Color(0.98f, 0.78f, 0.26f), Color.clear, Color.clear);
 
     // Marcar cofres: pin relleno = prendido, solo contorno = apagado.
     private static Sprite pinOn, pinOff;
