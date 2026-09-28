@@ -7,7 +7,7 @@
 > ⚠️ **Versión de prueba (beta).** Todavía se está probando y puede tener algunos bugs. Por favor [repórtalos](#reportar-bugs); ayuda muchísimo.
 > 🎮 **El soporte para control es aún más experimental** y casi no se ha probado.
 
-![Crafting Queue en el juego: Ctrl + clic derecho agrega recetas y las burbujas muestran en qué cofre están los materiales](docs/images/usage.gif)
+![Crafting Queue en el juego: Ctrl + clic derecho en el inventario agrega objetos a la cola, y luego el panel se agranda por su esquina](docs/images/add-and-panel.gif)
 
 ---
 
@@ -15,12 +15,12 @@
 
 Solo se hace una vez. Cierra el juego antes de empezar.
 
-### Paso 1: Descarga el mod
+### Paso 1: Descarga dos archivos
 
-Entra a [Releases](../../releases) (o a la [página de Nexus Mods](https://www.nexusmods.com/graveyardkeeper2/mods/177)) y descarga **uno** de estos archivos:
+1. **BepInEx 5**, el cargador de mods (sáltatelo si ya juegas con otros mods de BepInEx): en su [página oficial](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5), descarga **`BepInEx_win_x64_5.4.23.5.zip`**.
+2. **Crafting Queue**: en [Releases](../../releases) o en la [página de Nexus Mods](https://www.nexusmods.com/graveyardkeeper2/mods/177), descarga **`CraftingQueue-x.y.z.zip`**.
 
-- **`CraftingQueue-x.y.z-with-BepInEx.zip`**: elige este si no estás seguro. Trae todo lo necesario.
-- `CraftingQueue-x.y.z.zip`: solo el mod, para quien ya juega con otros mods de BepInEx.
+*Opcional:* [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) agrega al juego un menú **Mods** con todos los ajustes de este mod. Se instala siguiendo su propia página, cuando quieras.
 
 ### Paso 2: Copia la dirección de la carpeta del juego
 
@@ -30,7 +30,9 @@ Entra a [Releases](../../releases) (o a la [página de Nexus Mods](https://www.n
 
 > 💡 No importa en qué disco o carpeta tengas el juego: Steam siempre abre la correcta.
 
-### Paso 3: Descomprime el mod en esa carpeta
+### Paso 3: Descomprime los dos archivos en esa carpeta
+
+Hazlo primero con BepInEx y luego con Crafting Queue:
 
 1. Busca el archivo que descargaste (normalmente está en **Descargas**).
 2. Clic derecho sobre él → **Extraer todo…**
@@ -43,7 +45,7 @@ Abre otra vez la carpeta del juego. Ahora debe haber una carpeta **`BepInEx`** j
 
 ```
 Graveyard Keeper 2
-├─ BepInEx               ← nuevo
+├─ BepInEx               ← nuevo (adentro: plugins\CraftingQueue)
 ├─ winhttp.dll           ← nuevo
 ├─ doorstop_config.ini   ← nuevo
 └─ GraveyardKeeper2.exe
@@ -57,7 +59,8 @@ Para agregar algo, mantén **Ctrl** y da clic derecho sobre cualquier objeto.
 
 | Lo que ves | Qué hacer |
 |---|---|
-| Dentro de la carpeta del juego quedó una carpeta llamada `CraftingQueue-...` con `BepInEx` adentro | Mueve todo lo que está dentro de esa carpeta a la carpeta del juego y borra la carpeta vacía. |
+| Dentro de la carpeta del juego quedó una carpeta llamada `CraftingQueue-...` o `BepInEx_win_x64...` con `BepInEx` adentro | Mueve todo lo que está dentro de esa carpeta a la carpeta del juego y borra la carpeta vacía. |
+| No hay `winhttp.dll` junto a `GraveyardKeeper2.exe` | BepInEx no está instalado: descomprime `BepInEx_win_x64_5.4.23.5.zip` en la carpeta del juego (Paso 3). |
 | El juego abre pero no aparece el panel | Presiona **F3** (puede estar oculto). Si sigue sin aparecer, abre **Solución de problemas** casi al final de esta página. |
 | Windows o el antivirus avisan sobre `winhttp.dll` | Ese archivo es parte de BepInEx, el cargador de mods estándar de los juegos de Unity. Es seguro; permítelo. |
 
@@ -86,14 +89,18 @@ Para agregar algo, mantén **Ctrl** y da clic derecho sobre cualquier objeto.
 - **Solo lo que puedes usar.** Las recetas que aún no desbloqueas no aparecen, ni las estaciones que todavía no puedes construir. En cuanto las desbloqueas (árbol tecnológico, misiones…), aparecen solas.
 - **Cantidades reales.** El `×N` toma en cuenta tus talentos, o los de un zombi si trabaja esa estación. Para una estación que aún no construyes, muestra el edificio base con tus talentos.
 - **Una tarea pide *tener* esa cantidad.** Lo que ya tienes cuenta, y la receta de abajo es solo para lo que falta. Ctrl + clic derecho en un objeto o una receta pide uno más de lo que tienes; los pedidos (NPC, misiones, encargos, construcciones) piden su cantidad exacta.
-- **Los materiales compartidos se reparten en el orden de la cola.** Si dos tareas usan troncos, la de arriba toma primero lo que tienes y la siguiente lo que sobra. Cambia el orden con ▲ ▼.
+- **Los materiales compartidos se reparten en el orden de la cola.** Si dos tareas usan troncos, la de arriba toma primero lo que tienes y la siguiente lo que sobra. Arrastra una tarea por su título para subirla o bajarla.
 - **Las tareas se completan solas** cuando crafteas, recoges o compras lo que faltaba. Las construcciones y obras del pueblo bajan al construirlas.
 - **Lo que tienes en otras zonas.** Si aquí no te alcanza pero tienes en otra zona, pasa el mouse por el renglón y te dice dónde: `Yard: 7`.
 - **Los objetos llenan su celda,** para reconocerlos de un vistazo.
-- **Pasa el mouse sobre una tarea** para ver sus botones ▲ ▼ − + 🗑 y su pin. Con **Shift**, la cantidad cambia de 10 en 10 y la tarea se va hasta arriba o hasta abajo. Cada botón explica qué hace al pasarle el mouse.
+- **Pasa el mouse sobre una tarea** para ver sus botones − + 🗑 y su pin. Con **Shift**, la cantidad cambia de 10 en 10. Cada botón explica qué hace al pasarle el mouse.
+- **Arrastra una tarea para cambiarla de lugar.** Tómala por su título y suéltala donde quieras: una línea dorada marca dónde va a quedar, y la lista se desplaza sola cerca de la orilla de arriba o de abajo. Clic derecho o Esc cancela.
 - **Muévelo y cámbiale el tamaño.** Abre el candado de la barra de botones y arrastra el título para moverlo, o el agarre de su esquina de abajo para cambiar su tamaño. Nombres e íconos se reacomodan mientras arrastras, y los íconos se achican solos si el panel es angosto.
+- **Tamaño de íconos y letra con la rueda del mouse:** sobre el panel, **Ctrl + rueda** cambia el tamaño de los íconos y **Shift + rueda** el de la letra.
 
-![Botones de una tarea](docs/images/task-buttons.png)
+![Cambiar cantidades (Shift: de 10 en 10), prender y apagar el pin de una tarea y quitar tareas](docs/images/queue-controls.gif)
+
+![Arrastrar tareas para cambiar el orden de la cola](docs/images/reorder.gif)
 
 ### La barra de botones
 
@@ -124,7 +131,7 @@ Funciona en casi todo lo que muestra un objeto o una receta:
 
 Si el panel está plegado porque hay una ventana abierta, se despliega un momento para que veas la tarea nueva.
 
-![Quitar tareas y agregar planos desde el árbol tecnológico subiendo su cantidad](docs/images/remove-and-blueprints.gif)
+![Ctrl + clic derecho en un cofre, el inventario y el árbol tecnológico](docs/images/add-anywhere.gif)
 
 ![Un NPC pide un objeto: Ctrl + clic derecho en su ícono para agregarlo a la cola](docs/images/npc-request.png)
 
@@ -132,12 +139,12 @@ Si el panel está plegado porque hay una ventana abierta, se despliega un moment
 
 Burbujas sobre los cofres y almacenes de tu zona muestran qué materiales de tu cola tienen y cuántos.
 
-![Burbujas sobre los cofres](docs/images/chest-bubbles.png)
+![Burbujas sobre los cofres, que se prenden y apagan con el pin](docs/images/chest-bubbles.gif)
 
 - **Pasa el mouse sobre una tarea o un ingrediente** del panel para ver al momento dónde están sus materiales, aunque no tenga pin.
 - El **pin de la barra de botones** (marco dorado cuando está prendido) marca los materiales de toda la cola. El **pin de una tarea** marca solo esa tarea. Las tareas nuevas empiezan con su pin prendido. Los pines se guardan con tu partida.
 - Si ya tienes un objeto, se marca solo el objeto, para que sepas dónde recogerlo. Si no, se marcan sus ingredientes.
-- Las burbujas se vuelven transparentes cuando el mouse está encima o cuando tapan a tu personaje.
+- Las burbujas usan el pergamino del propio juego, y se vuelven transparentes cuando el mouse está encima o cuando tapan a tu personaje.
 
 ### Vista rápida de recetas (Alt)
 
@@ -154,8 +161,10 @@ Mantén **Alt** sobre cualquier objeto, en tu inventario, un cofre o el mismo pa
 - **Del tamaño de la interfaz del juego, en cualquier resolución.** El panel usa la misma escala que la interfaz del juego (×2 en 720p, 1080p y 1440p, ×4 en 4K…): su letra es del tamaño de la del juego y todo se ve nítido.
 - **Muy ligero.** Las cantidades se actualizan en su lugar en vez de redibujar el panel, cerrar un menú o cambiar de zona no lo rearma, y no corre nada pesado mientras juegas (unos 0.1 ms por cuadro en promedio).
 - **Una cola por partida guardada,** en su propio archivo y guardada de forma que un cierre inesperado no la borre. Una partida nueva nunca hereda la cola de una partida borrada (las colas viejas se guardan en la carpeta `anteriores`, por si acaso).
-- **Opciones:** ocultar el panel mientras la cola está vacía; los botones por el costado o por encima del panel; cualquier tamaño de letra (0 = la del juego; 8, 16, 24 y 32 se ven perfectos).
-- **Ajustes dentro del juego (opcional):** con [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) instalado, todos los ajustes están en el menú **Mods** del juego (ESC), junto con un botón para vaciar la cola. Los que son elegir entre varias opciones muestran la elegida con palabras («Por el costado», «Solo lo que llevas»…); un clic pasa a la siguiente.
+- **Opciones:** ocultar el panel mientras la cola está vacía; los botones por el costado o por encima del panel; tamaño de letra de 8 a 32 (16 es la del juego; 8, 16, 24 y 32 se ven perfectos); opacidad de todo el panel o solo de su fondo.
+- **Ajustes dentro del juego (opcional):** con [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) instalado, todos los ajustes están en el menú **Mods** del juego (ESC), junto con un botón para vaciar la cola. Mientras está abierta la página de Crafting Queue, el panel se ve junto al menú, así que cada cambio se ve al momento, y los valores se actualizan solos cuando cambias el tamaño del panel. Los que son elegir entre varias opciones muestran la elegida con palabras («Por el costado», «Solo lo que llevas»…); un clic pasa a la siguiente.
+
+![El menú Mods con el panel al lado: cada cambio se ve al momento](docs/images/mods-menu.gif)
 - **16 idiomas.** Todos los idiomas oficiales del juego; sigue el idioma del juego al momento.
 
 ### Qué cambia / compatibilidad
@@ -168,8 +177,8 @@ Mantén **Alt** sobre cualquier objeto, en tu inventario, un cofre o el mismo pa
 ### Requisitos
 
 - Graveyard Keeper 2 (probado en la versión 1.006).
-- [BepInEx](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5) 5.4.23.x, incluido en el zip *with-BepInEx*.
-- Opcional: [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) 0.1.14 o posterior, para el menú de ajustes dentro del juego.
+- **Obligatorio:** [BepInEx](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5) 5.4.23.x (`BepInEx_win_x64`), que se instala aparte (Paso 1).
+- **Opcional:** [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) 0.1.14 o posterior, para el menú de ajustes dentro del juego.
 
 ### Limitaciones conocidas
 
@@ -186,13 +195,14 @@ Mantén **Alt** sobre cualquier objeto, en tu inventario, un cofre o el mismo pa
 | Mostrar / ocultar el panel | `F3` | – |
 | Recetas detalladas / compactas | `F4` | – |
 | Ver dónde están los materiales de una tarea | Pasar el mouse sobre la tarea | Seleccionarla en el panel |
-| Cambiar el orden (prioridad) | Pasar el mouse sobre la tarea → ▲ ▼ (**Shift**: hasta arriba o hasta abajo) | – |
+| Cambiar el orden (prioridad) | Arrastrar la tarea por su título (clic derecho o `Esc` cancela) | – |
 | Cambiar una cantidad | Pasar el mouse sobre la tarea → − + (**Shift**: de 10 en 10) | X / Y en el panel |
 | Sacar / guardar los botones | Clic en la esquina ⋮ del panel (clic derecho: por el costado o por encima) | – |
 | Qué cuenta como "tienes" | La bolsa y el cofre de la barra de botones | – |
 | Vista Total | La hoja de la barra de botones | **View** en el panel |
 | Vaciar la cola | El bote de la barra de botones (dos clics) | – |
 | Mover / cambiar el tamaño | Abrir el candado → arrastrar el título o la esquina ⋮ / el agarre de la esquina | – |
+| Tamaño de íconos / letra | `Ctrl` + rueda / `Shift` + rueda sobre el panel | – |
 | Usar el panel | Mouse | **R3** entrar · cruceta ↑↓ moverse · → abrir · ← cerrar · LB/RB cambiar receta · X/Y −/+ · A pin · View total · B salir |
 
 ## Reportar bugs
@@ -224,7 +234,7 @@ Tus colas se guardan en `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyar
 <summary><b>Solución de problemas</b></summary>
 
 - **No aparece el panel:**
-  1. Revisa que exista `BepInEx\LogOutput.log` en la carpeta del juego. Si no existe, BepInEx no quedó instalado; usa el zip *with-BepInEx*.
+  1. Revisa que exista `BepInEx\LogOutput.log` en la carpeta del juego. Si no existe, BepInEx no quedó instalado (ve el Paso 1).
   2. Si el log existe, busca `Crafting Queue` adentro.
 - **El panel está oculto:** presiona `F3`. También se oculta a propósito cuando el juego esconde su propia interfaz (escenas de historia, al colocar una construcción), mientras preparas y peleas una batalla, y con la cola vacía si prendiste esa opción.
 - **No salen burbujas en los cofres:** prende el pin de la barra de botones (o el de una tarea), o pasa el mouse sobre una tarea del panel. Las burbujas solo muestran los cofres de la zona donde estás.
@@ -248,7 +258,6 @@ dotnet build -c Release -p:GameDir="C:\Program Files (x86)\Steam\steamapps\commo
 - Mod no oficial, sin relación con Lazy Bear Games.
 - Hecho con apoyo de inteligencia artificial ([Claude](https://claude.com), de Anthropic): el código se escribió junto con Claude y cada función se probó en el juego antes de publicarla.
 - No incluye código ni recursos del juego y no envía datos a ningún lado.
-- El paquete *with-BepInEx* incluye [BepInEx](https://github.com/BepInEx/BepInEx) 5.4.23.5 sin modificar (LGPL-2.1).
 
 ## Licencia
 

@@ -3,7 +3,7 @@
 
 Ever walk up to the workbench and forget what the recipe needed, or which chest the planks were in? Crafting Queue keeps a small to-do list on screen: [b]Ctrl + right-click[/b] anything to add it, and the panel shows what you have, what's missing and where it is.
 
-[center][img]https://raw.githubusercontent.com/VERTO13/GK2-CraftingQueue/main/docs/images/usage.gif[/img][/center]
+[center][img]https://raw.githubusercontent.com/VERTO13/GK2-CraftingQueue/main/docs/images/add-and-panel.gif[/img][/center]
 
 [size=4][b][color=#ffd966]Features[/color][/b][/size]
 
@@ -13,7 +13,17 @@ Ever walk up to the workbench and forget what the recipe needed, or which chest 
 [*]Vendor orders ask only for what the order still needs: goods already delivered or waiting on the pallets count.
 [*]If the panel is folded because a window is open, it unfolds for a moment so you can see the new task.
 [/list]
-[center][img]https://raw.githubusercontent.com/VERTO13/GK2-CraftingQueue/main/docs/images/remove-and-blueprints.gif[/img][/center]
+[center][img]https://raw.githubusercontent.com/VERTO13/GK2-CraftingQueue/main/docs/images/add-anywhere.gif[/img][/center]
+
+[b]Manage your queue[/b]
+[list]
+[*]Hover a task for its [b]− +[/b] and trash buttons and its pin. Hold [b]Shift[/b] to change the amount by 10.
+[*][b]New: drag a task by its title to reorder it.[/b] A gold line shows where it will land, and the list scrolls on its own near the edges. Right-click or Esc cancels.
+[*][b]Ctrl + mouse wheel[/b] over the panel changes the icon size, [b]Shift + wheel[/b] the text size.
+[/list]
+[center][img]https://raw.githubusercontent.com/VERTO13/GK2-CraftingQueue/main/docs/images/queue-controls.gif[/img][/center]
+
+[center][img]https://raw.githubusercontent.com/VERTO13/GK2-CraftingQueue/main/docs/images/reorder.gif[/img][/center]
 
 [b]The recipe tree, only for what's missing[/b]
 [list]
@@ -26,11 +36,11 @@ Ever walk up to the workbench and forget what the recipe needed, or which chest 
 
 [b]See which chest has it[/b]
 [list]
-[*]Little bubbles over the chests and storages in your zone show which of your materials each one holds.
+[*]Little parchment bubbles, in the game's own style, over the chests and storages in your zone show which of your materials each one holds.
 [*]Hover a task in the panel to preview where its materials are, or pin it to keep them marked.
 [*]Short here? Hover the row to see where else you have it: "Yard: 7".
 [/list]
-[center][img]https://raw.githubusercontent.com/VERTO13/GK2-CraftingQueue/main/docs/images/chest-bubbles.png[/img][/center]
+[center][img]https://raw.githubusercontent.com/VERTO13/GK2-CraftingQueue/main/docs/images/chest-bubbles.gif[/img][/center]
 
 [b]The button bar[/b]
 [list]
@@ -38,7 +48,6 @@ Ever walk up to the workbench and forget what the recipe needed, or which chest 
 [*][b]Bag and chest:[/b] count what you carry, the chests of your zone, or both (the default, like the game when you craft).
 [*][b]Total view:[/b] everything the queue needs in one list, one row per material, added up across all your tasks, with what's missing first.
 [*][b]Eye[/b] (always visible), [b]pin[/b] (chest bubbles), [b]lock[/b] (move and resize) and the [b]trash can[/b] to clear the queue (click twice to confirm).
-[*]Hold [b]Shift[/b] on − + to change an amount by 10, or on ▲ ▼ to send a task to the top or the bottom.
 [/list]
 
 [b]Peek at any recipe[/b]
@@ -49,13 +58,16 @@ Ever walk up to the workbench and forget what the recipe needed, or which chest 
 
 [b]And also[/b]
 [list]
-[*]Tasks that share a material split it in queue order. Reorder them with ▲ ▼ to set priorities.
+[*]Tasks that share a material split it in queue order: drag them to set priorities.
 [*]Tasks leave the list on their own once you craft, pick up or buy what was missing.
 [*]Stays out of the way: with a chest, station or the tech tree open, the panel moves aside or folds into a small tab. The eye keeps it always visible. It also hides whenever the game hides its own HUD (story scenes, placing a building) and while you prepare and fight a battle.
 [*]Make it yours: open the lock, then drag the title to move the panel or its corner to resize it. Names and icons rearrange as you drag.
 [*]Every button explains itself when you hover it.
-[*]Options to hide the panel while the queue is empty, to put the buttons down the side or across the top, and any text size.
-[*]Settings in the game: with [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed, everything is in ESC → Mods → Crafting Queue.
+[*]Options to hide the panel while the queue is empty, to put the buttons down the side or across the top, text size from 8 to 32, and the opacity of the whole panel or only its background.
+[*]Settings in the game: with [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed, everything is in ESC → Mods → Crafting Queue, with the panel shown next to the menu so you see every change right away.
+[/list]
+[center][img]https://raw.githubusercontent.com/VERTO13/GK2-CraftingQueue/main/docs/images/mods-menu.gif[/img][/center]
+[list]
 [*]Without the framework, [code]BepInEx\config\verto13.gk2.craftingqueue.cfg[/code] explains every setting in English and Spanish.
 [*]One queue per save slot, saved safely. A new game never inherits the queue of a deleted save.
 [*]The same size as the game's interface at any resolution (it uses the game's own UI scale), pixel-crisp. Very light (about 0.1 ms per frame). 16 languages, following the game's language.
@@ -67,27 +79,31 @@ Ever walk up to the workbench and forget what the recipe needed, or which chest 
 [*][b]Alt[/b] (hold) – show a recipe
 [*][b]F3[/b] – show / hide the panel
 [*][b]F4[/b] – detailed / compact recipes
-[*]Hover a task – its ▲ ▼ − + and trash buttons, and its pin ([b]Shift[/b]: by 10 / to the top or bottom)
+[*]Hover a task – its − + and trash buttons, and its pin ([b]Shift[/b]: by 10)
+[*]Drag a task by its title – reorder the queue
+[*][b]Ctrl / Shift + wheel[/b] over the panel – icon / text size
 [*]The button bar – what to count, the Total view, always visible, chest bubbles, the lock and the trash can
 [*]Gamepad [i](experimental)[/i]: tap [b]R3[/b] on a slot to add it, hold R3 to see its recipe, R3 in the world to use the panel ([b]View[/b] switches to the Total view)
 [/list]
 
 [size=4][b][color=#ffd966]Installation[/color][/b][/size]
+[b]BepInEx 5 is required[/b] (skip step 2 if you already play with BepInEx mods).
 [list=1]
 [*]Close the game.
+[*]Download [url=https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5]BepInEx 5.4.23.5[/url]: the file [b]BepInEx_win_x64_5.4.23.5.zip[/b].
 [*]In Steam, right-click [b]Graveyard Keeper 2[/b] → [b]Manage[/b] → [b]Browse local files[/b]. That's your game folder.
-[*]Extract the zip into that folder (choose [b]Replace[/b] if asked). You should see a [b]BepInEx[/b] folder next to [b]GraveyardKeeper2.exe[/b].
+[*]Extract BepInEx into that folder, then this mod's zip (choose [b]Replace[/b] if asked). You should see a [b]BepInEx[/b] folder and [b]winhttp.dll[/b] next to [b]GraveyardKeeper2.exe[/b].
 [*]Start the game and load your save: the [b]Queue[/b] panel appears at the top right.
 [/list]
-Pick [b]"with BepInEx"[/b] if this is your first BepInEx mod, or the [b]mod-only[/b] file if you already have BepInEx 5 or are updating. Your queue is kept when you update.
+Your queue is kept when you update.
 
 [b]Uninstall:[/b] delete [code]BepInEx\plugins\CraftingQueue[/code] in your game folder.
 
 [size=4][b][color=#ffd966]Requirements[/color][/b][/size]
 [list]
 [*]Graveyard Keeper 2 (tested on version 1.006).
-[*][url=https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5]BepInEx 5.4.23.x[/url] (included in the "with BepInEx" file).
-[*]Optional: [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] 0.1.14 or later, for the in-game settings menu.
+[*][b]Required:[/b] [url=https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5]BepInEx 5.4.23.x[/url] (BepInEx_win_x64).
+[*][b]Optional:[/b] [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] 0.1.14 or later, for the in-game settings menu.
 [/list]
 
 [size=4][b][color=#ffd966]Good to know[/color][/b][/size]

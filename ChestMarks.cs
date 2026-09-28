@@ -19,7 +19,7 @@ internal class ChestMarks : MonoBehaviour
 {
     private const int Columns = 2;
     private const int MaxCells = 4;
-    private const float Normal = 1f, Faded = 0.25f;
+    private const float Normal = 0.85f, Faded = 0.25f;
 
     internal static bool Dirty; // el panel cambió de materiales: revisar ya
 
@@ -75,6 +75,9 @@ internal class ChestMarks : MonoBehaviour
             return;
         }
         Ensure();
+        if (parchment == null && Parchment() != null)
+            foreach (Mark m in marks.Values)
+                m.signature = null; // apareció el pergamino del juego: rearmar las que salieron con el marco propio
         if (Dirty || Time.unscaledTime >= nextScan)
         {
             Dirty = false;
@@ -183,40 +186,72 @@ internal class ChestMarks : MonoBehaviour
         // Un paso más grande que en el panel (36 px en 1080p; 0.75 del ícono del juego, nítido).
         float icon = GameStyle.IconUnitsForNative(48f, 18f, s);
         float font = GameStyle.FontSize(0f, 1f, s);
-        // Todas las celdas del mismo ancho: las columnas quedan alineadas.
-        string widest = found.Max(x => x.count).ToString();
-        float cellWidth = icon + 2f + Mathf.Ceil(Measure(widest, font));
-
         int shown = found.Count > MaxCells ? MaxCells - 1 : found.Count;
         int cells = shown + (found.Count > shown ? 1 : 0);
+        // Solo la columna de la izquierda lleva ancho fijo (el de su número más largo), para que la de la
+        // derecha empiece alineada; la de la derecha mide lo suyo y no deja hueco antes del borde.
+        float leftWidth = 0f;
+        if (cells > 1)
+            for (int i = 0; i < shown; i += Columns)
+                leftWidth = Mathf.Max(leftWidth, icon + 2f + Mathf.Ceil(Measure(found[i].count.ToString(), font)));
+        if (cells > 1 && Parchment() != null)
+        {
+            // Con varios materiales, un poco más de aire alrededor y entre renglones.
+            VerticalLayoutGroup v = mark.box.GetComponent<VerticalLayoutGroup>();
+            v.padding = new RectOffset(7, 8, 6, 6);
+            v.spacing = 3f;
+        }
         Transform row = null;
         for (int i = 0; i < cells; i++)
         {
             if (i % Columns == 0)
                 row = Row(mark.box);
+            float width = i % Columns == 0 ? leftWidth : 0f;
             if (i < shown)
-                Cell(row, found[i].key, found[i].count.ToString(), icon, font, cellWidth);
+                Cell(row, found[i].key, found[i].count.ToString(), icon, font, width);
             else
-                Cell(row, null, "+" + (found.Count - shown), icon, font, cellWidth, dim: true);
+                Cell(row, null, "+" + (found.Count - shown), icon, font, width, dim: true);
         }
     }
 
     // Recuadro con el marco de pixel art que se ajusta a su contenido (renglones de arriba a abajo).
     private RectTransform Frame(string name)
     {
-        GameObject b = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+        GameObject b = new GameObject(name, typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
         b.transform.SetParent(canvas.transform, false);
         RectTransform rt = (RectTransform)b.transform;
         rt.anchorMin = rt.anchorMax = Vector2.zero;
-        Image bg = b.GetComponent<Image>();
-        // Marco propio en pixel art (9-slice): se estira a lo que mida el contenido sin deformarse.
-        bg.sprite = BubbleFrame();
-        bg.type = Image.Type.Sliced;
-        bg.pixelsPerUnitMultiplier = 1f;
+        // El fondo va en un hijo fuera del acomodo: así no impone su tamaño (la imagen del juego mide 156 × 113)
+        // y solo se estira a lo que mida el contenido.
+        GameObject back = new GameObject("Fondo", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+        back.transform.SetParent(b.transform, false);
+        back.GetComponent<LayoutElement>().ignoreLayout = true;
+        RectTransform brt = (RectTransform)back.transform;
+        brt.anchorMin = Vector2.zero;
+        brt.anchorMax = Vector2.one;
+        brt.offsetMin = brt.offsetMax = Vector2.zero;
+        Image bg = back.GetComponent<Image>();
         bg.raycastTarget = false;
         VerticalLayoutGroup v = b.GetComponent<VerticalLayoutGroup>();
-        v.padding = new RectOffset(3, 4, 2, 2);
-        v.spacing = 1f;
+        Sprite game = Parchment();
+        if (game != null)
+        {
+            // El pergamino de las pistas del juego: 1 pixel de su dibujo = 1 unidad del lienzo (como el HUD).
+            bg.sprite = game;
+            bg.type = Image.Type.Sliced;
+            bg.pixelsPerUnitMultiplier = 100f / game.pixelsPerUnit;
+            v.padding = new RectOffset(6, 6, 5, 5);
+            v.spacing = 2f;
+        }
+        else
+        {
+            // Marco propio en pixel art (9-slice): se estira a lo que mida el contenido sin deformarse.
+            bg.sprite = BubbleFrame();
+            bg.type = Image.Type.Sliced;
+            bg.pixelsPerUnitMultiplier = 1f;
+            v.padding = new RectOffset(3, 4, 2, 2);
+            v.spacing = 1f;
+        }
         v.childControlWidth = v.childControlHeight = true;
         v.childForceExpandWidth = v.childForceExpandHeight = false;
         ContentSizeFitter f = b.GetComponent<ContentSizeFitter>();
@@ -260,7 +295,7 @@ internal class ChestMarks : MonoBehaviour
         GameObject r = new GameObject("Renglon", typeof(RectTransform), typeof(HorizontalLayoutGroup));
         r.transform.SetParent(parent, false);
         HorizontalLayoutGroup h = r.GetComponent<HorizontalLayoutGroup>();
-        h.spacing = 4f;
+        h.spacing = Parchment() != null ? 6f : 4f; // entre las dos columnas
         h.childAlignment = TextAnchor.MiddleLeft;
         h.childControlWidth = h.childControlHeight = true;
         h.childForceExpandWidth = h.childForceExpandHeight = false;
@@ -286,7 +321,9 @@ internal class ChestMarks : MonoBehaviour
             LayoutElement le = g.GetComponent<LayoutElement>();
             le.minWidth = le.preferredWidth = le.minHeight = le.preferredHeight = icon;
             Image img = g.GetComponent<Image>();
-            img.sprite = GameData.Icon(key);
+            // Sin el margen transparente de su lienzo de 48 × 48 (como en el panel): el dibujo llena su
+            // casilla y se ve más grande, sin que la burbuja cambie de tamaño.
+            img.sprite = GameStyle.Trimmed(GameData.Icon(key));
             img.preserveAspect = true;
             img.raycastTarget = false;
             GameStyle.Apply(img);
@@ -297,11 +334,61 @@ internal class ChestMarks : MonoBehaviour
         TextMeshProUGUI t = tg.GetComponent<TextMeshProUGUI>();
         GameStyle.Apply(t);
         t.fontSize = font;
-        t.color = dim ? new Color(0.64f, 0.59f, 0.51f) : new Color(0.93f, 0.9f, 0.84f);
+        TMP_Text game = WorldLabel();
+        if (game != null)
+            t.font = game.font; // la fuente de las etiquetas del juego sobre los objetos
+        if (Parchment() != null)
+            // Sobre el pergamino: letra café oscuro sin contorno, como los textos del juego sobre él.
+            t.color = dim ? new Color(0.45f, 0.33f, 0.24f) : new Color(0.24f, 0.15f, 0.1f);
+        else
+            t.color = dim ? new Color(0.64f, 0.59f, 0.51f) : new Color(0.93f, 0.9f, 0.84f);
         t.alignment = TextAlignmentOptions.MidlineLeft;
         t.textWrappingMode = TextWrappingModes.NoWrap;
         t.raycastTarget = false;
         t.text = text;
+    }
+
+    // El texto de las etiquetas del juego sobre los objetos (UIQualityTooltipWidget), por su fuente.
+    private static TMP_Text worldLabel;
+    private static bool worldLabelSearched;
+
+    internal static TMP_Text WorldLabel()
+    {
+        if (worldLabel != null || worldLabelSearched)
+            return worldLabel;
+        try
+        {
+            LazyBearTechnology.LazyWidgetBase prefab = LazyBearTechnology.LazyWidgetPrefabContainer.GetPrefabFromDataType<UIQualityTooltipWidgetData>();
+            worldLabelSearched = true;
+            worldLabel = HarmonyLib.AccessTools.Field(typeof(UIQualityTooltipWidget), "label")?.GetValue(prefab) as TMP_Text;
+        }
+        catch (Exception e)
+        {
+            // Todavía sin cargar (menú principal): se vuelve a intentar después.
+            Plugin.Log.LogDebug("Etiqueta del juego no disponible: " + e.Message);
+        }
+        return worldLabel;
+    }
+
+    // El pergamino de las pistas del juego ("hint-frame", 156 × 113) con esquinas de 4 pixeles en vez de 20:
+    // su borde es una línea fina, y con 20 la burbuja no podía medir menos de 40 × 40. Se busca entre lo que el
+    // juego tiene cargado, a lo más cada 5 s mientras no aparezca; mientras tanto, el marco propio.
+    private static Sprite parchment;
+    private static float nextParchmentSearch;
+
+    private static Sprite Parchment()
+    {
+        if (parchment != null || Time.unscaledTime < nextParchmentSearch)
+            return parchment;
+        nextParchmentSearch = Time.unscaledTime + 5f;
+        Sprite game = Resources.FindObjectsOfTypeAll<Sprite>().FirstOrDefault(s => s != null && s.name == "hint-frame");
+        if (game != null)
+        {
+            parchment = Sprite.Create(game.texture, game.textureRect, new Vector2(0.5f, 0.5f), game.pixelsPerUnit, 0,
+                SpriteMeshType.FullRect, new Vector4(4, 4, 4, 4));
+            parchment.name = "hint-frame (burbuja)";
+        }
+        return parchment;
     }
 
     // Un solo texto vacío (no se ve) para medir: al llegar a una zona se arman todas sus burbujas juntas,
@@ -318,6 +405,8 @@ internal class ChestMarks : MonoBehaviour
             measurer.raycastTarget = false;
         }
         GameStyle.Apply(measurer); // el estilo del juego pudo encontrarse después de la primera medida
+        if (WorldLabel() != null)
+            measurer.font = WorldLabel().font;
         measurer.fontSize = font;
         return measurer.GetPreferredValues(text).x;
     }

@@ -59,6 +59,16 @@ internal static class GameWindows
         return any ? true : (bool?)null;
     }
 
+    // Una ventana abierta y visible por el nombre de su tipo (sin referenciar el ensamblado que la define;
+    // p. ej. "ModsMenuWindow" de GK2 Mod Framework).
+    public static LazyWidgetBase FindOpen(string typeName)
+    {
+        foreach (LazyWidgetBase w in Stack())
+            if (w != null && w.GetType().Name == typeName && w.gameObject.activeInHierarchy)
+                return w;
+        return null;
+    }
+
     // Para el registro: qué ventanas hay abiertas (tipo y si se ve).
     public static string Describe() =>
         string.Join(", ", Stack().Where(w => w != null).Select(w => w.GetType().Name + (w.gameObject.activeInHierarchy ? "" : "(oculta)")));

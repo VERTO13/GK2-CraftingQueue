@@ -56,7 +56,7 @@ internal class QueueHud : MonoBehaviour
     private RectTransform sizeBox;           // "240 × 300" junto al cursor mientras se arrastra
     private TMP_Text sizeText;
     private Vector2 resizeFrom;
-    private float resizeWidth, resizeHeight, nextResizeBuild;
+    private float resizeWidth, resizeHeight, nextResizeBuild, nextResizeSave, savedWidth, savedHeight;
     private bool resizeHeightTouched;
 
     // Para las marcas en los cofres: los materiales que el panel muestra ahora mismo y la escala.
@@ -111,6 +111,19 @@ internal class QueueHud : MonoBehaviour
     private bool pressing, dragging, scrolling, pressOnBar, pressOnTitle, resizing, pressOnGrip;
     private TMP_Text titleText;
     private Vector2 pressPos, lastMouse;
+
+    // Reordenar arrastrando la barra de una tarea: el bloque se atenúa, una línea dorada marca el hueco
+    // donde va a quedar y, cerca del borde de arriba o de abajo, la lista se desplaza sola.
+    private readonly List<(RectTransform block, RectTransform head, List<object> tasks)> taskBlocks =
+        new List<(RectTransform, RectTransform, List<object>)>();
+    private int pressTask = -1, reorderFrom = -1, reorderTo = -1;
+    private bool reordering;
+    private float reorderScroll;
+    private RectTransform reorderLine;
+    private CanvasGroup reorderFade, panelFade;
+    // La tarea "en la mano": una copia de su barra que sigue al mouse, levantada (sombra y marco dorado).
+    private RectTransform reorderGhost;
+    private float reorderGrab; // del mouse al centro de la barra, para que no brinque al agarrarla
     private Image hovered;
     private readonly List<(RectTransform guide, RectTransform body, RectTransform lastRow)> guides =
         new List<(RectTransform, RectTransform, RectTransform)>();
@@ -160,9 +173,22 @@ internal class QueueHud : MonoBehaviour
             signature = null; // aunque la cola no cambió (p. ej. ya hay botones del juego para usar)
         }
 
+        if (panelFade != null)
+            panelFade.alpha = Plugin.HudPanelOpacity;
+
         long tm = Perf.Start();
         HandleMouse();
         Perf.Stop("panel: mouse", tm, top: false);
+
+        // Ajustes de Crafting Queue abiertos en el menú Mods del framework: el panel se ve encima, como
+        // vista previa, y la ventana se achica lo justo para que quepa a un lado.
+        float previewScale = canvas != null && canvas.scaleFactor > 0f ? canvas.scaleFactor : GameStyle.PanelScale(LazyUI.ScaleFactor);
+        if (FrameworkPreview.Tick(Plugin.HudWidth, previewScale))
+        {
+            nextCheck = 0f;
+            lastFit = null;
+            GameWindows.Remeasure();
+        }
 
         // Se abrió o cerró una ventana: revisar y acomodar ya, no en la siguiente vuelta.
         int windows = GameWindows.Signature();
@@ -248,7 +274,16 @@ internal class QueueHud : MonoBehaviour
     private bool ShouldShow()
     {
         workWindow = null;
-        if (!Plugin.HudVisible || MainGame.PlayerData == null || GameState.HudHidden || GameState.InFight)
+        if (!Plugin.HudVisible || MainGame.PlayerData == null)
+            return false;
+        // Vista previa en los ajustes del menú Mods: encima de esa ventana y a un lado (Fit lo acomoda).
+        if (FrameworkPreview.Window != null)
+        {
+            workWindow = FrameworkPreview.Window;
+            NoWindows = false;
+            return true;
+        }
+        if (GameState.HudHidden || GameState.InFight)
             return false;
         bool? onlyWork = GameWindows.OnlyWorkWindows(out workWindow);
         NoWindows = onlyWork == null;
@@ -335,6 +370,8 @@ internal class QueueHud : MonoBehaviour
         canvas.sortingOrder = 30000;
         canvas.pixelPerfect = true; // la fuente pixelada se ve nítida solo en pixeles enteros
         root.AddComponent<GraphicRaycaster>();
+        // Opacidad de todo el panel (OpacidadPanel); los avisos de tamaño y los nombres se ven siempre sólidos.
+        panelFade = root.AddComponent<CanvasGroup>();
 
         GameObject b = new GameObject("Panel", typeof(RectTransform), typeof(Image));
         b.transform.SetParent(root.transform, false);
@@ -466,6 +503,7 @@ internal class QueueHud : MonoBehaviour
         if (box == null || !box.gameObject.activeInHierarchy)
         {
             pressing = dragging = scrolling = false;
+            EndReorder(apply: false);
             EndResize(save: false);
             SetHover(null);
             UpdateTooltip(Vector2.zero, false);
@@ -476,6 +514,7 @@ internal class QueueHud : MonoBehaviour
         {
             // Con el control manda la selección (UpdateNavMark), no el mouse.
             pressing = dragging = scrolling = false;
+            EndReorder(apply: false);
             EndResize(save: false);
             if (gripIcon != null)
                 gripIcon.gameObject.SetActive(false);
@@ -486,19 +525,36 @@ internal class QueueHud : MonoBehaviour
         Vector2 m = Input.mousePosition;
         bool over = OverPanel(m);
         UpdateGrip(m, over);
+        // La etiqueta "Íconos 22" / "Letra 24" de la rueda se va sola.
+        if (!resizing && sizeBox != null && sizeBox.gameObject.activeSelf && Time.unscaledTime > sizeBoxUntil)
+            sizeBox.gameObject.SetActive(false);
         UpdateHoverMarks(m, over && fit != FitMode.Folded && !resizing);
-        UpdateTooltip(m, over && !dragging && !scrolling && !resizing);
+        UpdateTooltip(m, over && !dragging && !scrolling && !resizing && !reordering);
         float s = canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f;
 
-        if (over && Input.mouseScrollDelta.y != 0f && contentHeight > viewHeight + 0.5f)
+        // Ctrl + rueda: tamaño de los íconos; Shift + rueda: tamaño de la letra (se ve al momento).
+        bool ctrlHeld = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
+        if (over && !reordering && !resizing && Input.mouseScrollDelta.y != 0f && (ctrlHeld || Shift))
+            WheelSize(Input.mouseScrollDelta.y > 0f ? 1 : -1, icons: ctrlHeld, m, s);
+        // La rueda también sirve mientras se reordena (aunque el mouse salga del panel).
+        else if ((over || reordering) && Input.mouseScrollDelta.y != 0f && contentHeight > viewHeight + 0.5f)
         {
             scrollY -= Input.mouseScrollDelta.y * rowHeight * 2f;
             ApplyScroll();
         }
 
         // Los botones − + basura aparecen en la barra de la tarea que tiene el mouse encima.
-        ShowActionsFor(dragging || scrolling || resizing || !over || !Inside(frame, m) ? null : HeaderAt(m));
-        SetHover(dragging || scrolling || resizing || !over ? null : ClickableAt(m));
+        bool busy = dragging || scrolling || resizing || reordering;
+        ShowActionsFor(busy || !over || !Inside(frame, m) ? null : HeaderAt(m));
+        SetHover(busy || !over ? null : ClickableAt(m));
+
+        // Clic derecho o Esc mientras se reordena: la tarea se queda donde estaba.
+        if (reordering && (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape)))
+        {
+            EndReorder(apply: false);
+            pressing = false;
+            return;
+        }
 
         // Clic derecho en la esquina ⋮: la barra cambia entre vertical (por el costado) y horizontal (por
         // encima del panel), y vuelve a salir deslizándose hacia el lado nuevo.
@@ -518,6 +574,8 @@ internal class QueueHud : MonoBehaviour
             // también sirven para moverlo.
             pressOnTitle = Inside(strip, m) || bar.DragArea(m);
             pressOnGrip = GripAt(m);
+            // Sobre la barra de una tarea (fuera de sus botones, flecha y pin): arrastrarla la reordena.
+            pressTask = !pressOnTitle && !pressOnBar && ClickableAt(m) == null ? TaskAt(m) : -1;
         }
         if (!pressing)
             return;
@@ -534,7 +592,16 @@ internal class QueueHud : MonoBehaviour
                 Resize(m, s);
                 return;
             }
-            if (!dragging && !scrolling && (m - pressPos).sqrMagnitude > 36f)
+            // Desde la barra de una tarea, un arrastre hacia arriba o abajo la reordena.
+            if (!dragging && !scrolling && !reordering && pressTask >= 0 && Mathf.Abs(m.y - pressPos.y) > 6f)
+                StartReorder(pressTask);
+            if (reordering)
+            {
+                lastMouse = m;
+                UpdateReorder(m, s);
+                return;
+            }
+            if (!dragging && !scrolling && pressTask < 0 && (m - pressPos).sqrMagnitude > 36f)
             {
                 // Mantener y deslizar: desde el título se mueve el panel (si el candado está
                 // abierto); desde cualquier otra parte se hace scroll (por si la rueda no funciona).
@@ -562,13 +629,243 @@ internal class QueueHud : MonoBehaviour
         }
 
         // Se soltó el botón.
-        if (resizing)
+        if (reordering)
+            EndReorder(apply: true);
+        else if (resizing)
             EndResize(save: true);
         else if (dragging)
             SavePosition(s);
         else if (!scrolling && !pressOnGrip)
             Click(m);
         pressing = dragging = scrolling = false;
+        pressTask = -1;
+    }
+
+    // --- Reordenar arrastrando ---
+
+    // La tarea cuya barra de título está bajo el mouse (índice en taskBlocks), o -1.
+    private int TaskAt(Vector2 m)
+    {
+        if (!Inside(frame, m))
+            return -1;
+        for (int i = 0; i < taskBlocks.Count; i++)
+            if (taskBlocks[i].head != null && Inside(taskBlocks[i].head, m))
+                return i;
+        return -1;
+    }
+
+    private void StartReorder(int index)
+    {
+        if (index < 0 || index >= taskBlocks.Count || taskBlocks.Count < 2)
+            return;
+        reordering = true;
+        reorderFrom = reorderTo = index;
+        reorderScroll = 0f;
+        // El bloque que se arrastra se ve atenuado mientras tanto.
+        reorderFade = taskBlocks[index].block.gameObject.AddComponent<CanvasGroup>();
+        reorderFade.alpha = 0.45f;
+        reorderFade.blocksRaycasts = false;
+        // La línea: 2 pixeles dorados con contorno oscuro, del ancho del panel.
+        GameObject line = new GameObject("Orden", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+        line.transform.SetParent(panel, false);
+        line.GetComponent<LayoutElement>().ignoreLayout = true;
+        Image dark = line.GetComponent<Image>();
+        dark.color = new Color(0.18f, 0.11f, 0.09f, 1f);
+        dark.raycastTarget = false;
+        reorderLine = (RectTransform)line.transform;
+        reorderLine.anchorMin = new Vector2(0f, 1f);
+        reorderLine.anchorMax = new Vector2(1f, 1f);
+        reorderLine.pivot = new Vector2(0.5f, 0.5f);
+        reorderLine.sizeDelta = new Vector2(0f, 4f);
+        GameObject gold = new GameObject("Oro", typeof(RectTransform), typeof(Image));
+        gold.transform.SetParent(line.transform, false);
+        RectTransform grt = (RectTransform)gold.transform;
+        grt.anchorMin = Vector2.zero;
+        grt.anchorMax = Vector2.one;
+        grt.offsetMin = new Vector2(1f, 1f);
+        grt.offsetMax = new Vector2(-1f, -1f);
+        Image gi = gold.GetComponent<Image>();
+        gi.color = new Color(0.91f, 0.69f, 0.25f, 1f);
+        gi.raycastTarget = false;
+        reorderLine.SetAsLastSibling();
+        MakeGhost(taskBlocks[index].head);
+        try { LazyAudio.PlayAndForget("gui_click"); } catch { }
+    }
+
+    // Copia de la barra de la tarea encima de todo el panel (sin el recorte de la lista), del mismo
+    // tamaño y sin botones: la que se lleva "en la mano" mientras se arrastra.
+    private void MakeGhost(RectTransform head)
+    {
+        if (head == null)
+            return;
+        Vector3[] c = new Vector3[4];
+        head.GetWorldCorners(c);
+        Vector2 size = head.rect.size;
+        // Contenedor: primero la sombra y encima la copia (en Unity un hijo se dibuja sobre su padre).
+        GameObject root = new GameObject("Tarea en la mano", typeof(RectTransform), typeof(CanvasGroup));
+        root.transform.SetParent(canvas.transform, false);
+        reorderGhost = (RectTransform)root.transform;
+        reorderGhost.anchorMin = reorderGhost.anchorMax = new Vector2(0f, 0f);
+        reorderGhost.pivot = new Vector2(0.5f, 0.5f);
+        reorderGhost.sizeDelta = size;
+        CanvasGroup cg = root.GetComponent<CanvasGroup>();
+        cg.blocksRaycasts = cg.interactable = false;
+
+        GameObject shadow = new GameObject("Sombra", typeof(RectTransform), typeof(Image));
+        shadow.transform.SetParent(reorderGhost, false);
+        RectTransform srt = (RectTransform)shadow.transform;
+        srt.anchorMin = Vector2.zero;
+        srt.anchorMax = Vector2.one;
+        srt.offsetMin = new Vector2(3f, -3f);
+        srt.offsetMax = new Vector2(3f, -3f);
+        Image si = shadow.GetComponent<Image>();
+        si.color = new Color(0f, 0f, 0f, 0.45f);
+        si.raycastTarget = false;
+
+        GameObject g = Instantiate(head.gameObject, reorderGhost, false);
+        g.name = "Barra";
+        RectTransform grt = (RectTransform)g.transform;
+        if (g.GetComponent<LayoutElement>() is LayoutElement le)
+            le.ignoreLayout = true;
+        grt.anchorMin = Vector2.zero;
+        grt.anchorMax = Vector2.one;
+        grt.offsetMin = grt.offsetMax = Vector2.zero;
+        grt.localScale = Vector3.one;
+        Transform actions = grt.Find("Acciones");
+        if (actions != null)
+            actions.gameObject.SetActive(false);
+        // Levantada: un marco dorado de 1 pixel alrededor de la barra.
+        if (g.GetComponent<Image>() != null)
+        {
+            Outline gold = g.AddComponent<Outline>();
+            gold.effectColor = new Color(0.91f, 0.69f, 0.25f, 1f);
+            gold.effectDistance = new Vector2(1f, -1f);
+        }
+        foreach (Graphic gr in root.GetComponentsInChildren<Graphic>(true))
+            gr.raycastTarget = false;
+        reorderGhost.SetAsLastSibling();
+        reorderGrab = (c[0].y + c[1].y) / 2f - pressPos.y;
+        PlaceGhost(Input.mousePosition, (c[0].x + c[2].x) / 2f);
+    }
+
+    // Sigue al mouse de arriba a abajo (sin salirse de su columna), en pixeles enteros del juego.
+    private void PlaceGhost(Vector2 m, float centerX)
+    {
+        if (reorderGhost == null)
+            return;
+        float s = canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f;
+        float y = Mathf.Round((m.y + reorderGrab) / s) * s;
+        float x = Mathf.Round((centerX + 2f * s) / s) * s; // un pixel del juego a la derecha: "levantada"
+        reorderGhost.position = new Vector3(x, y, 0f);
+    }
+
+    private void UpdateReorder(Vector2 m, float s)
+    {
+        if (reorderLine == null || taskBlocks.Count == 0)
+            return;
+        if (reorderGhost != null)
+            PlaceGhost(m, reorderGhost.position.x - 2f * s);
+        // Cerca del borde de arriba o de abajo (o pasándose), la lista se desplaza sola: más rápido
+        // mientras más al borde o más afuera esté el mouse.
+        Vector3[] c = new Vector3[4];
+        frame.GetWorldCorners(c);
+        float top = c[1].y, bottom = c[0].y, zone = rowHeight * s * 1.5f;
+        float speed = 0f;
+        if (m.y > top - zone)
+            speed = -Mathf.Clamp((m.y - (top - zone)) / zone, 0f, 3f);
+        else if (m.y < bottom + zone)
+            speed = Mathf.Clamp(((bottom + zone) - m.y) / zone, 0f, 3f);
+        if (speed != 0f && contentHeight > viewHeight + 0.5f)
+        {
+            reorderScroll += speed * rowHeight * 8f * Time.unscaledDeltaTime;
+            float whole = Mathf.Round(reorderScroll);
+            if (whole != 0f)
+            {
+                reorderScroll -= whole;
+                scrollY += whole;
+                ApplyScroll();
+            }
+        }
+
+        // El hueco: tantas tareas como tengan la mitad de su BARRA arriba del centro de la tarea que se
+        // lleva en la mano (no la mitad del bloque entero: con sus ingredientes desplegados, había que
+        // bajar casi hasta la siguiente tarea para que apareciera la línea).
+        float probe = m.y + reorderGrab;
+        int target = 0;
+        for (int i = 0; i < taskBlocks.Count; i++)
+        {
+            taskBlocks[i].head.GetWorldCorners(c);
+            if ((c[0].y + c[1].y) / 2f > probe)
+                target = i + 1;
+            else
+                break;
+        }
+        reorderTo = target;
+
+        // La línea, entre el bloque de arriba y el de abajo del hueco (oculta si no cambia nada).
+        bool moves = target != reorderFrom && target != reorderFrom + 1;
+        reorderLine.gameObject.SetActive(moves);
+        if (!moves)
+            return;
+        float y;
+        if (target == 0)
+        {
+            taskBlocks[0].block.GetWorldCorners(c);
+            y = c[1].y;
+        }
+        else if (target >= taskBlocks.Count)
+        {
+            taskBlocks[taskBlocks.Count - 1].block.GetWorldCorners(c);
+            y = c[0].y;
+        }
+        else
+        {
+            taskBlocks[target - 1].block.GetWorldCorners(c);
+            float above = c[0].y;
+            taskBlocks[target].block.GetWorldCorners(c);
+            y = (above + c[1].y) / 2f;
+        }
+        Vector3 local = panel.InverseTransformPoint(new Vector3(0f, y, 0f));
+        reorderLine.anchoredPosition = new Vector2(0f, Mathf.Round(local.y - panel.rect.yMax));
+    }
+
+    private void EndReorder(bool apply)
+    {
+        if (reorderFade != null)
+            Destroy(reorderFade);
+        if (reorderLine != null)
+            Destroy(reorderLine.gameObject);
+        if (reorderGhost != null)
+            Destroy(reorderGhost.gameObject);
+        reorderFade = null;
+        reorderLine = null;
+        reorderGhost = null;
+        if (apply && reordering && reorderFrom >= 0 && reorderFrom < taskBlocks.Count
+            && reorderTo != reorderFrom && reorderTo != reorderFrom + 1
+            && taskBlocks[reorderFrom].tasks.Count > 0 && taskBlocks[reorderFrom].tasks[0] is QueueTask task)
+        {
+            MoveGroupTo(task, reorderTo);
+            try { LazyAudio.PlayAndForget("gui_click"); } catch { }
+            Dirty = true;
+        }
+        reordering = false;
+        reorderFrom = reorderTo = pressTask = -1;
+    }
+
+    // Pone el bloque de esa tarea en el hueco 'gap' (0 = hasta arriba, N = hasta abajo), contado con el
+    // bloque todavía en su lugar.
+    private static void MoveGroupTo(QueueTask task, int gap)
+    {
+        List<List<QueueTask>> groups = Plan.Groups.Select(g => g.tasks).ToList();
+        int i = groups.FindIndex(t => t.Contains(task));
+        if (i < 0)
+            return;
+        List<QueueTask> moved = groups[i];
+        groups.RemoveAt(i);
+        if (gap > i)
+            gap--;
+        groups.Insert(Mathf.Clamp(gap, 0, groups.Count), moved);
+        Queue.SetOrder(groups.SelectMany(t => t));
     }
 
     private static bool Inside(RectTransform rt, Vector2 screen) =>
@@ -658,7 +955,7 @@ internal class QueueHud : MonoBehaviour
             p.transform.SetSiblingIndex(count.transform.GetSiblingIndex()); // antes de los botones y la cantidad
         Image img = p.GetComponent<Image>();
         bool on = Queue.Pins.Contains(id);
-        img.sprite = on ? PinOn() : PinOff();
+        img.sprite = on ? BarArt.RowPin : BarArt.RowPinOff; // el pin rojo de la barra, en chico
         img.raycastTarget = false;
         LayoutElement le = p.GetComponent<LayoutElement>(); // tamaño nativo: pixeles enteros
         le.minWidth = le.preferredWidth = img.sprite.rect.width;
@@ -754,38 +1051,11 @@ internal class QueueHud : MonoBehaviour
 
     private void FillActions(GameObject g, object entry)
     {
-        // ▲ ▼ cambian el orden (la de arriba toma primero lo que tienes), − + la cantidad, 🗑 la quita.
-        (Sprite sprite, int action)[] buttons =
-        {
-            (UpSprite(), ActionUp), (DownSprite(), ActionDown), (MinusSprite(), -1), (PlusSprite(), 1), (TrashSprite(), 0)
-        };
+        // − + la cantidad, 🗑 la quita. El orden se cambia arrastrando la barra de la tarea. Los dibujos
+        // son los de la barra de botones en chico (BarArt), a su tamaño nativo: nunca se estiran.
+        (Sprite sprite, int action)[] buttons = { (BarArt.RowMinus, -1), (BarArt.RowPlus, 1), (BarArt.RowTrash, 0) };
         foreach ((Sprite sprite, int action) in buttons)
         {
-            // Primero el botón real del juego; si no está cargado, el dibujo propio.
-            GameObject holder = new GameObject("Boton", typeof(RectTransform), typeof(LayoutElement));
-            holder.transform.SetParent(g.transform, false);
-            RectTransform game = GameStyle.CloneButton(action, holder.transform);
-            if (game != null && game.GetComponent<Image>() is Image gimg)
-            {
-                Vector2 native = game.rect.size;
-                if (native.x <= 0f || native.y <= 0f)
-                    native = new Vector2(13f, 13f);
-                // Más alto que el renglón: a la mitad exacta (sigue nítido). Se escala el botón
-                // completo, así fondo y dibujo se achican parejos.
-                float scale = native.y > rowHeight && native.y >= 18f ? 0.5f : 1f;
-                game.anchorMin = game.anchorMax = game.pivot = new Vector2(0.5f, 0.5f);
-                game.anchoredPosition = Vector2.zero;
-                game.sizeDelta = native;
-                game.localScale = new Vector3(scale, scale, 1f);
-                if (game.GetComponent<LayoutElement>() is LayoutElement inner)
-                    inner.ignoreLayout = true;
-                LayoutElement hle = holder.GetComponent<LayoutElement>();
-                hle.minWidth = hle.preferredWidth = native.x * scale;
-                hle.minHeight = hle.preferredHeight = native.y * scale;
-                actionButtons[gimg] = (entry, action);
-                continue;
-            }
-            Destroy(holder);
             GameObject b = new GameObject("Boton", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
             b.transform.SetParent(g.transform, false);
             Image img = b.GetComponent<Image>();
@@ -865,12 +1135,22 @@ internal class QueueHud : MonoBehaviour
         if (hovered == i)
             return;
         if (hovered != null)
+        {
             hovered.color = Color.white;
+            if (hovered.sprite == BarArt.RowTrashRed)
+                hovered.sprite = BarArt.RowTrash;
+        }
         hovered = i;
-        // Los de la barra los resalta la barra misma (sombra más clara, el bote en rojo).
+        // Los de la barra los resalta la barra misma (sombra más clara, el bote en rojo); el bote de
+        // una tarea también se pone rojo, como el de la barra.
         bar?.SetHovered(i);
         if (hovered != null && bar?.KindOf(hovered) == null)
-            hovered.color = Hover;
+        {
+            if (hovered.sprite == BarArt.RowTrash)
+                hovered.sprite = BarArt.RowTrashRed;
+            else
+                hovered.color = Hover;
+        }
         bar?.Refresh();
     }
 
@@ -1362,7 +1642,10 @@ internal class QueueHud : MonoBehaviour
         // mueve de verdad en vertical (así ajustar el ancho no pisa un alto máximo más grande).
         resizeHeight = barShown ? Plugin.HudMaxHeight : Mathf.Round(viewHeight);
         resizeHeightTouched = false;
-        nextResizeBuild = 0f;
+        nextResizeBuild = nextResizeSave = 0f;
+        savedWidth = Plugin.HudWidth;
+        savedHeight = Plugin.HudMaxHeight;
+        Plugin.PanelResizing = true;
     }
 
     private void Resize(Vector2 m, float s)
@@ -1389,31 +1672,69 @@ internal class QueueHud : MonoBehaviour
                 nextResizeBuild = Time.unscaledTime + 0.12f;
                 nextCheck = 0f; // el siguiente Tick lo rearma: los ingredientes se reparten por renglón al armar
             }
+            // También en el .cfg, unas veces por segundo: así el menú Mods muestra los valores en vivo.
+            if (Time.unscaledTime >= nextResizeSave)
+            {
+                nextResizeSave = Time.unscaledTime + 0.15f;
+                Plugin.SetHudSize(w, h ?? savedHeight);
+            }
         }
         ShowSize(m, s, w, h ?? Plugin.HudMaxHeight);
     }
+
+    // Íconos: de 2 en 2 (10 a 48). Si ya no caben en el ancho del panel (el ícono se limita al 11 % del
+    // ancho), el panel se ensancha lo justo para que el cambio se vea. Letra: de 1 en 1 (8 a 32).
+    private void WheelSize(int dir, bool icons, Vector2 m, float s)
+    {
+        string label;
+        if (icons)
+        {
+            // Si ya no caben, con el candado abierto el panel se ensancha solo (Plugin.OnAnySettingChanged).
+            float size = Mathf.Clamp(Mathf.Round(Plugin.HudIconSize) + dir * 2f, 10f, 48f);
+            Plugin.SetHudIconSize(size);
+            label = Lang.T("size_icons", (int)size);
+        }
+        else
+        {
+            float next = Mathf.Clamp(Mathf.Round(Plugin.HudTextSize) + dir, 8f, 32f);
+            Plugin.SetHudTextSize(next);
+            label = Lang.T("size_text", (int)next);
+        }
+        Dirty = true;
+        nextCheck = 0f; // se rearma en el siguiente cuadro con el tamaño nuevo
+        ShowSizeText(m, s, label);
+        sizeBoxUntil = Time.unscaledTime + 1.2f;
+    }
+
+    private float sizeBoxUntil;
 
     private void EndResize(bool save)
     {
         if (!resizing)
             return;
         resizing = false;
+        Plugin.PanelResizing = false;
         float w = Plugin.HudWidth, h = Plugin.HudMaxHeight; // con los valores en vivo
         Plugin.LiveHudWidth = Plugin.LiveHudMaxHeight = null;
         if (save)
             Plugin.SetHudSize(w, h);
+        else
+            Plugin.SetHudSize(savedWidth, savedHeight); // cancelado: se deshace lo que se guardó en el camino
         if (sizeBox != null)
             sizeBox.gameObject.SetActive(false);
         Dirty = true; // rearmar con el tamaño guardado (o el de antes, si se canceló)
     }
 
     // "ancho × alto" en las mismas unidades del .cfg y del menú, junto al cursor y del lado de afuera.
-    private void ShowSize(Vector2 m, float s, float w, float h)
+    private void ShowSize(Vector2 m, float s, float w, float h) => ShowSizeText(m, s, $"{w:0} × {h:0}");
+
+    private void ShowSizeText(Vector2 m, float s, string text)
     {
         if (sizeBox == null)
         {
             GameObject t = new GameObject("Tamaño", typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
             t.transform.SetParent(canvas.transform, false);
+            t.AddComponent<CanvasGroup>().ignoreParentGroups = true; // sólido aunque el panel sea transparente
             sizeBox = (RectTransform)t.transform;
             sizeBox.anchorMin = sizeBox.anchorMax = sizeBox.pivot = Vector2.zero;
             Image bg = t.GetComponent<Image>();
@@ -1428,7 +1749,7 @@ internal class QueueHud : MonoBehaviour
         }
         sizeBox.GetComponent<HorizontalLayoutGroup>().padding = new RectOffset((int)U(4f), (int)U(4f), (int)U(1f), (int)U(1f));
         sizeText.fontSize = fontSize;
-        sizeText.text = $"{w:0} × {h:0}";
+        sizeText.text = text;
         sizeBox.gameObject.SetActive(true);
         sizeBox.SetAsLastSibling();
         LayoutRebuilder.ForceRebuildLayoutImmediate(sizeBox);
@@ -1479,6 +1800,8 @@ internal class QueueHud : MonoBehaviour
         for (int i = panel.childCount - 1; i >= 0; i--)
             Destroy(panel.GetChild(i).gameObject);
         panel.DetachChildren();
+        EndReorder(apply: false); // el panel se rehace: un arrastre a medias se cancela
+        taskBlocks.Clear();
         guides.Clear();
         headers.Clear();
         pendingActions.Clear();
@@ -1506,9 +1829,11 @@ internal class QueueHud : MonoBehaviour
         // (p. ej. 86×48) salían de otro tamaño y hacían los renglones más altos.
         // Y se adapta al ancho: "Tamaño de íconos" (por la escala) es el máximo, y en un panel angosto
         // se achica para dejarles sitio a los nombres. El 0.11 del ancho respeta el tamaño normal (16)
-        // con el ancho normal (170); IconUnitsForNative lo lleva al paso nítido más cercano.
+        // con el ancho normal (170). Se usa el tamaño pedido tal cual (en unidades enteras): antes se llevaba
+        // al "paso nítido" más cercano de 48 px (12, 16, 18, 24…) y valores como 17, 19 o 20 no cambiaban
+        // nada. Los íconos ya van recortados (sin su margen), así que su escala nunca era entera de todos modos.
         float iconTarget = Mathf.Min(Plugin.HudIconSize * Plugin.HudScale, Mathf.Max(12f, Plugin.HudWidth * 0.11f));
-        iconSize = GameStyle.IconUnitsForNative(48f, iconTarget, canvas.scaleFactor);
+        iconSize = Mathf.Max(8f, Mathf.Round(iconTarget));
         if (!loggedSizes && sample != null)
         {
             loggedSizes = true;
@@ -1786,6 +2111,8 @@ internal class QueueHud : MonoBehaviour
             long tb = Perf.Start();
             HeaderActions((RectTransform)head.transform, countObj, entry);
             Perf.Stop("panel: botones − +", tb, top: false);
+            if (entry is List<object> tasks)
+                taskBlocks.Add(((RectTransform)block.transform, (RectTransform)head.transform, tasks));
             // Para el control: una tarea de objeto cambia sus recetas con LB/RB.
             AddNav((RectTransform)head.transform, "h:" + (focusId ?? title), arrowPath, entry, focusId,
                 focusId != null && focusId.StartsWith("i:") ? iconItem : null);
@@ -2006,8 +2333,15 @@ internal class QueueHud : MonoBehaviour
         string key = null;
         if (active)
         {
+            // El agarre: cómo cambiar el tamaño (arrastrándolo, o con Ctrl / Shift + rueda).
+            if (!resizing && GripAt(m))
+            {
+                key = Lang.T("grip_tip");
+                target = (RectTransform)gripIcon.transform;
+            }
             // Los botones primero (van dentro de la barra de la tarea, que puede tener su propio globo).
-            key = ButtonTip(ClickableAt(m), out target);
+            if (key == null)
+                key = ButtonTip(ClickableAt(m), out target);
             if (key == null && Inside(frame, m))
                 foreach (KeyValuePair<RectTransform, Func<string>> c in tipTargets)
                     if (c.Key != null && Inside(c.Key, m))
@@ -2091,6 +2425,7 @@ internal class QueueHud : MonoBehaviour
         {
             GameObject t = new GameObject("Nombre", typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
             t.transform.SetParent(canvas.transform, false);
+            t.AddComponent<CanvasGroup>().ignoreParentGroups = true; // sólido aunque el panel sea transparente
             tipBox = (RectTransform)t.transform;
             tipBox.anchorMin = tipBox.anchorMax = Vector2.zero;
             Image bg = t.GetComponent<Image>();
@@ -2481,55 +2816,6 @@ internal class QueueHud : MonoBehaviour
         t.text = text;
         return t;
     }
-
-    // Pin de cada tarea (marcar en los cofres solo sus materiales): relleno = prendido, contorno = apagado.
-    // (El candado, el ojo, la vista Total, el bote y el pin general están en la barra: ver ButtonBar.)
-    private static Sprite pinOn, pinOff;
-
-    // Prendido: dorado con borde oscuro (se reconoce de un vistazo). Apagado: solo contorno gris.
-    private static Sprite PinOn() => pinOn != null ? pinOn : pinOn = PixelSprite(new[]
-    {
-        ".ooooo.", "o#####o", "o##o##o", "o#ooo#o", "o##o##o", ".o###o.", "..o#o..", "..o#o..", "...o..."
-    }, new Color(0.30f, 0.19f, 0.07f), new Color(0.98f, 0.78f, 0.26f), Color.clear);
-
-    private static Sprite PinOff() => pinOff != null ? pinOff : pinOff = PixelSprite(new[]
-    {
-        ".ooooo.", "o.....o", "o..o..o", "o.ooo.o", "o..o..o", ".o...o.", "..o.o..", "..o.o..", "...o..."
-    }, new Color(0.62f, 0.58f, 0.52f), Color.clear, Color.clear);
-
-    // Botoncitos − + basura (gris y rojo, como los del juego).
-    private static Sprite minus, plus, trash;
-    private static readonly Color BtnLine = new Color(0.17f, 0.1f, 0.07f);
-    private static readonly Color BtnGrey = new Color(0.36f, 0.34f, 0.36f);
-    private static readonly Color BtnRed = new Color(0.62f, 0.16f, 0.13f);
-    private static readonly Color BtnMark = new Color(0.93f, 0.86f, 0.74f);
-
-    private static Sprite MinusSprite() => minus != null ? minus : minus = PixelSprite(new[]
-    {
-        ".ooooooo.", "o#######o", "o#######o", "o#######o", "o#wwwww#o", "o#######o", "o#######o", "o#######o", ".ooooooo."
-    }, BtnLine, BtnGrey, BtnMark);
-
-    private static Sprite PlusSprite() => plus != null ? plus : plus = PixelSprite(new[]
-    {
-        ".ooooooo.", "o#######o", "o###w###o", "o###w###o", "o#wwwww#o", "o###w###o", "o###w###o", "o#######o", ".ooooooo."
-    }, BtnLine, BtnGrey, BtnMark);
-
-    private static Sprite up, down;
-
-    private static Sprite UpSprite() => up != null ? up : up = PixelSprite(new[]
-    {
-        ".ooooooo.", "o#######o", "o#######o", "o###w###o", "o##www##o", "o#wwwww#o", "o#######o", "o#######o", ".ooooooo."
-    }, BtnLine, BtnGrey, BtnMark);
-
-    private static Sprite DownSprite() => down != null ? down : down = PixelSprite(new[]
-    {
-        ".ooooooo.", "o#######o", "o#######o", "o#wwwww#o", "o##www##o", "o###w###o", "o#######o", "o#######o", ".ooooooo."
-    }, BtnLine, BtnGrey, BtnMark);
-
-    private static Sprite TrashSprite() => trash != null ? trash : trash = PixelSprite(new[]
-    {
-        ".ooooooo.", "o#######o", "o#wwwww#o", "o##w#w##o", "o##w#w##o", "o##w#w##o", "o##www##o", "o#######o", ".ooooooo."
-    }, BtnLine, BtnRed, BtnMark);
 
     private static Sprite PixelSprite(string[] rows, Color line, Color fill, Color mark)
     {

@@ -22,7 +22,7 @@ cola de crafteo: qué quieres hacer, qué necesitas, qué tienes y en qué cofre
   real `×N` con talentos (perks), solo recetas/estaciones desbloqueadas.
 - **Una tarea pide TENER N** (no "hacer N más"). Ctrl + clic en objeto/receta pide "uno más de lo que tienes";
   los pedidos (NPC, misión, encargo, construcción) piden su cantidad exacta.
-- **Reparto en orden de la cola** (`Plan.cs`): la tarea de arriba toma primero lo que tienes; ▲ ▼ reordenan.
+- **Reparto en orden de la cola** (`Plan.cs`): la tarea de arriba toma primero lo que tienes; se reordena arrastrando (0.5.1).
 - **Se completan solas** cuando pasan de "falta" a "completa" en la misma zona (craftear, recoger, comprar).
 - **Burbujas sobre los cofres** de la zona (pin general y por tarea) + aviso "· Yard: 7" si hay en otra zona.
 - **Alt** = vista rápida de receta (inventario, cofres y renglones del panel).
@@ -31,6 +31,34 @@ cola de crafteo: qué quieres hacer, qué necesitas, qué tienes y en qué cofre
 - 16 idiomas propios (`Lang.cs`). Soporte de control (R3) **experimental, nunca probado con control real**.
 
 ---
+
+## 2a. Lo que trae la 0.5.1 (sin publicar todavía)
+
+Probado por el usuario en 1080p el 2026-09-28 (incluida la actualización del juego de ese día: sin errores en el log).
+
+- **Botones de la tarea** con dibujo propio y más chicos (`BarArt.RowMinus/RowPlus/RowTrash/RowPin`); el bote se pone
+  rojo al pasar el mouse. **Se quitaron ▲ ▼**: ahora se **arrastra la tarea por su título** (`StartReorder`/
+  `UpdateReorder`/`EndReorder` en `QueueHud`): la tarea "en la mano" sigue al mouse, una línea dorada marca dónde queda,
+  la lista se desplaza sola cerca de las orillas; clic derecho o Esc cancela. El umbral es la mitad del título vecino.
+- **Rueda del mouse sobre el panel:** Ctrl = íconos (±2, 10–48), Shift = letra (±1, 8–32); aviso junto al cursor.
+- **Íconos exactos** (sin redondear a tamaños "nítidos"): 16, 17, 19, 20 ya cambian.
+- **`TamanoLetra`**: 16 por defecto, 8–32; un 0 guardado (la versión anterior) se migra a 16.
+- **Ancho automático por íconos** (candado abierto): se ensancha lo justo y, al achicar los íconos, vuelve al ancho
+  que eligió el jugador (`Plugin.OnAnySettingChanged`, `chosenWidth`).
+- **`OpacidadPanel`** (0.3–1, nueva): `CanvasGroup` en el lienzo del panel; el aviso de tamaño y el globo de nombre
+  ignoran esa opacidad. `OpacidadFondo` sigue siendo solo el fondo de cada receta.
+- **Vista previa en el menú Mods** (`FrameworkPreview.cs`): con la página de Crafting Queue abierta, la ventana del
+  framework se corre al otro lado y solo si no cabe se achica (`[UI] WindowScalePercent`, con respaldo en
+  `framework_escala.txt` por si el juego se cierra); el panel se dibuja encima. Al salir se restaura.
+- **El puente refresca su página** cuando algo cambia fuera de ella (`Plugin.SettingsVersion`, pulso con
+  `SetEnabledCondition`); mientras se arrastra el agarre del panel (`Plugin.PanelResizing`) el `.cfg` se escribe cada
+  0.15 s para que los valores se vean en vivo.
+- **Burbujas de los cofres con el pergamino del juego** (`hint-frame`, recreado con bordes de 4 px para que no
+  imponga 40 × 40): letra café oscuro con la fuente de las etiquetas del juego, 85 % de opacidad (25 % con el mouse o
+  el personaje encima), columna derecha a su medida. Si el sprite no está cargado, marco propio hasta que aparece.
+- **Medios nuevos** en `docs/images/` (add-and-panel, queue-controls, reorder, chest-bubbles.gif, add-anywhere,
+  mods-menu). Los viejos (usage, remove-and-blueprints, chest-bubbles.png, task-buttons) **siguen en el repo porque
+  la descripción publicada en Nexus los enlaza**: borrarlos solo después de actualizar Nexus.
 
 ## 2. Lo que trae la 0.5.0 (publicada el 2026-09-28)
 
@@ -273,7 +301,7 @@ dotnet build FrameworkBridge -c Release
 | `Queue.cs` | Tareas por partida, persistencia en texto (`task`/`pin`, guardado seguro con `.tmp`/`.bak`), pines, agregar (`oneMore`), reordenar, apartar/renombrar colas de ranuras, vaciar (`ClearConfirm`). |
 | `Plan.cs` | Reparto de lo que tienes en orden de la cola; renglones por ruta; completado automático (`Tick`); vista Total (`Totals`). |
 | `QueueView.cs` | Convierte tareas en entradas para el panel. |
-| `QueueHud.cs` | El panel (UGUI en tiempo real): bloques, árbol de recetas, botones ▲ ▼ − + 🗑, pines, plegado, navegación con control, actualización de números en su lugar. |
+| `QueueHud.cs` | El panel (UGUI en tiempo real): bloques, árbol de recetas, botones − + 🗑, reordenar arrastrando, pines, plegado, navegación con control, actualización de números en su lugar. |
 | `ButtonBar.cs` | La barra de botones del panel (bolsa, cofre · Total, ojo, pin · candado, bote), al lado o arriba; `BarArt`: sprites del juego y dibujos propios. |
 | `GameData.cs` | Todo lo que se lee del juego: recetas (`OptionsFor`), rendimientos con talentos, estaciones disponibles, conteos (`Owned`), otras zonas (`Elsewhere`). |
 | `ChestMarks.cs` | Burbujas sobre los cofres. |
@@ -282,6 +310,7 @@ dotnet build FrameworkBridge -c Release
 | `GamepadInput.cs` | Control (Rewired). |
 | `GameHooks.cs` | Parches: crafteo terminado, construcción, obras del pueblo; `GameState` (partida, si está guardada, HUD del juego escondido, peleas). |
 | `GameStyle.cs`, `GameWindows.cs` | Estilo del juego (botones/fuente) y medición de ventanas abiertas. |
+| `FrameworkPreview.cs` | Vista previa con GK2 Mod Framework: acomoda su ventana Mods junto al panel mientras muestra la página de Crafting Queue (sin referenciar el framework). |
 | `Prefs.cs`, `Lang.cs`, `Perf.cs`, `Diagnostics.cs` | Preferencias (flechas/recetas elegidas), 16 idiomas, rendimiento, diagnóstico. |
 | `FrameworkBridge/` | Puente opcional con GK2 Mod Framework (0.5.0, en pruebas). |
 | `docs/nexus/` | Descripción de Nexus (BBCode), resumen, miniatura (HTML + base) y script de vista previa. |
@@ -329,7 +358,7 @@ Según el diseño:
 - **R3 en el mundo** → entra a navegar el panel (se pausa la entrada del juego): cruceta ↑↓ moverse, → abrir,
   ← cerrar, LB/RB cambiar receta, X/Y −/+, A pin, View vista Total, B salir.
 - En la preparación de una pelea y en la pelea el mod no usa R3 (el panel está oculto).
-- Falta: reordenar tareas (▲ ▼) con control.
+- Falta: reordenar tareas con control (con mouse es arrastrando).
 Anota todo lo que no funcione o se sienta raro y corrígelo con el usuario.
 
 ---
@@ -341,11 +370,11 @@ Misma versión en GitHub y Nexus. Siguiente: **0.5.1** (arreglos de la 0.5.0); d
 
 1. Subir `<Version>` en `CraftQueue.csproj` y `FrameworkBridge/*.csproj`, y en `[BepInPlugin]` de `Plugin.cs` y
    del puente. Compilar ambos.
-2. Empaquetar dos zips con rutas con `/` (usa `tar` de Windows: `C:\Windows\System32\tar.exe -a -cf x.zip ...`):
-   - `CraftingQueue-X.Y.Z.zip`: `BepInEx/plugins/CraftingQueue/...` (+ puente y traducciones, según se decida).
-   - `CraftingQueue-X.Y.Z-with-BepInEx.zip`: lo anterior + BepInEx 5.4.23.5 sin modificar
-     (`.doorstop_version`, `BepInEx/core`, `winhttp.dll`, `doorstop_config.ini`, `changelog.txt`,
-     `BepInEx_LICENSE_NOTICE.txt`).
+2. Empaquetar **un solo zip** (desde la 0.5.1 BepInEx ya no se incluye: es requisito aparte, en Nexus como
+   requisito y en el README como Paso 1; el framework es opcional). Rutas con `/` (usa `tar` de Windows:
+   `C:\Windows\System32\tar.exe -a -cf x.zip ...`):
+   - `CraftingQueue-X.Y.Z.zip`: `BepInEx/plugins/CraftingQueue/...` + el puente y sus traducciones
+     (`BepInEx/plugins/GK2.Framework/Localization/verto13.gk2.craftingqueue/`).
 3. `gh release create vX.Y.Z --prerelease --title "Crafting Queue X.Y.Z (beta)" --notes-file notes.md <zips>`.
    Notas en inglés y español: qué archivo descargar, cómo instalar, qué hay de nuevo.
 4. **Nexus:** en la página del mod, en Files, usar **Update** sobre el archivo existente (mantiene el historial).

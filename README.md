@@ -7,7 +7,7 @@ Ever walk up to the workbench and forget what the recipe needed, or which chest 
 > ⚠️ **Beta.** The mod is still being tested, so expect some bugs. Please [report them](#reporting-bugs). It really helps.
 > 🎮 **Gamepad support is even more experimental.** It has barely been tested yet.
 
-![Crafting Queue in game: Ctrl + right-click adds recipes, chest bubbles show where the materials are](docs/images/usage.gif)
+![Crafting Queue in game: Ctrl + right-click in the inventory adds items to the queue, then the panel is resized by its corner](docs/images/add-and-panel.gif)
 
 ---
 
@@ -15,12 +15,12 @@ Ever walk up to the workbench and forget what the recipe needed, or which chest 
 
 You only do this once. Close the game before you start.
 
-### Step 1: Download the mod
+### Step 1: Download two files
 
-Go to [Releases](../../releases) (or the [Nexus Mods page](https://www.nexusmods.com/graveyardkeeper2/mods/177)) and download **one** of these files:
+1. **BepInEx 5**, the mod loader (skip it if you already play with other BepInEx mods): from its [official page](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5), download **`BepInEx_win_x64_5.4.23.5.zip`**.
+2. **Crafting Queue**: from [Releases](../../releases) or the [Nexus Mods page](https://www.nexusmods.com/graveyardkeeper2/mods/177), download **`CraftingQueue-x.y.z.zip`**.
 
-- **`CraftingQueue-x.y.z-with-BepInEx.zip`**: get this one if you're not sure. It has everything you need.
-- `CraftingQueue-x.y.z.zip`: only the mod. Use it if you already play with other BepInEx mods.
+*Optional:* [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) adds a **Mods** menu to the game with every setting of this mod. Install it following its own page, whenever you like.
 
 ### Step 2: Copy the address of your game folder
 
@@ -30,7 +30,9 @@ Go to [Releases](../../releases) (or the [Nexus Mods page](https://www.nexusmods
 
 > 💡 It doesn't matter which drive or folder your game is on. Steam always opens the right one.
 
-### Step 3: Extract the mod into that folder
+### Step 3: Extract both files into that folder
+
+Do this first with BepInEx, then with Crafting Queue:
 
 1. Find the file you downloaded (it's usually in **Downloads**).
 2. Right-click it → **Extract All…**
@@ -43,7 +45,7 @@ Open the game folder again. You should now see a **`BepInEx`** folder next to `G
 
 ```
 Graveyard Keeper 2
-├─ BepInEx               ← new
+├─ BepInEx               ← new (inside it: plugins\CraftingQueue)
 ├─ winhttp.dll           ← new
 ├─ doorstop_config.ini   ← new
 └─ GraveyardKeeper2.exe
@@ -57,7 +59,8 @@ To add something, hold **Ctrl** and right-click any item.
 
 | What you see | What to do |
 |---|---|
-| There's a folder called `CraftingQueue-...` inside the game folder, and the `BepInEx` folder is inside it | Move everything from inside that folder into the game folder, then delete the empty folder. |
+| There's a folder called `CraftingQueue-...` or `BepInEx_win_x64...` inside the game folder, and the `BepInEx` folder is inside it | Move everything from inside that folder into the game folder, then delete the empty folder. |
+| There's no `winhttp.dll` next to `GraveyardKeeper2.exe` | BepInEx isn't installed: extract `BepInEx_win_x64_5.4.23.5.zip` into the game folder (Step 3). |
 | The game opens but there's no panel | Press **F3** (it may be hidden). If it's still missing, open **Troubleshooting** near the end of this page. |
 | Windows or your antivirus warns about `winhttp.dll` | That file is part of BepInEx, the standard mod loader for Unity games. It's safe; allow it. |
 
@@ -86,14 +89,18 @@ To add something, hold **Ctrl** and right-click any item.
 - **Only what you can actually use.** Recipes you haven't unlocked stay hidden, and so do stations you can't build yet. As soon as you unlock them (tech tree, quests…), they show up on their own.
 - **Real yields.** The `×N` includes your perks and talents, including a zombie's if one works that station. For a station you haven't built yet, it shows the base building plus your perks.
 - **A task asks to *have* that many.** What you already own counts, and the recipe below covers only what's missing. Ctrl + right-click on an item or a recipe asks for one more than you have; requests (NPCs, quests, orders, buildings) ask for their exact amount.
-- **Shared materials are split in queue order.** If two tasks need logs, the one on top takes what you have first and the next one gets what's left. Reorder tasks with ▲ ▼.
+- **Shared materials are split in queue order.** If two tasks need logs, the one on top takes what you have first and the next one gets what's left. Drag a task by its title to move it up or down.
 - **Tasks finish on their own** when you craft, pick up or buy what was missing. Buildings and town works go down when you build them.
 - **Stock in other zones.** If you're short here but have some elsewhere, hover the row and it tells you where: `Yard: 7`.
 - **Items fill their cells,** so they're easy to recognize at a glance.
-- **Hover a task** to show its ▲ ▼ − + 🗑 buttons and its pin. Hold **Shift** to change the amount by 10, or to send the task to the top or the bottom. Every button explains itself when you hover it.
+- **Hover a task** to show its − + 🗑 buttons and its pin. Hold **Shift** to change the amount by 10. Every button explains itself when you hover it.
+- **Drag a task to reorder it.** Grab it by its title and drop it where you want: a gold line shows where it will land, and the list scrolls on its own near the top or bottom edge. Right-click or Esc cancels.
 - **Move and resize it.** Open the lock in the button bar, then drag the title to move the panel, or the grip in its lower corner to resize it. Names and icons rearrange as you drag, and icons shrink on their own when the panel is narrow.
+- **Icon and text size with the mouse wheel:** over the panel, **Ctrl + wheel** changes the icon size and **Shift + wheel** the text size.
 
-![Task buttons](docs/images/task-buttons.png)
+![Changing amounts (Shift: by 10), turning a task's pin on and off, and removing tasks](docs/images/queue-controls.gif)
+
+![Dragging tasks to reorder the queue](docs/images/reorder.gif)
 
 ### The button bar
 
@@ -124,7 +131,7 @@ Works on almost everything that shows an item or a recipe:
 
 If the panel is folded because a window is open, it unfolds for a moment so you can see the new task.
 
-![Removing tasks, then queuing blueprints from the tech tree and raising their amount](docs/images/remove-and-blueprints.gif)
+![Ctrl + right-click in a chest, the inventory and the tech tree](docs/images/add-anywhere.gif)
 
 ![An NPC asks for an item: Ctrl + right-click its icon to queue it](docs/images/npc-request.png)
 
@@ -132,12 +139,12 @@ If the panel is folded because a window is open, it unfolds for a moment so you 
 
 Bubbles over the chests and storages in your current zone show which queued materials they hold, and how many.
 
-![Chest bubbles](docs/images/chest-bubbles.png)
+![Chest bubbles, turned on and off with the pin](docs/images/chest-bubbles.gif)
 
 - **Hover a task or an ingredient** in the panel to see where its materials are right away, even without a pin.
 - The **pin in the button bar** (gold frame when on) marks materials for the whole queue. A **task's pin** marks only that task. New tasks start with their pin on. Pins are saved with your save slot.
 - If you already have an item, only the item itself is marked, so you know where to pick it up. If you don't, its ingredients are marked instead.
-- Bubbles turn transparent when your mouse is over them or when they cover your character.
+- Bubbles use the game's own parchment, and turn transparent when your mouse is over them or when they cover your character.
 
 ### Quick recipe view (Alt)
 
@@ -154,8 +161,10 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 - **The same size as the game's interface, at any resolution.** The panel uses the game's own UI scale (×2 at 720p, 1080p and 1440p, ×4 at 4K…), so its text matches the game's and every pixel stays crisp.
 - **Light on performance.** Amounts update in place instead of redrawing the panel, closing a menu or changing zones doesn't rebuild it, and nothing heavy runs while you play (about 0.1 ms per frame on average).
 - **One queue per save slot,** in its own file, saved so a crash can't wipe it. A new game never inherits the queue of a deleted save (old queues are kept in the `anteriores` folder, just in case).
-- **Options:** hide the panel while the queue is empty; the buttons down the side or across the top; any text size (0 = the game's; 8, 16, 24 and 32 are pixel-perfect).
-- **Settings in the game (optional):** with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, every setting is in the game's **Mods** menu (ESC), plus a button to clear the queue. Settings that are a choice show the option you picked in words ("Down the side", "Only what you carry"…); click to switch to the next one.
+- **Options:** hide the panel while the queue is empty; the buttons down the side or across the top; text size from 8 to 32 (16 is the game's; 8, 16, 24 and 32 are pixel-perfect); opacity of the whole panel or only of its background.
+- **Settings in the game (optional):** with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, every setting is in the game's **Mods** menu (ESC), plus a button to clear the queue. While Crafting Queue's page is open, the panel is shown next to the menu, so you see every change as you make it, and the values follow along when you resize the panel. Settings that are a choice show the option you picked in words ("Down the side", "Only what you carry"…); click to switch to the next one.
+
+![The Mods menu with the panel next to it: every change shows up right away](docs/images/mods-menu.gif)
 - **16 languages.** All of the game's official languages; it follows the game's language live.
 
 ### What it changes / compatibility
@@ -168,8 +177,8 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 ### Requirements
 
 - Graveyard Keeper 2 (tested on version 1.006).
-- [BepInEx](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5) 5.4.23.x, included in the *with-BepInEx* zip.
-- Optional: [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) 0.1.14 or later, for the in-game settings menu.
+- **Required:** [BepInEx](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5) 5.4.23.x (`BepInEx_win_x64`), installed separately (Step 1).
+- **Optional:** [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) 0.1.14 or later, for the in-game settings menu.
 
 ### Known limitations
 
@@ -186,13 +195,14 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 | Show / hide panel | `F3` | – |
 | Detailed / compact recipes | `F4` | – |
 | See where a task's materials are | Hover the task in the panel | Select it in the panel |
-| Reorder tasks (priority) | Hover the task → ▲ ▼ (**Shift**: to the top or bottom) | – |
+| Reorder tasks (priority) | Drag the task by its title (right-click or `Esc` cancels) | – |
 | Change an amount | Hover the task → − + (**Shift**: by 10) | X / Y in the panel |
 | Show / hide the buttons | Click the ⋮ corner of the panel (right-click: down the side or across the top) | – |
 | What counts as "have" | Bag and chest in the button bar | – |
 | Total view | List in the button bar | **View** in the panel |
 | Clear the queue | Trash can in the button bar (click twice) | – |
 | Move / resize the panel | Open the lock → drag the title or the ⋮ corner / the corner grip | – |
+| Icon / text size | `Ctrl` + wheel / `Shift` + wheel over the panel | – |
 | Use the panel | Mouse | **R3** to enter · D-pad ↑↓ move · → open · ← close · LB/RB switch recipe · X/Y −/+ · A pin · View total · B exit |
 
 ## Reporting bugs
@@ -224,7 +234,7 @@ Your queues are saved in `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveya
 <summary><b>Troubleshooting</b></summary>
 
 - **The panel doesn't appear:**
-  1. Check that `BepInEx\LogOutput.log` exists in the game folder. If it doesn't, BepInEx isn't installed; use the *with-BepInEx* zip.
+  1. Check that `BepInEx\LogOutput.log` exists in the game folder. If it doesn't, BepInEx isn't installed (see Step 1).
   2. If the log exists, look inside it for `Crafting Queue`.
 - **The panel is hidden:** press `F3`. It also hides on purpose while the game hides its own HUD (story scenes, placing a building), while you prepare and fight a battle, and while the queue is empty if you turned on that option.
 - **No chest bubbles:** turn on the pin in the button bar (or a task's pin), or hover a task in the panel. Bubbles only show chests in the zone you're in.
@@ -248,7 +258,6 @@ dotnet build -c Release -p:GameDir="C:\Program Files (x86)\Steam\steamapps\commo
 - Unofficial mod, not affiliated with Lazy Bear Games.
 - Made with the help of AI ([Claude](https://claude.com), by Anthropic): the code was written together with Claude, and every feature was tested in the game before release.
 - Contains no game code or assets, and sends no data anywhere.
-- The *with-BepInEx* package includes [BepInEx](https://github.com/BepInEx/BepInEx) 5.4.23.5, unmodified (LGPL-2.1).
 
 ## License
 

@@ -46,7 +46,9 @@ internal static class Lang
         "opt_by_task", "opt_detailed", "opt_compact", "opt_count_both", "opt_count_carried", "opt_count_chests", "opt_marks_all",
         "opt_marks_pinned", "opt_with_pin", "opt_no_pin", "opt_hint", "opt_hide", "opt_win_work", "opt_win_none",
         "opt_win_all", "opt_aside", "opt_over", "opt_out", "opt_tucked", "opt_side", "opt_top",
-        "opt_movable", "opt_fixed", "opt_right", "opt_left"
+        "opt_movable", "opt_fixed", "opt_right", "opt_left",
+        // tamaño desde el panel (Ctrl / Shift + rueda) y el globo del agarre
+        "size_icons", "size_text", "grip_tip"
     };
 
     private static readonly Dictionary<string, string[]> More = new Dictionary<string, string[]>
@@ -65,7 +67,8 @@ internal static class Lang
             "Only the chests", "Whole queue", "Only pinned tasks", "With pin", "Without pin",
             "Shows how to add", "Hidden", "With chests and stations", "With none", "With all",
             "Moves aside", "Stays on top", "Out", "Tucked away", "Down the side",
-            "Across the top", "Movable", "Fixed", "Right", "Left"
+            "Across the top", "Movable", "Fixed", "Right", "Left",
+            "Icons {0}", "Text {0}", "Drag to resize · Ctrl + wheel: icons · Shift + wheel: text"
         },
         ["es"] = new[]
         {
@@ -81,7 +84,8 @@ internal static class Lang
             "Solo los cofres", "De toda la cola", "Solo de tareas con pin", "Con pin", "Sin pin",
             "Dice cómo agregar", "Se oculta", "Con cofres y mesas", "Con ninguna", "Con todas",
             "Se hace a un lado", "Se queda encima", "Afuera", "Guardada", "Por el costado",
-            "Por encima del panel", "Se puede mover", "Fijo", "Derecha", "Izquierda"
+            "Por encima del panel", "Se puede mover", "Fijo", "Derecha", "Izquierda",
+            "Íconos {0}", "Letra {0}", "Arrastra para cambiar el tamaño · Ctrl + rueda: íconos · Shift + rueda: letra"
         },
         ["de"] = new[]
         {
@@ -97,7 +101,8 @@ internal static class Lang
             "Nur Truhen", "Ganze Warteschlange", "Nur Aufgaben mit Pin", "Mit Pin", "Ohne Pin",
             "Zeigt, wie man hinzufügt", "Ausgeblendet", "Bei Truhen und Stationen", "Bei keinem", "Bei allen",
             "Weicht aus", "Bleibt darüber", "Ausgeklappt", "Eingeklappt", "Seitlich",
-            "Oberhalb", "Beweglich", "Fest", "Rechts", "Links"
+            "Oberhalb", "Beweglich", "Fest", "Rechts", "Links",
+            "Symbole {0}", "Schrift {0}", "Ziehen: Größe · Strg + Mausrad: Symbole · Umschalt + Mausrad: Schrift"
         },
         ["fr"] = new[]
         {
@@ -113,7 +118,8 @@ internal static class Lang
             "Seulement les coffres", "Toute la file", "Seulement les tâches épinglées", "Avec épingle", "Sans épingle",
             "Indique comment ajouter", "Masqué", "Avec coffres et établis", "Avec aucune", "Avec toutes",
             "Se décale", "Reste au-dessus", "Sortie", "Rangée", "Sur le côté",
-            "Au-dessus du panneau", "Déplaçable", "Fixe", "Droite", "Gauche"
+            "Au-dessus du panneau", "Déplaçable", "Fixe", "Droite", "Gauche",
+            "Icônes {0}", "Texte {0}", "Glisser : taille · Ctrl + molette : icônes · Maj + molette : texte"
         },
         ["pt-br"] = new[]
         {
@@ -129,7 +135,8 @@ internal static class Lang
             "Só os baús", "Fila inteira", "Só tarefas com pin", "Com pin", "Sem pin",
             "Mostra como adicionar", "Fica oculto", "Com baús e bancadas", "Com nenhuma", "Com todas",
             "Sai da frente", "Fica por cima", "Aberta", "Guardada", "Pela lateral",
-            "Por cima do painel", "Móvel", "Fixo", "Direita", "Esquerda"
+            "Por cima do painel", "Móvel", "Fixo", "Direita", "Esquerda",
+            "Ícones {0}", "Texto {0}", "Arraste: tamanho · Ctrl + roda: ícones · Shift + roda: texto"
         },
         ["ru"] = new[]
         {
@@ -145,7 +152,8 @@ internal static class Lang
             "Только сундуки", "Вся очередь", "Только задачи с меткой", "С меткой", "Без метки",
             "Подсказывает, как добавить", "Скрыта", "С сундуками и станками", "Ни с одним", "Со всеми",
             "Отодвигается", "Остаётся сверху", "Открыта", "Убрана", "Сбоку",
-            "Над панелью", "Можно двигать", "Закреплена", "Справа", "Слева"
+            "Над панелью", "Можно двигать", "Закреплена", "Справа", "Слева",
+            "Значки {0}", "Текст {0}", "Тяните: размер · Ctrl + колесо: значки · Shift + колесо: текст"
         },
         ["uk-ua"] = new[]
         {
@@ -161,7 +169,8 @@ internal static class Lang
             "Лише скрині", "Уся черга", "Лише завдання з міткою", "З міткою", "Без мітки",
             "Підказує, як додати", "Прихована", "Зі скринями й верстатами", "З жодним", "З усіма",
             "Відсувається", "Лишається зверху", "Відкрита", "Прибрана", "Збоку",
-            "Над панеллю", "Можна рухати", "Закріплена", "Праворуч", "Ліворуч"
+            "Над панеллю", "Можна рухати", "Закріплена", "Праворуч", "Ліворуч",
+            "Значки {0}", "Текст {0}", "Тягніть: розмір · Ctrl + коліщатко: значки · Shift + коліщатко: текст"
         },
         ["it"] = new[]
         {
@@ -177,7 +186,8 @@ internal static class Lang
             "Solo i forzieri", "Tutta la coda", "Solo attività con puntina", "Con puntina", "Senza puntina",
             "Spiega come aggiungere", "Nascosto", "Con forzieri e banchi", "Con nessuna", "Con tutte",
             "Si sposta", "Resta sopra", "Aperta", "Riposta", "Sul lato",
-            "Sopra il pannello", "Spostabile", "Fisso", "Destra", "Sinistra"
+            "Sopra il pannello", "Spostabile", "Fisso", "Destra", "Sinistra",
+            "Icone {0}", "Testo {0}", "Trascina: dimensione · Ctrl + rotellina: icone · Maiusc + rotellina: testo"
         },
         ["pl"] = new[]
         {
@@ -193,7 +203,8 @@ internal static class Lang
             "Tylko skrzynie", "Cała kolejka", "Tylko zadania z pinezką", "Z pinezką", "Bez pinezki",
             "Pokazuje, jak dodać", "Ukryty", "Przy skrzyniach i stołach", "Przy żadnym", "Przy wszystkich",
             "Odsuwa się", "Zostaje na wierzchu", "Wysunięty", "Schowany", "Z boku",
-            "Nad panelem", "Ruchomy", "Przypięty", "Z prawej", "Z lewej"
+            "Nad panelem", "Ruchomy", "Przypięty", "Z prawej", "Z lewej",
+            "Ikony {0}", "Tekst {0}", "Przeciągnij: rozmiar · Ctrl + kółko: ikony · Shift + kółko: tekst"
         },
         ["tr"] = new[]
         {
@@ -209,7 +220,8 @@ internal static class Lang
             "Sadece sandıklar", "Tüm sıra", "Sadece iğneli görevler", "İğneli", "İğnesiz",
             "Nasıl ekleneceğini gösterir", "Gizlenir", "Sandık ve tezgâhlarla", "Hiçbiriyle", "Hepsiyle",
             "Kenara çekilir", "Üstte kalır", "Açık", "Toplu", "Yandan",
-            "Panelin üstünden", "Taşınabilir", "Sabit", "Sağ", "Sol"
+            "Panelin üstünden", "Taşınabilir", "Sabit", "Sağ", "Sol",
+            "Simgeler {0}", "Yazı {0}", "Sürükle: boyut · Ctrl + tekerlek: simgeler · Shift + tekerlek: yazı"
         },
         ["ja"] = new[]
         {
@@ -225,7 +237,8 @@ internal static class Lang
             "チェストのみ", "キュー全体", "ピン付きのタスクのみ", "ピンあり", "ピンなし",
             "追加方法を表示", "隠す", "チェストと作業台で表示", "表示しない", "常に表示",
             "横によける", "上に表示したまま", "出す", "しまう", "横に",
-            "パネルの上に", "移動できる", "固定", "右", "左"
+            "パネルの上に", "移動できる", "固定", "右", "左",
+            "アイコン {0}", "文字 {0}", "ドラッグ: サイズ · Ctrl + ホイール: アイコン · Shift + ホイール: 文字"
         },
         ["zh_cn"] = new[]
         {
@@ -241,7 +254,8 @@ internal static class Lang
             "仅箱子", "整个队列", "仅带图钉的任务", "带图钉", "不带图钉",
             "提示如何添加", "隐藏", "箱子和工作台时显示", "都不显示", "都显示",
             "让开", "留在上面", "展开", "收起", "侧边",
-            "面板上方", "可移动", "固定", "右侧", "左侧"
+            "面板上方", "可移动", "固定", "右侧", "左侧",
+            "图标 {0}", "文字 {0}", "拖动：大小 · Ctrl + 滚轮：图标 · Shift + 滚轮：文字"
         },
         ["zh_cht"] = new[]
         {
@@ -257,7 +271,8 @@ internal static class Lang
             "僅箱子", "整個佇列", "僅有圖釘的任務", "有圖釘", "沒有圖釘",
             "提示如何加入", "隱藏", "箱子和工作台時顯示", "都不顯示", "都顯示",
             "讓開", "留在上面", "展開", "收起", "側邊",
-            "面板上方", "可移動", "固定", "右側", "左側"
+            "面板上方", "可移動", "固定", "右側", "左側",
+            "圖示 {0}", "文字 {0}", "拖曳：大小 · Ctrl + 滾輪：圖示 · Shift + 滾輪：文字"
         },
         ["ko"] = new[]
         {
@@ -273,7 +288,8 @@ internal static class Lang
             "상자만", "대기열 전체", "핀 고정한 작업만", "핀 고정", "핀 없음",
             "추가 방법 안내", "숨김", "상자와 작업대에서 표시", "표시 안 함", "항상 표시",
             "옆으로 비킴", "위에 그대로", "펼침", "접음", "옆으로",
-            "패널 위로", "이동 가능", "고정", "오른쪽", "왼쪽"
+            "패널 위로", "이동 가능", "고정", "오른쪽", "왼쪽",
+            "아이콘 {0}", "글자 {0}", "드래그: 크기 · Ctrl + 휠: 아이콘 · Shift + 휠: 글자"
         },
         ["th"] = new[]
         {
@@ -289,7 +305,8 @@ internal static class Lang
             "เฉพาะหีบ", "ทั้งคิว", "เฉพาะงานที่ปักหมุด", "ปักหมุด", "ไม่ปักหมุด",
             "บอกวิธีเพิ่ม", "ซ่อน", "กับหีบและโต๊ะทำงาน", "ไม่แสดงเลย", "แสดงทั้งหมด",
             "หลบไปด้านข้าง", "อยู่ด้านบน", "กางออก", "เก็บไว้", "ด้านข้าง",
-            "เหนือแผง", "ย้ายได้", "ตรึงไว้", "ขวา", "ซ้าย"
+            "เหนือแผง", "ย้ายได้", "ตรึงไว้", "ขวา", "ซ้าย",
+            "ไอคอน {0}", "ตัวอักษร {0}", "ลาก: ขนาด · Ctrl + ล้อเมาส์: ไอคอน · Shift + ล้อเมาส์: ตัวอักษร"
         },
         ["vn"] = new[]
         {
@@ -305,7 +322,8 @@ internal static class Lang
             "Chỉ rương", "Cả hàng đợi", "Chỉ nhiệm vụ có ghim", "Có ghim", "Không ghim",
             "Chỉ cách thêm", "Ẩn", "Với rương và bàn chế tạo", "Không với cửa sổ nào", "Với mọi cửa sổ",
             "Tránh sang bên", "Nằm trên", "Mở ra", "Cất đi", "Bên cạnh",
-            "Phía trên bảng", "Di chuyển được", "Cố định", "Phải", "Trái"
+            "Phía trên bảng", "Di chuyển được", "Cố định", "Phải", "Trái",
+            "Biểu tượng {0}", "Chữ {0}", "Kéo: kích thước · Ctrl + con lăn: biểu tượng · Shift + con lăn: chữ"
         },
     };
 

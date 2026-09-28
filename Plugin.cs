@@ -112,6 +112,49 @@ public class Plugin : BaseUnityPlugin
         hudTop.Value = Mathf.Max(0f, top);
     }
 
+    // Cuántas veces cambió algún ajuste (desde el panel, el menú Mods o donde sea). El puente con GK2 Mod
+    // Framework lo lee para refrescar los valores que muestra su página (no se entera sola si el panel
+    // cambia de tamaño con el agarre o la rueda).
+    public static int SettingsVersion { get; private set; }
+
+    // Mientras se arrastra el agarre del panel: el puente refresca su página aunque el botón del mouse siga
+    // presionado (el arrastre es del panel, no de un deslizador de la página).
+    public static bool PanelResizing { get; internal set; }
+
+    // El ancho que eligió el jugador, mientras el panel está ensanchado por los íconos (null si no lo está).
+    private static float? chosenWidth;
+    private static bool autoWidth;
+
+    private static void OnAnySettingChanged(object sender, SettingChangedEventArgs e)
+    {
+        SettingsVersion++;
+        if (e.ChangedSetting == hudWidth && !autoWidth)
+            chosenWidth = null; // el jugador eligió otro ancho: ese es el suyo
+        // Con el candado abierto, si los íconos ya no caben en el ancho (se limitan al 11 % del panel), el
+        // panel se ensancha lo justo; al achicarlos, vuelve al ancho que tenía el jugador. Con el candado
+        // cerrado, el tamaño del panel no lo mueve ninguna otra opción.
+        if (e.ChangedSetting == hudIconSize && hudMovable.Value)
+        {
+            float need = Mathf.Ceil(hudIconSize.Value * hudScale.Value / 0.11f);
+            float chosen = chosenWidth ?? hudWidth.Value;
+            float target = Mathf.Clamp(Mathf.Max(chosen, need), 100f, 800f);
+            if (Mathf.Abs(target - hudWidth.Value) > 0.5f)
+            {
+                chosenWidth = chosen;
+                autoWidth = true;
+                hudWidth.Value = target;
+                autoWidth = false;
+            }
+        }
+    }
+
+    internal static float HudPanelOpacity => hudPanelOpacity.Value;
+    private static ConfigEntry<float> hudPanelOpacity;
+
+    // Ctrl / Shift + rueda sobre el panel: tamaño de los íconos y de la letra, guardados al momento.
+    internal static void SetHudIconSize(float size) => hudIconSize.Value = Mathf.Clamp(Mathf.Round(size), 10f, 48f);
+    internal static void SetHudTextSize(float size) => hudTextSize.Value = Mathf.Clamp(Mathf.Round(size), 8f, 32f);
+
     // Los mismos límites que el .cfg y el menú del framework (Ancho 100–800, AltoMaximo 60–1000).
     internal static void SetHudSize(float width, float maxHeight)
     {
@@ -225,11 +268,13 @@ public class Plugin : BaseUnityPlugin
         started = true;
         Log = Logger;
         BindConfig();
+        Config.SettingChanged += OnAnySettingChanged;
         BindChoices();
 
         string data = dataFolder = Path.Combine(Application.persistentDataPath, "CraftingQueue");
         Queue.Init(data);
         Prefs.Load(data);
+        FrameworkPreview.Init(data);
         try { Lang.Init(Path.GetDirectoryName(Info.Location)); }
         catch (Exception e) { Log.LogError("Idiomas: " + (e.InnerException ?? e).Message); }
 
@@ -388,11 +433,15 @@ public class Plugin : BaseUnityPlugin
         hudMaxHeight = Config.Bind(P, "AltoMaximo", 200f,
             new ConfigDescription(Both("Maximum height; if the queue doesn't fit, it scrolls.",
                 "Alto máximo; si la cola no cabe, se desplaza."), new AcceptableValueRange<float>(60f, 1000f)));
-        hudTextSize = Config.Bind(P, "TamanoLetra", 0f,
-            new ConfigDescription(Both("Panel text size. 0 = the game's own (16). Any size works; 8, 16, 24 and 32 look perfect, " +
-                    "and the ones in between have a few strokes slightly thicker than others.",
-                "Tamaño de letra del panel. 0 = el mismo que usa el juego (16). Cualquier tamaño funciona; 8, 16, 24 y 32 " +
-                "se ven perfectos y los de en medio, con algunos trazos un poco más gruesos que otros."), new AcceptableValueRange<float>(0f, 40f)));
+        hudTextSize = Config.Bind(P, "TamanoLetra", 16f,
+            new ConfigDescription(Both("Panel text size, from 8 to 32 (16 = the game's own). 8, 16, 24 and 32 look perfect, " +
+                    "and the ones in between have a few strokes slightly thicker than others. Shift + mouse wheel over the panel changes it.",
+                "Tamaño de letra del panel, de 8 a 32 (16 = el del juego). 8, 16, 24 y 32 se ven perfectos y los de en medio, " +
+                "con algunos trazos un poco más gruesos que otros. Shift + rueda del mouse sobre el panel lo cambia."),
+                new AcceptableValueRange<float>(0f, 40f)));
+        // Antes 0 era "el del juego": se muestra y guarda como 16 (un "0" en el menú confundía).
+        if (hudTextSize.Value < 8f)
+            hudTextSize.Value = 16f;
         hudIconSize = Config.Bind(P, "TamanoIconos", 16f,
             new ConfigDescription(Both("Largest icon size: in a narrow panel they shrink on their own to leave room for the names.",
                 "Tamaño máximo de los íconos: en un panel angosto se achican solos para dejarles sitio a los nombres."), new AcceptableValueRange<float>(10f, 48f)));
@@ -402,6 +451,9 @@ public class Plugin : BaseUnityPlugin
         hudOpacity = Config.Bind(P, "OpacidadFondo", 0.55f,
             new ConfigDescription(Both("Background: 0 = invisible, 1 = solid.",
                 "0 = fondo invisible, 1 = fondo sólido."), new AcceptableValueRange<float>(0f, 1f)));
+        hudPanelOpacity = Config.Bind(P, "OpacidadPanel", 1f,
+            new ConfigDescription(Both("The whole panel (text, icons, buttons and background): 0.3 = see-through, 1 = solid.",
+                "Todo el panel (letra, íconos, botones y fondo): 0.3 = transparente, 1 = sólido."), new AcceptableValueRange<float>(0.3f, 1f)));
         hudMaxRows = Config.Bind(P, "MaxRenglones", 80,
             new ConfigDescription(Both("Most rows the panel builds.",
                 "Renglones máximos que se arman."), new AcceptableValueRange<int>(3, 300)));

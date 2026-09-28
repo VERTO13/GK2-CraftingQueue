@@ -386,6 +386,16 @@ internal static class BarArt
     internal static Sprite Check => Once(ref check, () => Draw(Ring(Outline(CheckFill))));
     internal static Sprite Dots => Once(ref dots, () => Draw(Ring(DotsRows)));
 
+    // Botones de cada tarea del panel: los mismos dibujos y colores que la barra, más chicos (caben en el
+    // renglón sin estirarse). El bote se pone rojo con el mouse encima; el pin apagado va en gris.
+    private static Sprite rowPlus, rowMinus, rowTrash, rowTrashRed, rowPin, rowPinOff;
+    internal static Sprite RowPlus => Once(ref rowPlus, () => Draw(Ring(Outline(RowPlusFill))));
+    internal static Sprite RowMinus => Once(ref rowMinus, () => Draw(Ring(Outline(RowMinusFill))));
+    internal static Sprite RowTrash => Once(ref rowTrash, () => Draw(Ring(RowTrashRows)));
+    internal static Sprite RowTrashRed => Once(ref rowTrashRed, () => Draw(Ring(Recolor(RowTrashRows, "WNMO", "UTSR"))));
+    internal static Sprite RowPin => Once(ref rowPin, () => Draw(Ring(RowPinRows)));
+    internal static Sprite RowPinOff => Once(ref rowPinOff, () => Draw(Ring(Recolor(RowPinRows, "TUSX", "MNOM"))));
+
     private static bool Alive(Sprite s) => s != null && s.texture != null;
 
     private static Sprite Once(ref Sprite s, Func<Sprite> make)
@@ -642,6 +652,38 @@ internal static class BarArt
         ".BNMNMNMNMNMNMB.",
         ".BOMOMOMOMOMOMB.",
         "..BBBBBBBBBBBB..",
+    };
+
+    // Botones de las tareas: + y − de papel (el contorno y el aro se agregan al dibujarlos)…
+    private static readonly string[] RowPlusFill = { "..77..", "..77..", "777777", "666666", "..66..", "..66.." };
+    private static readonly string[] RowMinusFill = { "777777", "666666" };
+
+    // …el bote de la barra en chico…
+    private static readonly string[] RowTrashRows =
+    {
+        "...BBBB...",
+        "BBBBBBBBBB",
+        "BWNNNNNNNB",
+        "BBBBBBBBBB",
+        ".BNMNMNMB.",
+        ".BNMNMNMB.",
+        ".BNMNMNMB.",
+        ".BOMOMOMB.",
+        "..BBBBBB..",
+    };
+
+    // …y el pin rojo del mapa en chico.
+    private static readonly string[] RowPinRows =
+    {
+        "..BBBB..",
+        ".BTTTSB.",
+        "BTUTTTSB",
+        "BTTXXTSB",
+        "BTTXXTSB",
+        ".BTTTSB.",
+        "..BTSB..",
+        "...BB...",
+        "...BB...",
     };
 
     // La esquina: tres puntos de papel, uno sobre otro.

@@ -32,7 +32,12 @@ public sealed class FrameworkBridgePlugin : BaseUnityPlugin
         }
         try
         {
-            FrameworkApi.RegisterMod(new Bridge(main.Metadata.Version.ToString(), main.Instance.GetType()), main.Instance.Config);
+            bridge = new Bridge(main.Metadata.Version.ToString(), main.Instance.GetType());
+            FrameworkApi.RegisterMod(bridge, main.Instance.Config);
+            // Con un Crafting Queue que no la tiene, simplemente no se refrescan los valores.
+            settingsVersion = main.Instance.GetType().GetProperty("SettingsVersion", BindingFlags.Public | BindingFlags.Static);
+            panelResizing = main.Instance.GetType().GetProperty("PanelResizing", BindingFlags.Public | BindingFlags.Static);
+            lastVersion = ReadVersion();
             Logger.LogInfo("Crafting Queue settings added to the GK2 Mod Framework Mods menu.");
         }
         catch (Exception e)
@@ -42,10 +47,66 @@ public sealed class FrameworkBridgePlugin : BaseUnityPlugin
         }
     }
 
+    private Bridge bridge;
+    private PropertyInfo settingsVersion, panelResizing;
+    private int lastVersion;
+    private float nextPoll;
+
+    // La página de ajustes del framework no se entera si un valor cambia desde otro lado (el agarre del panel,
+    // Ctrl/Shift + rueda, los botones del panel): se le pide que se rearme en cuanto algo cambió. Con el botón
+    // del mouse presionado solo si es el agarre del panel, para no cortar el arrastre de un deslizador.
+    private void Update()
+    {
+        if (bridge == null || settingsVersion == null || Time.unscaledTime < nextPoll)
+            return;
+        nextPoll = Time.unscaledTime + 0.15f;
+        if (Input.GetMouseButton(0) && !PanelResizing())
+            return;
+        int v = ReadVersion();
+        if (v == lastVersion)
+            return;
+        lastVersion = v;
+        bridge.RefreshShownValues();
+    }
+
+    private bool PanelResizing()
+    {
+        try { return panelResizing != null && (bool)panelResizing.GetValue(null); }
+        catch { return false; }
+    }
+
+    private int ReadVersion()
+    {
+        try { return settingsVersion != null ? (int)settingsVersion.GetValue(null) : 0; }
+        catch { return 0; }
+    }
+
     private sealed class Bridge : Gk2ModBase
     {
         private readonly Gk2ModMetadata metadata;
         private readonly Type main;
+        private Gk2Settings settings;
+        private bool pulse;
+
+        // Truco con la API pública: la página se rearma (y relee todos los valores) cuando cambia cómo se
+        // presenta algún ajuste. Un renglón se "desactiva" y se "reactiva" en seguida; la página se rearma una
+        // sola vez, en el siguiente cuadro, ya con el renglón activo, así que nunca se ve desactivado.
+        internal void RefreshShownValues()
+        {
+            if (settings == null)
+                return;
+            try
+            {
+                pulse = true;
+                settings.RefreshConditions();
+                pulse = false;
+                settings.RefreshConditions();
+            }
+            catch
+            {
+                pulse = false;
+            }
+        }
 
         internal Bridge(string version, Type main)
         {
@@ -68,7 +129,7 @@ public sealed class FrameworkBridgePlugin : BaseUnityPlugin
         // Localization/verto13.gk2.craftingqueue/<idioma>.json del framework.
         public override void OnRegister(Gk2ModContext context)
         {
-            Gk2Settings s = context.Settings;
+            Gk2Settings s = settings = context.Settings;
             const string C = "Controles", Q = "Vista rápida", P = "Panel en pantalla";
             int order = 0;
 
@@ -134,13 +195,18 @@ public sealed class FrameworkBridgePlugin : BaseUnityPlugin
                 "Panel width; long names wrap to a second line.", 10f, order++);
             s.AddFloatSlider(P, "AltoMaximo", 200f, 60f, 1000f, "Maximum height",
                 "A longer queue scrolls.", 10f, order++);
-            s.AddFloatSlider(P, "TamanoLetra", 0f, 0f, 40f, "Text size",
-                "0 = the game's own size (16). Any size works; 8, 16, 24 and 32 look perfectly crisp, sizes in between " +
-                "a little uneven.", 1f, order++);
+            s.AddFloatSlider(P, "TamanoLetra", 16f, 8f, 32f, "Text size",
+                "16 = the game's own size. 8, 16, 24 and 32 look perfectly crisp, sizes in between a little uneven. " +
+                "Shift + mouse wheel over the panel does the same.", 1f, order++);
+            s.AddFloatSlider(P, "OpacidadPanel", 1f, 0.3f, 1f, "Panel opacity",
+                "The whole panel: text, icons, buttons and background. 1 = solid.", 0.05f, order++);
             s.AddFloatSlider(P, "OpacidadFondo", 0.55f, 0f, 1f, "Background opacity",
-                "0 = invisible background, 1 = solid.", 0.05f, order++);
-            s.AddFloatSlider(P, "TamanoIconos", 16f, 10f, 48f, "Maximum icon size",
-                "On a narrow panel the icons shrink on their own to leave room for the names.", 1f, order++);
+                "Only the background behind each recipe: 0 = invisible, 1 = solid.", 0.05f, order++);
+            s.AddFloatSlider(P, "TamanoIconos", 16f, 10f, 48f, "Icon size",
+                "With the panel's lock open, the panel widens when the icons no longer fit. With the lock closed, the " +
+                "panel keeps its size and the icons stay within its width. Ctrl + mouse wheel over the panel does the same.",
+                1f, order++);
+            s.SetEnabledCondition(P, "TamanoIconos", () => !pulse); // ver RefreshShownValues
             s.AddFloatSlider(P, "Escala", 1f, 0.3f, 2f, "Spacing scale",
                 "Makes icons and spacing smaller or bigger; text stays at the game's crisp size.", 0.1f, order++);
 
