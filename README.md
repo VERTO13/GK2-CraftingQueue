@@ -208,7 +208,7 @@ Open an [issue](../../issues/new/choose) and include:
 <details>
 <summary><b>Configuration</b></summary>
 
-Settings live in `BepInEx\config\verto13.gk2.craftingqueue.cfg` (open it with Notepad while the game is closed). The file is created the first time you play, and every setting is explained inside it: panel side, width, height, icon size, opacity, recipe style…
+Settings live in `BepInEx\config\verto13.gk2.craftingqueue.cfg` (open it with Notepad while the game is closed). The file is created the first time you play, and every setting is explained inside it, in English and Spanish (the setting names themselves stay in Spanish): panel side, width, height, icon size, opacity, recipe style…
 
 With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, the same settings are in the game: **ESC → Mods → Crafting Queue**. Changes apply right away.
 
