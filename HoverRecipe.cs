@@ -142,10 +142,15 @@ internal class HoverRecipe : MonoBehaviour
             ContentSizeFitter f = p.GetComponent<ContentSizeFitter>();
             f.horizontalFit = f.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         }
-        // Misma escala que el panel de la cola: entera y según la resolución.
-        Canvas gameCanvas = cell.GetComponentInParent<Canvas>()?.rootCanvas;
-        if (gameCanvas != null && gameCanvas.scaleFactor > 0f)
-            canvas.scaleFactor = GameStyle.PanelScale(gameCanvas.scaleFactor);
+        // Misma escala que el panel de la cola: la de la interfaz del juego (no la del lienzo de la
+        // celda, que puede ser el de otro mod); sin ella todavía, la del lienzo de la celda.
+        float game = LazyBearTechnology.LazyUI.ScaleFactor;
+        if (game < 1f)
+        {
+            Canvas gameCanvas = cell.GetComponentInParent<Canvas>()?.rootCanvas;
+            game = gameCanvas != null ? gameCanvas.scaleFactor : 0f;
+        }
+        canvas.scaleFactor = GameStyle.PanelScale(game);
     }
 
     private void Build(string id)
@@ -258,6 +263,13 @@ internal class HoverRecipe : MonoBehaviour
             anchorCell.GetWorldCorners(corners);
             Vector2 bl = RectTransformUtility.WorldToScreenPoint(cam, corners[0]) / s;
             Vector2 tr = RectTransformUtility.WorldToScreenPoint(cam, corners[2]) / s;
+            // Un renglón del panel de la cola: tampoco encima de su barra de botones (al lado).
+            if (QueueHud.Instance != null && QueueHud.Instance.Owns(anchorCell))
+            {
+                QueueHud.Instance.OuterEdges(out float outerLeft, out float outerRight);
+                bl.x = Mathf.Min(bl.x, outerLeft / s);
+                tr.x = Mathf.Max(tr.x, outerRight / s);
+            }
             bool toLeft = bl.x - 4f - size.x >= 4f;
             panel.pivot = new Vector2(toLeft ? 1f : 0f, 1f);
             float ax = toLeft ? bl.x - 4f : Mathf.Min(tr.x + 4f, screen.x - size.x - 4f);

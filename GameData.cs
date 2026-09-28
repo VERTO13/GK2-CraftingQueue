@@ -516,19 +516,29 @@ internal static class GameData
         catch { return null; }
     }
 
-    // Cuánto tienes disponible, contado igual que el juego al craftear: tu inventario más los
-    // almacenes de la zona donde estás (la estación puede tomar de ahí). Con "SoloMochila", solo
-    // lo que llevas encima.
+    // Cuánto tienes disponible. De fábrica, igual que el juego al craftear: tu inventario más los
+    // almacenes de la zona donde estás (la estación puede tomar de ahí). La bolsa y el cofre de la
+    // barra de botones eligen qué se cuenta: solo lo que llevas encima, solo los almacenes de la zona
+    // (todo menos lo que llevas), o las dos cosas.
     public static int Owned(string key)
     {
         try
         {
             if (MainGame.PlayerData == null)
                 return 0;
-            MultiInventory inv = CountingInventory();
+            bool carried = Plugin.CountCarried, chests = Plugin.CountChests;
+            MultiInventory all = chests ? Counting(ref zoneInventory, ref zoneFrame, withZone: true) : null;
+            MultiInventory bag = carried && chests ? null : Counting(ref bagInventory, ref bagFrame, withZone: false);
             int total = 0;
             foreach (string id in ItemsOf(key))
-                total += inv.GetTotalCount(id);
+            {
+                if (carried && chests)
+                    total += all.GetTotalCount(id);
+                else if (carried)
+                    total += bag.GetTotalCount(id);
+                else
+                    total += Math.Max(0, all.GetTotalCount(id) - bag.GetTotalCount(id));
+            }
             return total;
         }
         catch
@@ -577,9 +587,10 @@ internal static class GameData
     }
 
     // Lo que hay en los almacenes de OTRAS zonas (desde aquí no se puede usar): la zona que más
-    // tiene y cuánto, para avisar en el panel "Patio: 7". Con "SoloMochila" también cuenta la zona
-    // donde estás (sus cofres no se suman). Los almacenes se revisan cada 2 s.
+    // tiene y cuánto, para avisar en el panel "Patio: 7". Con el cofre de la barra apagado también
+    // cuenta la zona donde estás (sus cofres no se suman). Los almacenes se revisan cada 2 s.
     private static float elsewhereAt = -10f;
+    private static bool elsewhereWithHere;
     private static readonly List<(string zone, List<WgoData> storages)> otherZones = new List<(string, List<WgoData>)>();
     private static readonly Dictionary<string, (string zone, int count)> elsewhere = new Dictionary<string, (string, int)>();
 
@@ -587,16 +598,18 @@ internal static class GameData
     {
         try
         {
-            if (Time.unscaledTime - elsewhereAt > 2f)
+            bool withHere = !Plugin.CountChests;
+            if (Time.unscaledTime - elsewhereAt > 2f || withHere != elsewhereWithHere)
             {
                 elsewhereAt = Time.unscaledTime;
+                elsewhereWithHere = withHere;
                 elsewhere.Clear();
                 otherZones.Clear();
                 WorldZoneData here = MainGame.PlayerData?.CurrentWorldZoneData;
                 foreach (GameSceneData scene in MainGame.WorldData?.gameSceneDataList ?? new List<GameSceneData>())
                     foreach (WorldZoneData z in scene?.worldZones ?? new List<WorldZoneData>())
                     {
-                        if (z == null || (!Plugin.BackpackOnly && (z == here || (here != null && z.id == here.id))))
+                        if (z == null || (!withHere && (z == here || (here != null && z.id == here.id))))
                             continue;
                         List<WgoData> storages = ZoneStorages(z).ToList();
                         if (storages.Count > 0)
@@ -631,20 +644,20 @@ internal static class GameData
     public static int CountIn(Inventory inv, string key) =>
         inv?.Data == null ? 0 : ItemsOf(key).Sum(id => inv.Data.GetTotalCountInInventory(id));
 
-    // Inventario + almacenes de la zona (o solo el inventario, con "SoloMochila"), armado una sola
-    // vez por cuadro (el panel pregunta por muchos materiales seguidos; armarlo para cada uno
-    // recorría la zona entera cada vez).
-    private static MultiInventory countingInventory;
-    private static int countingFrame = -1;
+    // Inventario + almacenes de la zona, y solo el inventario: cada uno armado una sola vez por cuadro
+    // (el panel pregunta por muchos materiales seguidos; armarlo para cada uno recorría la zona entera
+    // cada vez).
+    private static MultiInventory zoneInventory, bagInventory;
+    private static int zoneFrame = -1, bagFrame = -1;
 
-    private static MultiInventory CountingInventory()
+    private static MultiInventory Counting(ref MultiInventory inv, ref int frame, bool withZone)
     {
-        if (countingInventory == null || countingFrame != Time.frameCount)
+        if (inv == null || frame != Time.frameCount)
         {
-            countingInventory = new MultiInventory(MainGame.PlayerData, addCurrentPlayerWorldZone: !Plugin.BackpackOnly);
-            countingFrame = Time.frameCount;
+            inv = new MultiInventory(MainGame.PlayerData, addCurrentPlayerWorldZone: withZone);
+            frame = Time.frameCount;
         }
-        return countingInventory;
+        return inv;
     }
 
     private static string ResolveStar(string id)

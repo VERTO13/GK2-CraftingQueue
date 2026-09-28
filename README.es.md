@@ -89,17 +89,24 @@ Para agregar algo, mantén **Ctrl** y da clic derecho sobre cualquier objeto.
 - **Los materiales compartidos se reparten en el orden de la cola.** Si dos tareas usan troncos, la de arriba toma primero lo que tienes y la siguiente lo que sobra. Cambia el orden con ▲ ▼.
 - **Las tareas se completan solas** cuando crafteas, recoges o compras lo que faltaba. Las construcciones y obras del pueblo bajan al construirlas.
 - **Lo que tienes en otras zonas.** Si aquí no te alcanza pero tienes en otra zona, pasa el mouse por el renglón y te dice dónde: `Yard: 7`.
+- **Los objetos llenan su celda,** para reconocerlos de un vistazo.
 - **Pasa el mouse sobre una tarea** para ver sus botones ▲ ▼ − + 🗑 y su pin. Con **Shift**, la cantidad cambia de 10 en 10 y la tarea se va hasta arriba o hasta abajo. Cada botón explica qué hace al pasarle el mouse.
-- **Muévelo y cámbiale el tamaño.** Abre el candado y arrastra el título para moverlo, o el agarre de su esquina de abajo para cambiar su tamaño. Nombres e íconos se reacomodan mientras arrastras, y los íconos se achican solos si el panel es angosto.
+- **Muévelo y cámbiale el tamaño.** Abre el candado de la barra de botones y arrastra el título para moverlo, o el agarre de su esquina de abajo para cambiar su tamaño. Nombres e íconos se reacomodan mientras arrastras, y los íconos se achican solos si el panel es angosto.
 
 ![Botones de una tarea](docs/images/task-buttons.png)
 
-### Vista Total y vaciar la cola
+### La barra de botones
 
-Al pasar el mouse por el panel aparecen dos botones más en su barra de título:
+Siete botones en las celdas de objeto del propio juego. Salen de la **esquina ⋮**, justo afuera de la esquina de arriba del panel: un clic y la barra baja deslizándose por el costado del panel (o corre por encima del panel, si lo prefieres: *Botones arriba* en el menú Mods, `BotonesArriba` en la configuración); otro clic y se guarda. Con clic derecho en la esquina cambia entre el costado y por encima del panel. El título del panel, «Cola», se queda donde está. Marco dorado = prendido; celda sombreada = apagado.
 
-- **Σ** cambia a la vista **Total**: todo lo que pide la cola en una sola lista, un renglón por material, sumado de todas tus tareas. Es lo que todavía tienes que conseguir, con lo que falta primero.
-- **El bote** vacía la cola completa. Se pone rojo al pasarle el mouse y, al primer clic, se vuelve una palomita: clic en la palomita para confirmar.
+- **La bolsa y el cofre** eligen qué cuenta como "tienes". Los dos prendidos (de fábrica): lo que llevas encima más los cofres y almacenes de la zona donde estás, como el juego al craftear. Solo la bolsa: solo lo que llevas. Solo el cofre: solo lo guardado en la zona. Uno de los dos siempre queda prendido.
+- **La hoja** cambia a la vista **Total**: todo lo que pide la cola en una sola lista, un renglón por material, sumado de todas tus tareas. Es lo que todavía tienes que conseguir, con lo que falta primero.
+- **El ojo** deja el panel siempre visible (ojo abierto). Cerrado, el panel se recorre o se pliega con cofres y mesas.
+- **El pin** muestra las burbujas de toda la cola en los cofres.
+- **El candado** te deja mover el panel (arrastrando el título) y cambiar su tamaño (el agarre de la esquina).
+- **El bote** vacía la cola completa. Se pone rojo al pasarle el mouse y, al primer clic, se vuelve una palomita dorada: clic en la palomita para confirmar.
+
+Los botones nunca se estiran ni se encogen con el panel: miden siempre 26 pixeles del juego, igual de nítidos que sus íconos. La esquina ⋮ va del lado del panel que mira al centro de la pantalla, y también sirve para arrastrar el panel. Si el panel está hasta abajo de la pantalla, la barra sube desde la esquina. Por encima del panel, un grupo de botones baja a un segundo renglón si el panel mide menos de 200 de ancho, y el panel baja con él.
 
 ### Agrega lo que sea con Ctrl + clic derecho
 
@@ -128,7 +135,7 @@ Burbujas sobre los cofres y almacenes de tu zona muestran qué materiales de tu 
 ![Burbujas sobre los cofres](docs/images/chest-bubbles.png)
 
 - **Pasa el mouse sobre una tarea o un ingrediente** del panel para ver al momento dónde están sus materiales, aunque no tenga pin.
-- El **pin junto al candado** (dorado cuando está prendido) marca los materiales de toda la cola. El **pin de una tarea** marca solo esa tarea. Las tareas nuevas empiezan con su pin prendido. Los pines se guardan con tu partida.
+- El **pin de la barra de botones** (marco dorado cuando está prendido) marca los materiales de toda la cola. El **pin de una tarea** marca solo esa tarea. Las tareas nuevas empiezan con su pin prendido. Los pines se guardan con tu partida.
 - Si ya tienes un objeto, se marca solo el objeto, para que sepas dónde recogerlo. Si no, se marcan sus ingredientes.
 - Las burbujas se vuelven transparentes cuando el mouse está encima o cuando tapan a tu personaje.
 
@@ -142,13 +149,13 @@ Mantén **Alt** sobre cualquier objeto, en tu inventario, un cofre o el mismo pa
 
 ### Y además
 
-- **No estorba:** con un cofre, una mesa o el árbol tecnológico abierto, el panel se recorre de su lado o se pliega en una pestañita "Cola" que se despliega al pasar el mouse. ¿Lo prefieres siempre visible? Prende el **ojo** de la barra del panel.
+- **No estorba:** con un cofre, una mesa o el árbol tecnológico abierto, el panel se recorre de su lado o se pliega en una pestañita "Cola" que se despliega al pasar el mouse. ¿Lo prefieres siempre visible? Abre el **ojo** de la barra de botones.
 - **No estorba en las peleas:** el panel se oculta mientras preparas y peleas una batalla.
-- **Nítido** en 720p, 1080p, 1440p y 4K.
+- **Del tamaño de la interfaz del juego, en cualquier resolución.** El panel usa la misma escala que la interfaz del juego (×2 en 720p, 1080p y 1440p, ×4 en 4K…): su letra es del tamaño de la del juego y todo se ve nítido.
 - **Muy ligero.** Las cantidades se actualizan en su lugar en vez de redibujar el panel, y no corre nada pesado mientras juegas (unos 0.1 ms por cuadro en promedio).
 - **Una cola por partida guardada,** en su propio archivo y guardada de forma que un cierre inesperado no la borre. Una partida nueva nunca hereda la cola de una partida borrada (las colas viejas se guardan en la carpeta `anteriores`, por si acaso).
-- **Opciones:** ocultar el panel mientras la cola está vacía, o contar solo lo que llevas encima en vez de tu bolsa más los cofres de la zona.
-- **Ajustes dentro del juego (opcional):** con [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) instalado, todos los ajustes están en el menú **Mods** del juego (ESC), junto con un botón para vaciar la cola.
+- **Opciones:** ocultar el panel mientras la cola está vacía; los botones por el costado o por encima del panel; cualquier tamaño de letra (0 = la del juego; 8, 16, 24 y 32 se ven perfectos).
+- **Ajustes dentro del juego (opcional):** con [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) instalado, todos los ajustes están en el menú **Mods** del juego (ESC), junto con un botón para vaciar la cola. Los que son elegir entre varias opciones muestran la elegida con palabras («Por el costado», «Solo lo que llevas»…); un clic pasa a la siguiente.
 - **16 idiomas.** Todos los idiomas oficiales del juego; sigue el idioma del juego al momento.
 
 ### Qué cambia / compatibilidad
@@ -166,7 +173,7 @@ Mantén **Alt** sobre cualquier objeto, en tu inventario, un cofre o el mismo pa
 
 ### Limitaciones conocidas
 
-- "Tienes" cuenta lo que llevas encima más los cofres y almacenes de la zona donde estás, igual que el juego al craftear. Los cofres de otras zonas solo salen como aviso al pasar el mouse por un renglón.
+- "Tienes" cuenta lo que llevas encima más los cofres y almacenes de la zona donde estás, igual que el juego al craftear (o solo una de las dos cosas, con la bolsa y el cofre de la barra). Los cofres de otras zonas solo salen como aviso al pasar el mouse por un renglón.
 - Las burbujas solo marcan los cofres de la zona donde estás.
 - El soporte para control es experimental, y sigue siendo una beta: por favor [reporta los bugs](#reportar-bugs).
 
@@ -181,9 +188,11 @@ Mantén **Alt** sobre cualquier objeto, en tu inventario, un cofre o el mismo pa
 | Ver dónde están los materiales de una tarea | Pasar el mouse sobre la tarea | Seleccionarla en el panel |
 | Cambiar el orden (prioridad) | Pasar el mouse sobre la tarea → ▲ ▼ (**Shift**: hasta arriba o hasta abajo) | – |
 | Cambiar una cantidad | Pasar el mouse sobre la tarea → − + (**Shift**: de 10 en 10) | X / Y en el panel |
-| Vista Total | **Σ** en la barra del panel | **View** en el panel |
-| Vaciar la cola | Bote de la barra del panel (dos clics) | – |
-| Mover / cambiar el tamaño | Abrir el candado → arrastrar el título / el agarre de la esquina | – |
+| Sacar / guardar los botones | Clic en la esquina ⋮ del panel (clic derecho: por el costado o por encima) | – |
+| Qué cuenta como "tienes" | La bolsa y el cofre de la barra de botones | – |
+| Vista Total | La hoja de la barra de botones | **View** en el panel |
+| Vaciar la cola | El bote de la barra de botones (dos clics) | – |
+| Mover / cambiar el tamaño | Abrir el candado → arrastrar el título o la esquina ⋮ / el agarre de la esquina | – |
 | Usar el panel | Mouse | **R3** entrar · cruceta ↑↓ moverse · → abrir · ← cerrar · LB/RB cambiar receta · X/Y −/+ · A pin · View total · B salir |
 
 ## Reportar bugs
@@ -218,7 +227,7 @@ Tus colas se guardan en `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyar
   1. Revisa que exista `BepInEx\LogOutput.log` en la carpeta del juego. Si no existe, BepInEx no quedó instalado; usa el zip *with-BepInEx*.
   2. Si el log existe, busca `Crafting Queue` adentro.
 - **El panel está oculto:** presiona `F3`. También se oculta a propósito mientras preparas y peleas una batalla, y con la cola vacía si prendiste esa opción.
-- **No salen burbujas en los cofres:** prende el pin junto al candado (o el de una tarea), o pasa el mouse sobre una tarea del panel. Las burbujas solo muestran los cofres de la zona donde estás.
+- **No salen burbujas en los cofres:** prende el pin de la barra de botones (o el de una tarea), o pasa el mouse sobre una tarea del panel. Las burbujas solo muestran los cofres de la zona donde estás.
 - **Una receta no dice cómo se hace:** seguramente aún no la desbloqueas. Aparece sola en cuanto lo hagas.
 
 </details>

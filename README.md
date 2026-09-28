@@ -89,17 +89,24 @@ To add something, hold **Ctrl** and right-click any item.
 - **Shared materials are split in queue order.** If two tasks need logs, the one on top takes what you have first and the next one gets what's left. Reorder tasks with ▲ ▼.
 - **Tasks finish on their own** when you craft, pick up or buy what was missing. Buildings and town works go down when you build them.
 - **Stock in other zones.** If you're short here but have some elsewhere, hover the row and it tells you where: `Yard: 7`.
+- **Items fill their cells,** so they're easy to recognize at a glance.
 - **Hover a task** to show its ▲ ▼ − + 🗑 buttons and its pin. Hold **Shift** to change the amount by 10, or to send the task to the top or the bottom. Every button explains itself when you hover it.
-- **Move and resize it.** Open the lock, then drag the title to move the panel, or the grip in its lower corner to resize it. Names and icons rearrange as you drag, and icons shrink on their own when the panel is narrow.
+- **Move and resize it.** Open the lock in the button bar, then drag the title to move the panel, or the grip in its lower corner to resize it. Names and icons rearrange as you drag, and icons shrink on their own when the panel is narrow.
 
 ![Task buttons](docs/images/task-buttons.png)
 
-### Total view and clearing the queue
+### The button bar
 
-Hover the panel and two more buttons appear in its title bar:
+Seven buttons in the game's own item cells. They come out of the **⋮ corner**, just outside the panel's top corner: click it and the bar slides down the side of the panel (or across the top of the panel, if you prefer: *Buttons on top* in the Mods menu, `BotonesArriba` in the config); click it again and the bar slides back in. Right-click the corner to switch between down the side and across the top. The panel's title, "Queue", stays where it is. A gold frame means on; a shaded cell means off.
 
-- **Σ** switches to the **Total** view: everything the queue needs in one list, one row per material, added up across all your tasks. It's what you still have to gather, with what's missing first.
-- **The trash can** clears the whole queue. It turns red when you point at it, and after the first click it becomes a check mark: click the check to confirm.
+- **Bag and chest** choose what counts as "have". Both on (the default): what you carry plus the chests and storages of the zone you're in, like the game does when you craft. Only the bag: just what you carry. Only the chest: just the zone's storage. One of them always stays on.
+- **The list** switches to the **Total** view: everything the queue needs in one list, one row per material, added up across all your tasks. It's what you still have to gather, with what's missing first.
+- **The eye** keeps the panel always visible (open eye). Closed, the panel moves aside or folds for chests and stations.
+- **The pin** shows chest bubbles for the whole queue.
+- **The lock** lets you move the panel (drag the title) and resize it (the corner grip).
+- **The trash can** clears the whole queue. It turns red when you point at it, and after the first click it becomes a gold check mark: click the check to confirm.
+
+The buttons never stretch or shrink with the panel: they're always 26 game pixels, as crisp as the game's icons. The ⋮ corner sits on the side of the panel that faces the middle of the screen, and you can also drag the panel by it. If the panel is at the bottom of the screen, the bar slides up from the corner instead. Across the top, a group of buttons moves to a second row when the panel is narrower than 200, and the panel moves down with it.
 
 ### Add anything with Ctrl + right-click
 
@@ -128,7 +135,7 @@ Bubbles over the chests and storages in your current zone show which queued mate
 ![Chest bubbles](docs/images/chest-bubbles.png)
 
 - **Hover a task or an ingredient** in the panel to see where its materials are right away, even without a pin.
-- The **pin next to the lock** (gold when on) marks materials for the whole queue. A **task's pin** marks only that task. New tasks start with their pin on. Pins are saved with your save slot.
+- The **pin in the button bar** (gold frame when on) marks materials for the whole queue. A **task's pin** marks only that task. New tasks start with their pin on. Pins are saved with your save slot.
 - If you already have an item, only the item itself is marked, so you know where to pick it up. If you don't, its ingredients are marked instead.
 - Bubbles turn transparent when your mouse is over them or when they cover your character.
 
@@ -142,13 +149,13 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 
 ### And also
 
-- **Stays out of the way:** with a chest, station or the tech tree open, the panel moves aside on its own side, or folds into a small "Queue" tab that expands when you hover it. Prefer to always see it? Turn on the **eye** icon in the panel's title bar.
+- **Stays out of the way:** with a chest, station or the tech tree open, the panel moves aside on its own side, or folds into a small "Queue" tab that expands when you hover it. Prefer to always see it? Open the **eye** in the button bar.
 - **Out of the way in battles:** the panel hides while you prepare and fight a battle.
-- **Pixel-crisp** at 720p, 1080p, 1440p and 4K.
+- **The same size as the game's interface, at any resolution.** The panel uses the game's own UI scale (×2 at 720p, 1080p and 1440p, ×4 at 4K…), so its text matches the game's and every pixel stays crisp.
 - **Light on performance.** Amounts update in place instead of redrawing the panel, and nothing heavy runs while you play (about 0.1 ms per frame on average).
 - **One queue per save slot,** in its own file, saved so a crash can't wipe it. A new game never inherits the queue of a deleted save (old queues are kept in the `anteriores` folder, just in case).
-- **Options:** hide the panel while the queue is empty, or count only what you carry instead of your bag plus the zone's chests.
-- **Settings in the game (optional):** with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, every setting is in the game's **Mods** menu (ESC), plus a button to clear the queue.
+- **Options:** hide the panel while the queue is empty; the buttons down the side or across the top; any text size (0 = the game's; 8, 16, 24 and 32 are pixel-perfect).
+- **Settings in the game (optional):** with [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, every setting is in the game's **Mods** menu (ESC), plus a button to clear the queue. Settings that are a choice show the option you picked in words ("Down the side", "Only what you carry"…); click to switch to the next one.
 - **16 languages.** All of the game's official languages; it follows the game's language live.
 
 ### What it changes / compatibility
@@ -166,7 +173,7 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 
 ### Known limitations
 
-- "Have" counts what you carry plus the chests and storages of the zone you're in, the same way the game does when you craft. Chests in other zones only show up as a hint when you hover a row.
+- "Have" counts what you carry plus the chests and storages of the zone you're in, the same way the game does when you craft (or only one of the two, with the bag and chest buttons). Chests in other zones only show up as a hint when you hover a row.
 - Chest bubbles only cover the zone you're in.
 - Gamepad support is experimental, and it's still a beta: please [report bugs](#reporting-bugs).
 
@@ -181,9 +188,11 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 | See where a task's materials are | Hover the task in the panel | Select it in the panel |
 | Reorder tasks (priority) | Hover the task → ▲ ▼ (**Shift**: to the top or bottom) | – |
 | Change an amount | Hover the task → − + (**Shift**: by 10) | X / Y in the panel |
-| Total view | **Σ** in the panel's title bar | **View** in the panel |
-| Clear the queue | Trash can in the panel's title bar (click twice) | – |
-| Move / resize the panel | Open the lock → drag the title / the corner grip | – |
+| Show / hide the buttons | Click the ⋮ corner of the panel (right-click: down the side or across the top) | – |
+| What counts as "have" | Bag and chest in the button bar | – |
+| Total view | List in the button bar | **View** in the panel |
+| Clear the queue | Trash can in the button bar (click twice) | – |
+| Move / resize the panel | Open the lock → drag the title or the ⋮ corner / the corner grip | – |
 | Use the panel | Mouse | **R3** to enter · D-pad ↑↓ move · → open · ← close · LB/RB switch recipe · X/Y −/+ · A pin · View total · B exit |
 
 ## Reporting bugs
@@ -218,7 +227,7 @@ Your queues are saved in `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveya
   1. Check that `BepInEx\LogOutput.log` exists in the game folder. If it doesn't, BepInEx isn't installed; use the *with-BepInEx* zip.
   2. If the log exists, look inside it for `Crafting Queue`.
 - **The panel is hidden:** press `F3`. It also hides on purpose while you prepare and fight a battle, and while the queue is empty if you turned on that option.
-- **No chest bubbles:** turn on the pin next to the lock (or a task's pin), or hover a task in the panel. Bubbles only show chests in the zone you're in.
+- **No chest bubbles:** turn on the pin in the button bar (or a task's pin), or hover a task in the panel. Bubbles only show chests in the zone you're in.
 - **A recipe doesn't show how to make it:** you probably haven't unlocked it yet. It appears on its own as soon as you do.
 
 </details>

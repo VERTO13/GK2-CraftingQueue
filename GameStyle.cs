@@ -119,14 +119,20 @@ internal static class GameStyle
 
     private static bool AtlasIsSdf => AtlasPointSize >= 0f && atlasIsSdf;
 
-    // Escala de nuestros paneles: siempre un entero (pixeles exactos, nítido) y según el alto de
-    // la pantalla: 720p y 1080p → ×2, 1440p → ×3, 4K → ×4. Nunca más grande que la del juego
-    // (LazyUI.ScaleFactor: ×2 a 1080p y a 1440p "x2", ×4 en 4K). El "×3 a 1080p" que se veía antes
-    // era el lienzo de otro mod, no el del juego (ver QueueHud.Ensure).
+    // Escala de nuestros paneles: exactamente la de la interfaz del juego (LazyUI.ScaleFactor, el
+    // PixelSize de su resolución), siempre entera, así el panel se ve del tamaño de la interfaz del
+    // juego y nítido en cualquier resolución. Su lista (ResolutionConfig): ×2 en 720p, 1080p, 1200,
+    // 1440p "(x2)", ultrapanorámicas y 2560×1600; ×3 en 2880×1800; ×4 en 4K. En los modos "(x3)" de
+    // 1440p el juego dibuja en 1920×1080 o 1440×1080 (×2) y el monitor estira todo, el panel igual.
+    // Antes se tomaba el alto de la pantalla (÷480) con la del juego como tope: casi siempre daba lo
+    // mismo, pero con alturas de 1621 a 1679 (p. ej. 2496×1664) salía ×3 con el juego en ×4.
+    // Sin escala del juego todavía: la regla con la que el juego la calcula (GetPixelSize).
     public static float PanelScale(float gameScale)
     {
-        float s = Mathf.Max(1f, Mathf.Round(Screen.height / 480f));
-        return gameScale >= 1f ? Mathf.Min(s, Mathf.Round(gameScale)) : s;
+        if (gameScale >= 1f)
+            return Mathf.Round(gameScale);
+        int h = Screen.height;
+        return h < 720 ? 1f : h <= 1440 ? 2f : Mathf.Ceil(h / 540f);
     }
 
     // Tamaño (en unidades de la interfaz) de un ícono: el pixel entero más cercano al tamaño
@@ -145,6 +151,35 @@ internal static class GameStyle
             : new[] { 1f, 2f, 3f, 4f };
         float best = factors.OrderBy(f => Mathf.Abs(native * f - targetPx)).First();
         return Mathf.Round(native * best) / canvasScale;
+    }
+
+    // El dibujo de un objeto sin el margen transparente de su lienzo de 48 × 48 (el juego guarda el
+    // recorte en su atlas): así llena su celda del panel en vez de ocupar la mitad. Uno por sprite.
+    private static readonly System.Collections.Generic.Dictionary<Sprite, Sprite> trimmed =
+        new System.Collections.Generic.Dictionary<Sprite, Sprite>();
+
+    public static Sprite Trimmed(Sprite s)
+    {
+        if (s == null)
+            return null;
+        if (trimmed.TryGetValue(s, out Sprite t) && t != null)
+            return t;
+        t = s;
+        try
+        {
+            Rect r = s.textureRect; // falla si el atlas no lo guarda como rectángulo: queda el de siempre
+            if (s.texture != null && (r.width < s.rect.width - 0.5f || r.height < s.rect.height - 0.5f))
+            {
+                t = Sprite.Create(s.texture, r, new Vector2(0.5f, 0.5f), s.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+                t.name = s.name + " (recorte)";
+            }
+        }
+        catch
+        {
+            t = s;
+        }
+        trimmed[s] = t;
+        return t;
     }
 
     public static void Apply(TMP_Text t)

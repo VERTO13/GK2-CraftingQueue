@@ -83,28 +83,60 @@ public sealed class FrameworkBridgePlugin : BaseUnityPlugin
 
             s.AddToggle(P, "Visible", true, "Show panel",
                 "Shows the queue on screen.", order++);
-            s.AddToggle(P, "MarcarCofres", true, "Chest bubbles",
-                "Bubbles over the chests in your zone show which queued materials each one holds.", order++);
-            s.AddToggle(P, "PinAlAgregar", true, "Pin new tasks",
-                "New tasks start with their pin on, so their materials are marked on the chests right away.", order++);
-            s.AddToggle(P, "OcultarSiVacia", false, "Hide when empty",
-                "Hides the panel while the queue is empty; it comes back when you add something.", order++);
-            s.AddToggle(P, "SoloMochila", false, "Count only what you carry",
-                "Counts only your inventory. Otherwise it counts like the game does when crafting: what you carry plus " +
-                "the chests and storages of the zone you are in.", order++);
-            s.AddToggle(P, "SiempreVisible", false, "Always visible",
-                "With a chest, station or the tech tree open, keep the panel fully visible instead of moving it aside or folding it.", order++);
-            s.AddToggle(P, "OcultarConVentanas", true, "Hide with menus",
-                "Hides the panel with menus, settings, dialogs and the map.", order++);
-            s.AddToggle(P, "MostrarEnCofresYMesas", true, "Show in chests and stations",
-                "Keeps the panel visible with chests, crafting stations, shops and the character page.", order++);
-            s.AddToggle(P, "Movible", true, "Movable",
-                "Lets you drag the panel by its title. The lock in the panel does the same.", order++);
+
+            // Las opciones que no son "sí/no": un botón con la opción elegida, en el idioma del jugador (la
+            // lista desplegable del framework no traduce sus opciones); cada clic pasa a la siguiente. El texto
+            // y el cambio los pone el mod (Plugin.ChoiceLabel/ChoiceNext), por reflexión; guardan en las mismas
+            // claves del .cfg. Con un Crafting Queue más viejo, que no las tiene, no salen.
+            MethodInfo choiceLabel = main?.GetMethod("ChoiceLabel", BindingFlags.Public | BindingFlags.Static);
+            MethodInfo choiceNext = main?.GetMethod("ChoiceNext", BindingFlags.Public | BindingFlags.Static);
+            void Choice(string id, string name, string description)
+            {
+                if (choiceLabel == null || choiceNext == null)
+                    return;
+                var label = (Func<string, string>)Delegate.CreateDelegate(typeof(Func<string, string>), choiceLabel);
+                var next = (Action<string>)Delegate.CreateDelegate(typeof(Action<string>), choiceNext);
+                s.AddButton(P, id, name, description, () => label(id), () => next(id), order++);
+            }
+            Choice("Vista", "View",
+                "By task: each task with its recipe. Total: everything the queue needs in one list. The list in the " +
+                "panel's button bar does the same.");
+            Choice("Recetas", "Recipes",
+                "Detailed: one ingredient per row, with its name. Compact: one line with icons. F4 does the same while you play.");
+            Choice("Contar", "What counts as \"have\"",
+                "What you carry and the chests of the zone you're in (like the game when crafting), only what you carry, " +
+                "or only the chests. The bag and the chest in the panel do the same.");
+            Choice("Burbujas", "Chest bubbles",
+                "Bubbles over the chests of your zone: for the whole queue, or only for the tasks with their pin on. The " +
+                "pin in the panel's button bar does the same.");
+            Choice("PinNuevas", "New tasks",
+                "New tasks start with their pin on (their materials are marked on the chests right away) or off.");
+            Choice("ColaVacia", "When the queue is empty",
+                "The panel shows how to add things, or hides until you add something.");
+            Choice("ConVentanas", "Shown with windows open",
+                "With chests and stations: it stays with chests, crafting stations, shops and the character page, and " +
+                "hides with menus, dialogs and the map. With none: it hides with any window. With all: always shown.");
+            Choice("SiTapa", "If it covers the window",
+                "With a chest, station or the tech tree open: the panel moves aside or folds into a small tab, or stays " +
+                "on top. The eye in the panel's button bar does the same.");
+            Choice("Barra", "Button bar",
+                "The panel's buttons out, or tucked into their ⋮ corner. A click on the ⋮ corner does the same.");
+            Choice("BarraSale", "Buttons come out",
+                "Down the side of the panel, or across its top (in two or three rows on a narrow panel). A right-click " +
+                "on the ⋮ corner does the same.");
+            Choice("Mover", "Panel",
+                "Movable: drag it by its title or its ⋮ corner, and resize it by its corner grip. Fixed: it stays put. " +
+                "The lock in the panel's button bar does the same.");
+            Choice("Lado", "Screen side",
+                "Which side of the screen the panel sticks to. Dragging the panel also sets it.");
 
             s.AddFloatSlider(P, "Ancho", 170f, 100f, 800f, "Width",
                 "Panel width; long names wrap to a second line.", 10f, order++);
             s.AddFloatSlider(P, "AltoMaximo", 200f, 60f, 1000f, "Maximum height",
                 "A longer queue scrolls.", 10f, order++);
+            s.AddFloatSlider(P, "TamanoLetra", 0f, 0f, 40f, "Text size",
+                "0 = the game's own size (16). Any size works; 8, 16, 24 and 32 look perfectly crisp, sizes in between " +
+                "a little uneven.", 1f, order++);
             s.AddFloatSlider(P, "OpacidadFondo", 0.55f, 0f, 1f, "Background opacity",
                 "0 = invisible background, 1 = solid.", 0.05f, order++);
             s.AddFloatSlider(P, "TamanoIconos", 16f, 10f, 48f, "Maximum icon size",

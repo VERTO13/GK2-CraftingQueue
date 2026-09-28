@@ -54,7 +54,12 @@ Se está haciendo la **0.5.0**. En esta rama (sin publicar, **versión aún 0.4.
    Un valor guardado viejo como `LeftControl` se lee igual. El resto del mod usa `.Value.MainKey`.
 3. **Panel** (probado por el usuario en 1080p el 2026-09-27):
    - Escala de la interfaz desde `LazyUI.ScaleFactor` (el juego: ×2 a 1080p y 1440p "x2", ×4 en 4K). Antes se
-     buscaba "el lienzo del juego" y a veces tomaba el de otro mod: a 1440p el panel salía ×3.
+     buscaba "el lienzo del juego" y a veces tomaba el de otro mod: a 1440p el panel salía ×3 (queja en Nexus de
+     LibertyGTX y UltraJohn: "el texto es mucho más grande que el del juego"). Desde la barra de botones,
+     `GameStyle.PanelScale` usa **exactamente** la escala del juego (sin el alto de pantalla ÷ 480, que con alturas de
+     1621 a 1679 daba ×3 con el juego en ×4); sin escala del juego todavía, la regla del juego
+     (`ResolutionConfig.GetPixelSize`: <720 → 1, ≤1440 → 2, si no ceil(alto/540)). La tabla de las 24 resoluciones
+     del juego está en el tablero 10 del lienzo de mockups.
    - **Agarre** en la esquina de abajo del lado de adentro (con el candado abierto): cambia ancho y alto en vivo;
      el `.cfg` se escribe una vez al soltar (`Plugin.LiveHudWidth/LiveHudMaxHeight` mientras se arrastra).
    - "Otra zona: N" pasó del nombre al **globo** al pasar el mouse (antes hacía bajar dos o tres renglones).
@@ -79,15 +84,56 @@ Se está haciendo la **0.5.0**. En esta rama (sin publicar, **versión aún 0.4.
      ahí (en la preparación, R3 = "terminar preparación" en `UIBuildingWindow`; antes además agregaba el edificio
      enfocado a la cola).
    - **Encargos (1.006):** Ctrl + clic en un encargo pide solo lo que falta (`GameData.OrderMissing`).
-   - **Vista Total** (Σ en la barra, ajuste `Vista`): renglones "hoja" del plan sumados por material (`Plan.Totals`).
-   - **Vaciar la cola:** bote en la barra (dos clics, `ClearConfirm`) y botón en el menú Mods (`Plugin.ClearQueueLabel/
-     ClearQueueClick`, que el puente llama por reflexión). Íconos elegidos por el usuario (tablero 6 del lienzo de
-     mockups): bote gris con tapa separada, rojo con el mouse encima, palomita dorada tras el primer clic. El bote
-     rojo relleno de antes se leía como "!".
+   - **Vista Total** (la hoja de la barra de botones, ajuste `Vista`): renglones "hoja" del plan sumados por material
+     (`Plan.Totals`).
+   - **Vaciar la cola:** bote de la barra de botones (dos clics, `ClearConfirm`) y botón en el menú Mods
+     (`Plugin.ClearQueueLabel/ClearQueueClick`, que el puente llama por reflexión). Íconos elegidos por el usuario
+     (tablero 6 del lienzo de mockups): bote gris con tapa separada, rojo con el mouse encima, palomita dorada tras el
+     primer clic. El bote rojo relleno de antes se leía como "!".
    - **Shift** en − + (±10; − se detiene en 1) y en ▲ ▼ (hasta arriba/abajo). **Globos** en todos los botones.
-   - Ajustes nuevos: `OcultarSiVacia`, `SoloMochila` (cuenta solo el inventario; el globo de otras zonas incluye
-     entonces la zona actual), `Vista` (Tareas/Total). Los dos primeros también en el menú del framework.
+   - Ajustes nuevos: `OcultarSiVacia`, `Vista` (Tareas/Total). `OcultarSiVacia` también en el menú del framework.
    - 17 textos nuevos en los 16 idiomas (`Lang.MoreKeys`/`Lang.More`).
+5. **Barra de botones** (`ButtonBar.cs`, 2026-09-27; diseño en los tableros 8 a 13 del lienzo de mockups):
+   - Siete celdas en tres grupos: bolsa, cofre · hoja (vista Total), ojo (siempre visible), pin (marcar cofres) ·
+     candado, bote. Sustituyen a los íconos chiquitos de la barra de "Cola" (ojo, pin, candado, Σ y bote).
+   - Celda, marco dorado de selección, sombra de "inactivo", bolsa y cofre son **sprites del juego** buscados por
+     nombre (`comm-item_cell-dark`, `selection` de 42×42, `comm-item-inactive_shade`,
+     `comm-header_2-type_icon-main_inventory`, `comm-header_2-type_icon-simple_chest`) con
+     `Resources.FindObjectsOfTypeAll<Sprite>` **una vez, durante la carga de la partida** (`BarArt.Search`, desde
+     `Plugin.Update`); las piezas se rehacen con `Sprite.Create` en nueve partes (esquinas de 8) para llevarlas a
+     26 × 26. Si falta alguna, hay dibujo propio. El resto de los íconos son dibujos propios (hoja, ojo abierto y
+     cerrado, pin, candado, bote, palomita) con la paleta de los mockups. **No se incluye arte del juego en el repo.**
+   - Prendido = marco dorado; apagado = sombra (el ojo apagado además se cierra). Todo mide 26 pixeles del juego y
+     nunca se estira: solo la escala del juego cambia su tamaño.
+   - **La esquina ⋮** (dibujo del usuario, tablero 13): una celda afuera del panel, en su esquina de arriba del lado
+     de adentro (el que mira al centro). Un clic saca o guarda la barra (`MostrarBotones`), que se desliza desde la
+     esquina en pixeles enteros (`QueueHud.LateUpdate`: `barSlide` de 0 a 1 en 0.2 s; la bandeja con
+     `RectMask2D` recorta los botones mientras salen). Mantener y deslizar la esquina arrastra el panel. Clic derecho en la esquina: vertical ↔ horizontal (la barra
+     vuelve a salir hacia el lado nuevo). «Cola» sigue
+     siendo el título del panel.
+   - **Vertical** (de fábrica): 30 × 200, baja por el costado desde la esquina; si abajo no cabe (panel pegado abajo),
+     sube desde la esquina (`QueueHud.BarUp`). **Horizontal** (`BotonesArriba = true`): corre por encima del panel;
+     los grupos bajan de renglón completos (1 renglón desde 200 de ancho, 2 de 142 a 199, 3 por debajo) y el panel
+     baja con ellos: al sacarla, primero baja el panel y después corren los botones (`QueueHud.BarHead`).
+   - **Posición:** `DistanciaArriba` es ahora la de lo más alto (la esquina o los renglones de arriba); el panel va
+     debajo. La esquina y la barra cuentan como parte del panel en `Fit` (recorrerse junto a una ventana, no salirse
+     de la pantalla), en los globos y en la vista con Alt (`QueueHud.OuterEdges`); se esconden con el panel plegado.
+   - **Íconos de objeto** en las celdas del panel: el recorte del atlas (`GameStyle.Trimmed`, sin el margen
+     transparente del lienzo de 48 × 48), así llenan su celda.
+   - **Letra:** `TamanoLetra` (0 = la del juego) también en el menú del framework, libre de 1 en 1 (8, 16, 24 y 32 se
+     ven perfectos; los de en medio, un poco disparejos).
+   - **Qué se cuenta** (`ContarLoQueLlevas`, `ContarCofres`, reemplazan a `SoloMochila`, que nunca se publicó):
+     bolsa = inventario, cofre = almacenes de la zona (todo menos lo que llevas), las dos = como el juego al craftear.
+     Nunca las dos apagadas (`Plugin.ToggleCount` y `SettingChanged`). Cambiar qué se cuenta no completa tareas
+     (`Plan.Tick` lo toma como contexto nuevo). Los tres ajustes también en el menú del framework.
+   - **Menú Mods con opciones en palabras** (idea del usuario: no todo es On/Off): 12 renglones del puente son botones
+     (`AddButton`) cuyo texto es la opción elegida en el idioma del jugador y que con cada clic pasan a la siguiente
+     (`Plugin.ChoiceLabel/ChoiceNext` por reflexión; las opciones, en `Plugin.BindChoices`). Guardan en las mismas
+     claves del .cfg; "Contar" junta `ContarLoQueLlevas`+`ContarCofres` y "ConVentanas" junta `OcultarConVentanas`+
+     `MostrarEnCofresYMesas`. Se hizo así porque la lista desplegable del framework muestra el valor crudo (no traduce
+     sus opciones). Estos renglones no tienen el botón «Restablecer» del framework (son de solo lectura para él).
+   - 30 textos nuevos (`count_bag_tip`, `count_chests_tip`, `bar_show`, `bar_hide`, `bar_turn` y 25 `opt_*` de las
+     opciones del menú) en los 16 idiomas.
    - README (en/es) y `docs/nexus/description.bbcode` ya describen todo esto: subir la descripción a Nexus al publicar.
 
 ### Lo que falta probar (hazlo con el usuario, en su juego)
@@ -108,7 +154,21 @@ Se está haciendo la **0.5.0**. En esta rama (sin publicar, **versión aún 0.4.
 - [ ] El juego arranca normal y el log de BepInEx no muestra `IL Compile Error` (ver la lección de arriba).
 - [ ] Pelea: el panel se oculta en la preparación y vuelve al terminar; R3 termina la preparación sin agregar nada.
 - [ ] Encargo con parte entregada: Ctrl + clic pide solo lo que falta.
-- [ ] `OcultarSiVacia` y `SoloMochila` desde el menú Mods.
+- [ ] `OcultarSiVacia`, `ContarLoQueLlevas`, `ContarCofres`, `BotonesArriba`, `MostrarBotones` y `TamanoLetra`
+      desde el menú Mods.
+- [ ] Esquina ⋮: clic saca y guarda la barra deslizándose (vertical y horizontal); mantener y deslizar mueve el panel;
+      marco dorado con la barra afuera; se acuerda al reiniciar.
+- [ ] Vertical: celdas del juego (el log dice "Barra de botones: arte del juego …" con los tamaños), marco dorado /
+      sombra, ojo cerrado, globos por fuera de la barra; panel a la izquierda → esquina y barra a su derecha; panel
+      pegado abajo → la barra sube desde la esquina; con un cofre abierto se recorre sin taparlo o se pliega (y la
+      esquina y la barra se esconden).
+- [ ] Horizontal: un renglón con 300 de ancho, dos con 170 (el panel baja con el segundo), tres con menos de 142;
+      cambiar el ancho con el agarre; «Cola» debajo de los botones.
+- [ ] Íconos de objeto llenando su celda en tareas, ingredientes y el estilo compacto.
+- [ ] Tamaño de letra desde el menú Mods (el panel se rehace con la letra nueva).
+- [ ] Bolsa y cofre: solo la bolsa cuenta lo que llevas; solo el cofre, lo guardado; apagar el único prendido prende el
+      otro; ninguna tarea se completa sola al cambiarlo.
+- [ ] 1440p (x2): la letra del panel del mismo tamaño que la del juego.
 
 ### Decisiones pendientes para empaquetar la 0.5.0
 - El zip debe incluir `BepInEx/plugins/CraftingQueue/CraftingQueue.GK2Framework.dll` y las traducciones en
@@ -169,7 +229,8 @@ dotnet build FrameworkBridge -c Release
 | `Queue.cs` | Tareas por partida, persistencia en texto (`task`/`pin`, guardado seguro con `.tmp`/`.bak`), pines, agregar (`oneMore`), reordenar, apartar/renombrar colas de ranuras, vaciar (`ClearConfirm`). |
 | `Plan.cs` | Reparto de lo que tienes en orden de la cola; renglones por ruta; completado automático (`Tick`); vista Total (`Totals`). |
 | `QueueView.cs` | Convierte tareas en entradas para el panel. |
-| `QueueHud.cs` | El panel (UGUI en tiempo real): bloques, árbol de recetas, botones ▲ ▼ − + 🗑, pines, ojo, plegado, navegación con control, actualización de números en su lugar. |
+| `QueueHud.cs` | El panel (UGUI en tiempo real): bloques, árbol de recetas, botones ▲ ▼ − + 🗑, pines, plegado, navegación con control, actualización de números en su lugar. |
+| `ButtonBar.cs` | La barra de botones del panel (bolsa, cofre · Total, ojo, pin · candado, bote), al lado o arriba; `BarArt`: sprites del juego y dibujos propios. |
 | `GameData.cs` | Todo lo que se lee del juego: recetas (`OptionsFor`), rendimientos con talentos, estaciones disponibles, conteos (`Owned`), otras zonas (`Elsewhere`). |
 | `ChestMarks.cs` | Burbujas sobre los cofres. |
 | `QuickAdd.cs` | Ctrl + clic derecho en todos lados (parches Harmony, diálogos de NPC, encargos). |
@@ -267,8 +328,10 @@ Misma versión en GitHub y Nexus. Siguiente: **0.5.0**; arreglos 0.5.1, 0.5.2…
 - Posible: más traducciones del menú del framework (hoy solo en/es).
 - Posible optimización: la vista Total se rearma entera cuando cambia lo que tienes (una vez por segundo como mucho,
   solo con esa vista abierta); podría actualizar los números en su lugar como la vista de tareas.
-- Capturas/GIF nuevos para el README y Nexus: vista Total, bote, agarre (las de ahora muestran el aviso de zona
-  en gris, que ya no existe).
+- Capturas/GIF nuevos para el README y Nexus: barra de botones, vista Total, bote, agarre (las de ahora muestran la
+  barra de título vieja y el aviso de zona en gris, que ya no existe).
+- Responder en Nexus a LibertyGTX y UltraJohn (letra más grande que la del juego en 1440p, ocultar el panel vacío,
+  achicarlo) cuando salga la 0.5.0: todo queda resuelto en esa versión.
 - Competencia (revisada el 2026-09-27): **Shopping List** de Saint ArchI (Nexus 45, el más parecido; cuenta solo la
   mochila, vista por tarea o sumada, pedidos del pueblo), su **Codex** y **Thoughtful Week**; Pin My Recipe, Queue
   Count, Kebo, Keeper's Little Helpers. Saint ArchI mantiene la guía de Steam de mods de calidad de vida

@@ -46,9 +46,12 @@ internal class QueueHud : MonoBehaviour
     private Canvas canvas;
     private RectTransform box;     // todo el panel (se posiciona y se arrastra)
     private RectTransform strip;   // barrita de arriba
-    private Image lockIcon, marksIcon, eyeIcon;
-    private Image totalIcon, trashIcon;      // Σ (vista Total) y bote (vaciar la cola), a la izquierda del ojo
-    private RectTransform titleRect;
+    private static readonly Color StripColor = new Color(0.1f, 0.08f, 0.07f, 0.75f);
+    // Bolsa, cofre · vista Total, ojo, pin · candado, bote (ver ButtonBar): al lado del panel o arriba.
+    private ButtonBar bar;
+    private float barSlide;                  // 0 = barra guardada en su esquina, 1 = afuera (se anima)
+    private bool barOnTopSeen;               // vertical u horizontal, la última vez (para volver a sacarla)
+    private const float SlideSeconds = 0.2f;
     private Image gripIcon;                  // agarre para cambiar el tamaño (con el candado abierto)
     private RectTransform sizeBox;           // "240 × 300" junto al cursor mientras se arrastra
     private TMP_Text sizeText;
@@ -93,15 +96,14 @@ internal class QueueHud : MonoBehaviour
         HoverMaterials.RemoveWhere(GameData.IsFuel);
         ChestMarks.Dirty = true; // mostrarlo ya, sin esperar la siguiente revisión
     }
-    internal static float GameScale = 1f;
+    internal static float GameScale; // la del juego (0 = todavía no se sabe: GameStyle.PanelScale usa su regla)
     internal static bool NoWindows; // jugando, sin cofres/mesas/menús abiertos
     private RectTransform frame;   // ventana visible (recorta el contenido)
     private RectTransform panel;   // contenido completo
     private RectTransform barTrack, barHandle;
     private string signature;
-    private float nextCheck, nextScale;
-    private Canvas gameCanvas; // el lienzo principal del juego (para copiar su escala)
-    private float gameScale = 1f;
+    private float nextCheck;
+    private float gameScale;
     private int rows;
     private int hiddenRows;
     private float fontSize, rowHeight, iconSize;
@@ -277,7 +279,8 @@ internal class QueueHud : MonoBehaviour
             sb.Append(c.Key).Append('=').Append(c.Value).Append(','); // receta elegida con ◂ ▸
         sb.Append(Plugin.HudTextSize).Append(Plugin.HudIconSize).Append(Plugin.HudOpacity).Append(Plugin.HudWidth);
         sb.Append(Plugin.HudMaxRows).Append(Plugin.HudScale).Append(Plugin.HudMaxHeight).Append(Plugin.CompactRecipes);
-        sb.Append(Plugin.TotalView);
+        sb.Append(Plugin.TotalView).Append(Plugin.ButtonsOnTop);
+        sb.Append(Plugin.CountCarried).Append(Plugin.CountChests); // qué se cuenta: otros "tienes"
         sb.Append(LLBase.CurrentLang); // si cambias el idioma del juego, se redibuja traducido
         sb.Append('|').Append(GameData.KnowledgeStamp); // receta recién desbloqueada: aparece ya
         sb.Append('|').Append(GameData.PerksStamp);     // talento o tecnología nueva: el ×N al momento
@@ -290,49 +293,19 @@ internal class QueueHud : MonoBehaviour
     {
         if (canvas == null)
             Create();
-        // La escala de la interfaz del juego sale de LazyUI: el juego la pone con su PixelSize al
-        // aplicar la resolución (2 a 1080p y a 1440p "x2", 4 en 4K). Buscar "el lienzo del juego"
-        // entre todos podía dar con el de otro mod (uno con base de 640x360 va a ×3 en 1080p y a ×4
-        // en 1440p): a 1080p el tope de PanelScale lo tapaba, pero a 1440p el panel salía a ×3 con
-        // el juego en ×2. La búsqueda queda solo de respaldo, por si LazyUI aún no tiene escala.
-        if (LazyUI.ScaleFactor > 0.001f)
-            GameScale = gameScale = LazyUI.ScaleFactor;
-        else
-        {
-            if ((gameCanvas == null || !gameCanvas.isActiveAndEnabled) && Time.unscaledTime >= nextScale)
-            {
-                nextScale = Time.unscaledTime + 5f;
-                gameCanvas = FindObjectsByType<Canvas>(FindObjectsSortMode.None)
-                    .Where(c => c != canvas && c.isRootCanvas && c.renderMode == RenderMode.ScreenSpaceOverlay && c.scaleFactor > 0f)
-                    .OrderByDescending(c => c.GetComponent<CanvasScaler>() != null)
-                    .FirstOrDefault();
-            }
-            if (gameCanvas != null && gameCanvas.scaleFactor > 0f)
-                GameScale = gameScale = gameCanvas.scaleFactor;
-        }
+        // La escala es la de la interfaz del juego (LazyUI): el juego la pone con su PixelSize al
+        // aplicar la resolución (×2 a 1080p y a 1440p "x2", ×4 en 4K). Antes se buscaba "el lienzo del
+        // juego" entre todos y a veces se tomaba el de otro mod (uno con base de 640x360 va a ×4 en
+        // 1440p): en 1440p el panel salía ×3 con el juego en ×2, y la letra se veía más grande que la
+        // del juego. Mientras LazyUI no tenga escala, PanelScale usa la misma regla que el juego.
+        GameScale = gameScale = LazyUI.ScaleFactor > 0.001f ? LazyUI.ScaleFactor : 0f;
         // Escala entera (pixeles exactos): la fuente y los íconos pixelados solo se ven nítidos así.
-        float panelScale = GameStyle.PanelScale(gameScale);
-        canvas.scaleFactor = panelScale;
+        canvas.scaleFactor = GameStyle.PanelScale(gameScale);
         // Jugando: por encima de toda la interfaz. Con un cofre/mesa abierta: justo encima de
         // esa ventana, pero debajo de los menús que se abran sobre ella (clic derecho, cantidad…).
         canvas.sortingOrder = workWindow != null ? GameWindows.SortingAbove(workWindow, 30000) : 30000;
         // La posición la pone Fit() cada cuadro (su lugar, o junto a la ventana abierta).
-        lockIcon.sprite = Plugin.HudMovable ? LockOpen() : LockClosed();
-        ((RectTransform)lockIcon.transform).sizeDelta = lockIcon.sprite.rect.size;
-        RefreshMarksIcon();
-    }
-
-    private void RefreshEyeIcon()
-    {
-        eyeIcon.sprite = Plugin.HudAlwaysOpen ? EyeOn() : EyeOff();
-        ((RectTransform)eyeIcon.transform).sizeDelta = eyeIcon.sprite.rect.size;
-    }
-
-    private void RefreshMarksIcon()
-    {
-        RefreshEyeIcon();
-        marksIcon.sprite = Plugin.ChestMarks ? PinOn() : PinOff();
-        ((RectTransform)marksIcon.transform).sizeDelta = marksIcon.sprite.rect.size;
+        bar.Refresh();
     }
 
     private void Create()
@@ -354,7 +327,7 @@ internal class QueueHud : MonoBehaviour
         Image blocker = b.GetComponent<Image>();
         blocker.color = Color.clear; // invisible; tapa el clic para que no llegue al mundo
 
-        // Título del panel: de aquí se agarra para moverlo; el candado a la derecha lo deja fijo.
+        // Título del panel: de aquí se agarra para moverlo (con el candado de la barra abierto).
         GameObject s = new GameObject("Titulo del panel", typeof(RectTransform), typeof(Image));
         s.transform.SetParent(box, false);
         strip = (RectTransform)s.transform;
@@ -362,46 +335,19 @@ internal class QueueHud : MonoBehaviour
         strip.anchorMax = new Vector2(1f, 1f);
         strip.pivot = new Vector2(0.5f, 1f);
         strip.sizeDelta = new Vector2(0f, stripHeight);
-        s.GetComponent<Image>().color = new Color(0.1f, 0.08f, 0.07f, 0.75f);
+        s.GetComponent<Image>().color = StripColor;
         GameObject tt = new GameObject("Texto", typeof(RectTransform), typeof(TextMeshProUGUI));
         tt.transform.SetParent(strip, false);
         RectTransform trt = (RectTransform)tt.transform;
         trt.anchorMin = Vector2.zero;
         trt.anchorMax = Vector2.one;
-        trt.offsetMin = new Vector2(5f, 0f);
-        trt.offsetMax = new Vector2(-42f, 0f); // lugar para el ojo, el pin y el candado
+        trt.offsetMin = new Vector2(TitleMargin, 0f);
+        trt.offsetMax = new Vector2(-TitleMargin, 0f);
         titleText = tt.GetComponent<TextMeshProUGUI>();
-        titleRect = trt;
         titleText.alignment = TextAlignmentOptions.MidlineLeft;
         titleText.textWrappingMode = TextWrappingModes.NoWrap;
         titleText.overflowMode = TextOverflowModes.Ellipsis;
         titleText.color = new Color(0.64f, 0.59f, 0.51f);
-        GameObject l = new GameObject("Candado", typeof(RectTransform), typeof(Image));
-        l.transform.SetParent(strip, false);
-        RectTransform lrt = (RectTransform)l.transform;
-        lrt.anchorMin = lrt.anchorMax = lrt.pivot = new Vector2(1f, 0.5f);
-        lrt.anchoredPosition = new Vector2(-3f, 0f);
-        lockIcon = l.GetComponent<Image>();
-        // A su izquierda: marcar en los cofres dónde están los materiales (prender/apagar).
-        GameObject mk = new GameObject("Marcar cofres", typeof(RectTransform), typeof(Image));
-        mk.transform.SetParent(strip, false);
-        RectTransform mrt = (RectTransform)mk.transform;
-        mrt.anchorMin = mrt.anchorMax = mrt.pivot = new Vector2(1f, 0.5f);
-        mrt.anchoredPosition = new Vector2(-3f - 7f - 5f, 0f); // candado (7 px) + separación
-        marksIcon = mk.GetComponent<Image>();
-        marksIcon.raycastTarget = false;
-        // Y a su izquierda: "siempre visible" aunque haya un cofre, mesa o el árbol abierto.
-        GameObject ey = new GameObject("Siempre visible", typeof(RectTransform), typeof(Image));
-        ey.transform.SetParent(strip, false);
-        RectTransform ert = (RectTransform)ey.transform;
-        ert.anchorMin = ert.anchorMax = ert.pivot = new Vector2(1f, 0.5f);
-        ert.anchoredPosition = new Vector2(-3f - 7f - 5f - 7f - 5f, 0f); // candado + pin + separaciones
-        eyeIcon = ey.GetComponent<Image>();
-        eyeIcon.raycastTarget = false;
-        // Más a la izquierda, con el mouse encima: la Σ (vista Total) y el bote (vaciar la cola).
-        // Su lugar lo pone UpdateStripIcons según cuáles se vean.
-        totalIcon = StripIcon("Vista total");
-        trashIcon = StripIcon("Vaciar cola");
 
         // Ventana que recorta el contenido (debajo de la barrita).
         GameObject f = new GameObject("Ventana", typeof(RectTransform), typeof(RectMask2D));
@@ -448,63 +394,56 @@ internal class QueueHud : MonoBehaviour
 
         foreach (Graphic g in root.GetComponentsInChildren<Graphic>(true))
             g.raycastTarget = g == blocker;
+
+        // La barra de botones y su esquina ⋮, por fuera del panel (sus fondos también tapan el clic). Las
+        // acomoda Fit; el agarre sigue siendo el último hijo, encima de todo.
+        BarArt.Search(); // normalmente ya se hizo al cargar la partida
+        bar = new ButtonBar(box, StripColor);
+        barSlide = Plugin.ButtonsShown ? 1f : 0f; // como se dejó, sin animar al cargar
+        barOnTopSeen = Plugin.ButtonsOnTop;
+        gr.transform.SetAsLastSibling();
     }
 
-    private Image StripIcon(string name)
+    private const float TitleMargin = 5f;
+
+    // El panel con su esquina ⋮ y su barra de botones (quedan fuera del recuadro del panel).
+    private bool OverPanel(Vector2 m) => Inside(box, m) || (bar != null && bar.Contains(m));
+
+    internal bool Owns(RectTransform rt) => box != null && rt != null && rt.IsChildOf(box);
+
+    // Bordes izquierdo y derecho, en pixeles de pantalla, del panel con su esquina y su barra: los globos
+    // y la vista rápida (Alt) van por fuera.
+    internal void OuterEdges(out float left, out float right)
     {
-        GameObject g = new GameObject(name, typeof(RectTransform), typeof(Image));
-        g.transform.SetParent(strip, false);
-        RectTransform rt = (RectTransform)g.transform;
-        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 0.5f);
-        Image img = g.GetComponent<Image>();
-        img.raycastTarget = false;
-        g.SetActive(false);
-        return img;
+        Vector3[] c = new Vector3[4];
+        box.GetWorldCorners(c); // en un lienzo overlay, "mundo" = pixeles de pantalla
+        left = c[0].x;
+        right = c[2].x;
+        bar?.Extend(ref left, ref right);
     }
 
-    // Σ y bote: aparecen con el mouse sobre el panel. La Σ se queda a la vista (dorada) mientras la
-    // vista Total está puesta, y el bote mientras espera la confirmación (ya como palomita). El
-    // título deja lugar solo para los que se ven.
-    private void UpdateStripIcons(bool over)
+    // Lo que ocupa la barra encima del panel: la esquina ⋮, o los renglones de la barra horizontal. Al
+    // sacarla en horizontal con más de un renglón, primero baja el panel lo necesario y después corren los
+    // botones (al guardarla, al revés); "slide" es cuánto han salido los botones (0 a 1).
+    private float BarHead(out float slide)
     {
-        if (totalIcon == null)
-            return;
-        bool folded = fit == FitMode.Folded && !peeking;
-        bool armed = ClearConfirm.Armed;
-        bool showTotal = !folded && (over || Plugin.TotalView);
-        bool showTrash = !folded && (over || armed) && Queue.HasSlot && Queue.Tasks.Count > 0;
-        float right = -41f, left = -36f; // el ojo (9 px) termina en -36
-        if (SetStripIcon(totalIcon, showTotal, Plugin.TotalView ? TotalOn() : TotalOff(), right))
-        {
-            left = right - totalIcon.sprite.rect.width;
-            right = left - 5f;
-        }
-        Sprite trash = armed ? CheckGold() : hovered == trashIcon ? TrashRed() : TrashGrey();
-        if (SetStripIcon(trashIcon, showTrash, trash, right))
-            left = right - trashIcon.sprite.rect.width;
-        float reserve = -left + 6f;
-        if (titleRect != null && !Mathf.Approximately(titleRect.offsetMax.x, -reserve))
-            titleRect.offsetMax = new Vector2(-reserve, 0f);
+        slide = barSlide;
+        if (!bar.OnTop || bar.Block <= ButtonBar.Slot)
+            return ButtonBar.Slot;
+        const float drop = 0.35f;
+        slide = Mathf.Clamp01((barSlide - drop) / (1f - drop));
+        return Mathf.Round(Mathf.Lerp(ButtonBar.Slot, bar.Block, Mathf.Clamp01(barSlide / drop)));
     }
 
-    private static bool SetStripIcon(Image icon, bool show, Sprite sprite, float right)
-    {
-        if (icon.gameObject.activeSelf != show)
-            icon.gameObject.SetActive(show);
-        if (!show)
-            return false;
-        if (icon.sprite != sprite)
-        {
-            icon.sprite = sprite;
-            ((RectTransform)icon.transform).sizeDelta = sprite.rect.size;
-        }
-        RectTransform rt = (RectTransform)icon.transform;
-        if (rt.anchoredPosition.x != right)
-            rt.anchoredPosition = new Vector2(right, 0f);
-        return true;
-    }
+    // Lo más que ocupa encima del panel, con la barra afuera (para medir cuánto cabe del panel).
+    private float BarHeadFull => bar.OnTop ? Mathf.Max(ButtonBar.Slot, bar.Block) : ButtonBar.Slot;
 
-    // --- Mouse: arrastrar, rueda, clic en flechas y candado ---
+    // La barra vertical baja por el costado desde la esquina; si abajo no cabe (panel pegado abajo),
+    // sube desde la esquina, si arriba sí cabe.
+    private bool BarUp(float panelFromTop, float head, float screenH) =>
+        !bar.OnTop && panelFromTop + ButtonBar.SideHeight > screenH && panelFromTop - head - ButtonBar.SideHeight >= 0f;
+
+    // --- Mouse: arrastrar, rueda, clic en flechas y en la barra de botones ---
 
     private void HandleMouse()
     {
@@ -516,6 +455,7 @@ internal class QueueHud : MonoBehaviour
             UpdateTooltip(Vector2.zero, false);
             return;
         }
+        bar.Refresh(); // prendidos, apagados, el bote: también si cambian desde el menú Mods o el .cfg
         if (GamepadInput.InPanel)
         {
             // Con el control manda la selección (UpdateNavMark), no el mouse.
@@ -523,14 +463,12 @@ internal class QueueHud : MonoBehaviour
             EndResize(save: false);
             if (gripIcon != null)
                 gripIcon.gameObject.SetActive(false);
-            UpdateStripIcons(false);
             SetHover(null);
             UpdateTooltip(Vector2.zero, false);
             return;
         }
         Vector2 m = Input.mousePosition;
-        bool over = Inside(box, m);
-        UpdateStripIcons(over && !dragging && !resizing);
+        bool over = OverPanel(m);
         UpdateGrip(m, over);
         UpdateHoverMarks(m, over && fit != FitMode.Folded && !resizing);
         UpdateTooltip(m, over && !dragging && !scrolling && !resizing);
@@ -546,12 +484,23 @@ internal class QueueHud : MonoBehaviour
         ShowActionsFor(dragging || scrolling || resizing || !over || !Inside(frame, m) ? null : HeaderAt(m));
         SetHover(dragging || scrolling || resizing || !over ? null : ClickableAt(m));
 
+        // Clic derecho en la esquina ⋮: la barra cambia entre vertical (por el costado) y horizontal (por
+        // encima del panel), y vuelve a salir deslizándose hacia el lado nuevo.
+        if (Input.GetMouseButtonDown(1) && !pressing && bar.OnCorner(m))
+        {
+            Plugin.ButtonsOnTop = !Plugin.ButtonsOnTop; // LateUpdate la vuelve a sacar hacia el lado nuevo
+            Dirty = true;
+            try { LazyAudio.PlayAndForget("gui_click"); } catch { }
+        }
+
         if (Input.GetMouseButtonDown(0) && over)
         {
             pressing = true;
             pressPos = lastMouse = m;
             pressOnBar = barTrack.gameObject.activeSelf && Inside(barTrack, m);
-            pressOnTitle = Inside(strip, m);
+            // La esquina ⋮ (mantener y deslizar; un clic saca o guarda la barra) y el fondo de la barra
+            // también sirven para moverlo.
+            pressOnTitle = Inside(strip, m) || bar.DragArea(m);
             pressOnGrip = GripAt(m);
         }
         if (!pressing)
@@ -583,6 +532,7 @@ internal class QueueHud : MonoBehaviour
             if (dragging)
             {
                 box.anchoredPosition += delta;
+                BarWhileDragging(s); // primero el lado de la esquina y la barra: KeepOnScreen los mide
                 KeepOnScreen(s);
             }
             else if (scrolling)
@@ -608,20 +558,13 @@ internal class QueueHud : MonoBehaviour
     private static bool Inside(RectTransform rt, Vector2 screen) =>
         rt != null && RectTransformUtility.RectangleContainsScreenPoint(rt, screen, null);
 
-    // La flecha (o el candado) bajo el mouse, si hay.
+    // El botón (o la flecha) bajo el mouse, si hay.
     private Image ClickableAt(Vector2 m)
     {
-        // El candado y el botón de marcas: su lado de la barrita, con margen para atinarles fácil.
-        if (Inside(strip, m) && m.x >= LeftEdge(lockIcon) - 2f * canvas.scaleFactor)
-            return lockIcon;
-        if (Inside(strip, m) && m.x >= LeftEdge(marksIcon) - 2f * canvas.scaleFactor)
-            return marksIcon;
-        if (Inside(strip, m) && m.x >= LeftEdge(eyeIcon) - 3f * canvas.scaleFactor)
-            return eyeIcon;
-        if (Inside(strip, m) && totalIcon.gameObject.activeSelf && m.x >= LeftEdge(totalIcon) - 3f * canvas.scaleFactor)
-            return totalIcon;
-        if (Inside(strip, m) && trashIcon.gameObject.activeSelf && m.x >= LeftEdge(trashIcon) - 3f * canvas.scaleFactor)
-            return trashIcon;
+        // Los de la barra: la celda completa.
+        Image barButton = bar?.IconAt(m);
+        if (barButton != null)
+            return barButton;
         if (!Inside(frame, m))
             return null;
         foreach (KeyValuePair<Image, (object entry, int action)> b in actionButtons)
@@ -901,13 +844,6 @@ internal class QueueHud : MonoBehaviour
         Queue.SetOrder(groups.SelectMany(t => t));
     }
 
-    private static float LeftEdge(Image i)
-    {
-        Vector3[] c = new Vector3[4];
-        ((RectTransform)i.transform).GetWorldCorners(c);
-        return c[0].x;
-    }
-
     private void SetHover(Image i)
     {
         if (hovered == i)
@@ -915,9 +851,11 @@ internal class QueueHud : MonoBehaviour
         if (hovered != null)
             hovered.color = Color.white;
         hovered = i;
-        // El bote no se tiñe: cambia de dibujo (rojo, o la palomita dorada; ver UpdateStripIcons).
-        if (hovered != null && hovered != trashIcon)
+        // Los de la barra los resalta la barra misma (sombra más clara, el bote en rojo).
+        bar?.SetHovered(i);
+        if (hovered != null && bar?.KindOf(hovered) == null)
             hovered.color = Hover;
+        bar?.Refresh();
     }
 
     private void Click(Vector2 m)
@@ -925,37 +863,9 @@ internal class QueueHud : MonoBehaviour
         Image target = ClickableAt(m);
         if (target == null)
             return;
-        if (target == lockIcon)
+        if (bar.KindOf(target) is ButtonBar.Kind kind)
         {
-            Plugin.HudMovable = !Plugin.HudMovable;
-            lockIcon.sprite = Plugin.HudMovable ? LockOpen() : LockClosed();
-            ((RectTransform)lockIcon.transform).sizeDelta = lockIcon.sprite.rect.size;
-        }
-        else if (target == eyeIcon)
-        {
-            Plugin.HudAlwaysOpen = !Plugin.HudAlwaysOpen;
-            RefreshEyeIcon();
-            lastFit = null; // acomodar ya con el modo nuevo
-        }
-        else if (target == marksIcon)
-        {
-            // Pin general = toda la cola: al prenderlo se quitan los pines de recetas en específico.
-            Plugin.ChestMarks = !Plugin.ChestMarks;
-            if (Plugin.ChestMarks)
-                Queue.ClearPins();
-            RefreshMarksIcon();
-            Dirty = true; // recalcular qué se marca en los cofres
-        }
-        else if (target == totalIcon)
-        {
-            Plugin.TotalView = !Plugin.TotalView;
-            Dirty = true;
-        }
-        else if (target == trashIcon)
-        {
-            // Primer clic: se pone rojo y el globo pide otro; el segundo (antes de 4 s) vacía.
-            if (ClearConfirm.Press() > 0)
-                Dirty = true;
+            BarClick(kind);
         }
         else if (actionButtons.TryGetValue(target, out var act))
         {
@@ -965,11 +875,7 @@ internal class QueueHud : MonoBehaviour
         {
             // Una receta en específico: el pin general (toda la cola) se apaga solo.
             if (Queue.TogglePin(pin.id) && Plugin.ChestMarks)
-            {
                 Plugin.ChestMarks = false;
-                RefreshMarksIcon();
-            }
-
         }
         else if (cycleButtons.TryGetValue(target, out var cyc))
         {
@@ -983,14 +889,72 @@ internal class QueueHud : MonoBehaviour
         try { LazyAudio.PlayAndForget("gui_click"); } catch { }
     }
 
+    // Los siete botones de la barra.
+    private void BarClick(ButtonBar.Kind kind)
+    {
+        switch (kind)
+        {
+            case ButtonBar.Kind.Bag:
+            case ButtonBar.Kind.Chest:
+                // Qué se cuenta como "tienes": nunca las dos apagadas (apagar la única prendida cambia a la otra).
+                Plugin.ToggleCount(carried: kind == ButtonBar.Kind.Bag);
+                Dirty = true;
+                break;
+            case ButtonBar.Kind.Total:
+                Plugin.TotalView = !Plugin.TotalView;
+                Dirty = true;
+                break;
+            case ButtonBar.Kind.Eye:
+                Plugin.HudAlwaysOpen = !Plugin.HudAlwaysOpen;
+                lastFit = null; // acomodar ya con el modo nuevo
+                break;
+            case ButtonBar.Kind.Pin:
+                // Pin general = toda la cola: al prenderlo se quitan los pines de recetas en específico.
+                Plugin.ChestMarks = !Plugin.ChestMarks;
+                if (Plugin.ChestMarks)
+                    Queue.ClearPins();
+                Dirty = true; // recalcular qué se marca en los cofres
+                break;
+            case ButtonBar.Kind.Lock:
+                Plugin.HudMovable = !Plugin.HudMovable;
+                break;
+            case ButtonBar.Kind.Clear:
+                // Primer clic: la palomita dorada y el globo pide otro; el segundo (antes de 4 s) vacía.
+                if (ClearConfirm.Press() > 0)
+                    Dirty = true;
+                break;
+            case ButtonBar.Kind.Toggle:
+                // La esquina ⋮: saca o guarda la barra (se desliza; ver LateUpdate).
+                Plugin.ButtonsShown = !Plugin.ButtonsShown;
+                break;
+        }
+        bar.Refresh();
+    }
+
+    // Arrastrando el panel: la esquina y la barra van del lado que mira al centro (el que tendrá al
+    // soltarlo), y la barra vertical baja o sube según quepa.
+    private void BarWhileDragging(float s)
+    {
+        if (!bar.Visible)
+            return;
+        Vector3[] c = new Vector3[4];
+        box.GetWorldCorners(c);
+        bool panelLeft = (c[0].x + c[2].x) * 0.5f < Screen.width * 0.5f;
+        float screenH = Screen.height / s, panelFromTop = (Screen.height - c[1].y) / s;
+        float head = BarHead(out float slide);
+        bar.Apply(true, !panelLeft, head, BarUp(panelFromTop, head, screenH), slide, box.rect.width);
+    }
+
     private void KeepOnScreen(float s)
     {
         Vector3[] c = new Vector3[4];
         box.GetWorldCorners(c); // en un lienzo overlay, "mundo" = pixeles de pantalla
+        OuterEdges(out float left, out float right); // con la esquina y la barra, que tampoco se salgan
+        float head = BarHead(out _) * s;             // la esquina (o los renglones) encima del panel
         float dx = 0f, dy = 0f;
-        if (c[0].x < 0f) dx = -c[0].x;
-        else if (c[2].x > Screen.width) dx = Screen.width - c[2].x;
-        if (c[1].y > Screen.height) dy = Screen.height - c[1].y;
+        if (left < 0f) dx = -left;
+        else if (right > Screen.width) dx = Screen.width - right;
+        if (c[1].y + head > Screen.height) dy = Screen.height - head - c[1].y;
         else if (c[0].y < 0f) dy = -c[0].y;
         if (dx != 0f || dy != 0f)
             box.anchoredPosition += new Vector2(dx, dy) / s;
@@ -1122,10 +1086,7 @@ internal class QueueHud : MonoBehaviour
         if (id == null)
             return;
         if (Queue.TogglePin(id) && Plugin.ChestMarks)
-        {
-            Plugin.ChestMarks = false;
-            RefreshMarksIcon();
-        }
+            Plugin.ChestMarks = false; // (el pin de la barra se apaga solo: la barra lee el ajuste)
     }
 
     // Cada cuadro: resaltado sobre el renglón seleccionado y scroll para que se vea.
@@ -1189,13 +1150,29 @@ internal class QueueHud : MonoBehaviour
     private FitMode fit = FitMode.Normal;
     private Vector2 fullSize;
     private bool barShown, peeking;
-    private (FitMode, bool, float, Vector2, float, float)? lastFit; // último acomodo aplicado
+    private (FitMode, bool, float, Vector2, float, float, float, float, bool, bool, bool)? lastFit; // último acomodo aplicado
 
     private void LateUpdate()
     {
         long t = Perf.Start();
         try
         {
+            // La barra se desliza al sacarla o guardarla (con la esquina ⋮, o desde el menú Mods); si cambia
+            // entre vertical y horizontal estando afuera, vuelve a salir hacia el lado nuevo.
+            if (bar != null && Plugin.ButtonsOnTop != barOnTopSeen)
+            {
+                barOnTopSeen = Plugin.ButtonsOnTop;
+                if (Plugin.ButtonsShown)
+                    barSlide = 0f;
+            }
+            float target = Plugin.ButtonsShown ? 1f : 0f;
+            if (bar != null && barSlide != target)
+            {
+                barSlide = Mathf.MoveTowards(barSlide, target, Time.unscaledDeltaTime / SlideSeconds);
+                lastFit = null;
+                if (dragging)
+                    BarWhileDragging(canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f);
+            }
             Fit();
             UpdateNavMark();
             Perf.Stop("panel: acomodo", t);
@@ -1217,10 +1194,22 @@ internal class QueueHud : MonoBehaviour
         float s = canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f;
         float screenW = Screen.width / s, screenH = Screen.height / s;
         bool left = Plugin.HudLeft;
+        // La esquina ⋮ va afuera, arriba y del lado de adentro (el que mira al centro); la barra baja por
+        // ese costado o corre por encima del panel. Cuentan como parte del panel para no tapar la ventana
+        // abierta ni salirse de la pantalla. La posición guardada es la de lo más alto: la esquina (o los
+        // renglones de arriba); el panel va debajo.
+        float rail = ButtonBar.Slot;
+        float head = BarHead(out float slide);
+        bool vertical = !bar.OnTop;
         // Dónde iría normalmente (unidades del lienzo, origen abajo a la izquierda).
         float xMin = left ? Plugin.HudSideOffset : screenW - Plugin.HudSideOffset - fullSize.x;
-        float top = screenH - Mathf.Clamp(Plugin.HudTop, 0f, Mathf.Max(0f, screenH - fullSize.y));
-        Rect normal = new Rect(xMin, top - fullSize.y, fullSize.x, fullSize.y);
+        float panelFromTop = Mathf.Clamp(Plugin.HudTop + head, head, Mathf.Max(head, screenH - fullSize.y));
+        bool up = BarUp(panelFromTop, head, screenH);
+        float top = screenH - panelFromTop;
+        float column = vertical && slide > 0f ? ButtonBar.SideHeight : 0f;
+        float footTop = top + head + (up ? column : 0f);
+        float footBottom = Mathf.Min(top - fullSize.y, up ? top : top - column);
+        Rect normal = new Rect(left ? xMin : xMin - rail, footBottom, fullSize.x + rail, footTop - footBottom);
 
         FitMode mode = FitMode.Normal;
         float x = xMin;
@@ -1235,10 +1224,10 @@ internal class QueueHud : MonoBehaviour
                 // recorre hacia allá; si no, se pliega en su misma esquina.
                 float gap = 3f;
                 float ownSpace = left ? occ.xMin - gap : screenW - occ.xMax - gap;
-                if (fullSize.x <= ownSpace)
+                if (fullSize.x + rail <= ownSpace)
                 {
                     mode = FitMode.Moved;
-                    x = left ? Mathf.Max(0f, occ.xMin - gap - fullSize.x) : Mathf.Min(occ.xMax + gap, screenW - fullSize.x);
+                    x = left ? Mathf.Max(0f, occ.xMin - gap - rail - fullSize.x) : Mathf.Min(occ.xMax + gap + rail, screenW - fullSize.x);
                 }
                 else if (!Plugin.HudAlwaysOpen)
                     mode = FitMode.Folded;
@@ -1247,19 +1236,19 @@ internal class QueueHud : MonoBehaviour
         }
 
         // Plegado: al pasar el mouse por la barrita se despliega; sigue abierto mientras el mouse
-        // esté sobre el panel desplegado.
+        // esté sobre el panel desplegado (o su barra de botones).
         // También se despliega un momento al agregar algo, para que se vea que sí entró.
         if (mode == FitMode.Folded)
-            peeking = Inside(box, Input.mousePosition) || Time.unscaledTime < peekUntil;
+            peeking = OverPanel(Input.mousePosition) || Time.unscaledTime < peekUntil;
         else
             peeking = false;
 
         Vector2 size = fullSize;
         if (mode == FitMode.Folded)
         {
-            // La barrita: del ancho de su título y los dos botones, siempre en la esquina de su
-            // lado (donde el jugador dejó el panel), aunque toque un poco la ventana.
-            float w = Mathf.Min(fullSize.x, Mathf.Ceil(titleText.GetPreferredValues(titleText.text).x) + 5f + 42f + 4f);
+            // La barrita: del ancho de su título, siempre en la esquina de su lado (donde el
+            // jugador dejó el panel), aunque toque un poco la ventana.
+            float w = Mathf.Min(fullSize.x, Mathf.Ceil(titleText.GetPreferredValues(titleText.text).x) + 2f * TitleMargin);
             float foldX = left ? Plugin.HudSideOffset : screenW - Plugin.HudSideOffset - w;
             if (peeking)
                 x = xMin; // se despliega en su lugar de siempre, encima de la ventana
@@ -1269,11 +1258,16 @@ internal class QueueHud : MonoBehaviour
                 size = new Vector2(w, stripHeight);
             }
         }
-        // Nunca fuera de la pantalla (resoluciones chicas o una posición guardada muy a la orilla).
-        x = Mathf.Clamp(x, 0f, Mathf.Max(0f, screenW - size.x));
-        float fromTop = Mathf.Clamp(Plugin.HudTop, 0f, Mathf.Max(0f, screenH - size.y));
+        bool folded = mode == FitMode.Folded && !peeking;
+        // Nunca fuera de la pantalla (resoluciones chicas o una posición guardada muy a la orilla),
+        // tampoco la esquina ni la barra. Plegado, la esquina y la barra se esconden con el panel.
+        float railNow = folded ? 0f : rail, headNow = folded ? 0f : head;
+        float minX = left ? 0f : railNow, maxX = screenW - size.x - (left ? railNow : 0f);
+        x = Mathf.Clamp(x, minX, Mathf.Max(minX, maxX));
+        float fromTop = Mathf.Clamp(Plugin.HudTop + head, headNow, Mathf.Max(headNow, screenH - size.y));
+        up = BarUp(fromTop, head, screenH);
 
-        var key = (mode, peeking, x, size, fromTop, s);
+        var key = (mode, peeking, x, size, fromTop, s, head, slide, up, vertical, left);
         if (lastFit.HasValue && lastFit.Value.Equals(key))
             return;
         lastFit = key;
@@ -1283,13 +1277,14 @@ internal class QueueHud : MonoBehaviour
         box.anchorMin = box.anchorMax = box.pivot = new Vector2(0f, 1f);
         box.anchoredPosition = new Vector2(Mathf.Round(x), -Mathf.Round(fromTop));
         box.sizeDelta = size;
-        bool folded = mode == FitMode.Folded && !peeking;
         frame.gameObject.SetActive(!folded);
         barTrack.gameObject.SetActive(!folded && barShown);
+        bar.Apply(!folded, innerLeft: !left, head, up, slide, size.x);
     }
 
-    // Al soltarlo se pega al lado más cercano y guarda su distancia a ese borde y al de arriba,
-    // así queda en el mismo lugar relativo en cualquier resolución.
+    // Al soltarlo se pega al lado más cercano y guarda su distancia a ese borde y al de arriba (de lo más
+    // alto: la esquina ⋮ o los renglones de la barra), así queda en el mismo lugar relativo en cualquier
+    // resolución.
     private void SavePosition(float s)
     {
         Vector3[] c = new Vector3[4];
@@ -1297,7 +1292,7 @@ internal class QueueHud : MonoBehaviour
         float leftPx = c[0].x, rightPx = c[2].x, topPx = c[1].y;
         bool left = (leftPx + rightPx) * 0.5f < Screen.width * 0.5f;
         float side = left ? leftPx / s : (Screen.width - rightPx) / s;
-        float top = (Screen.height - topPx) / s;
+        float top = (Screen.height - topPx) / s - BarHead(out _);
         Plugin.SetHudPosition(left, Mathf.Round(side), Mathf.Round(top));
     }
 
@@ -1358,12 +1353,15 @@ internal class QueueHud : MonoBehaviour
         float screenW = Screen.width / s, screenH = Screen.height / s;
         Vector2 d = (m - resizeFrom) / s;
         float w = resizeWidth + (Plugin.HudLeft ? d.x : -d.x);
-        w = Mathf.Clamp(Mathf.Round(w), 100f, Mathf.Min(800f, screenW - Plugin.HudSideOffset));
+        // La esquina ⋮ (y la barra vertical) también tienen que caber al lado; arriba, sus renglones.
+        w = Mathf.Clamp(Mathf.Round(w), 100f, Mathf.Max(100f, Mathf.Min(800f, screenW - Plugin.HudSideOffset - ButtonBar.Slot)));
         if (!resizeHeightTouched && Mathf.Abs(d.y) >= 3f)
             resizeHeightTouched = true;
+        bar.Layout(Plugin.ButtonsOnTop, w); // con el ancho nuevo, los renglones de arriba pueden ser otros
         float? h = null;
         if (resizeHeightTouched)
-            h = Mathf.Clamp(Mathf.Round(resizeHeight - d.y), 60f, Mathf.Min(1000f, screenH - Plugin.HudTop - stripHeight - 4f));
+            h = Mathf.Clamp(Mathf.Round(resizeHeight - d.y), 60f,
+                Mathf.Max(60f, Mathf.Min(1000f, screenH - Plugin.HudTop - BarHeadFull - stripHeight - 4f)));
         if (w != Plugin.LiveHudWidth || h != Plugin.LiveHudMaxHeight)
         {
             Plugin.LiveHudWidth = w;
@@ -1669,17 +1667,21 @@ internal class QueueHud : MonoBehaviour
         float width = Plugin.HudWidth;
         // Título del panel a la altura de la letra, con el nombre que el juego usa para la cola.
         stripHeight = Mathf.Max(11f, fontSize + 2f);
-        // Alto máximo: el configurado, pero nunca más de lo que cabe en pantalla desde donde
-        // está el panel (en resoluciones chicas no se sale por abajo).
+        // La barra de botones va por fuera del panel: en columna o, arriba, en renglones del ancho del
+        // panel (uno a tres; nunca se encogen los botones). La acomoda Fit.
+        bar.Layout(Plugin.ButtonsOnTop, width);
+        float head = stripHeight;
+        // Alto máximo: el configurado, pero nunca más de lo que cabe en pantalla desde donde está el
+        // panel, debajo de su esquina o de los renglones de la barra (en resoluciones chicas no se sale).
         float screenUnits = Screen.height / (canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f);
-        float maxHeight = Mathf.Max(rowHeight * 3f, Mathf.Min(Plugin.HudMaxHeight, screenUnits - Plugin.HudTop - stripHeight - 4f));
+        float maxHeight = Mathf.Max(rowHeight * 3f, Mathf.Min(Plugin.HudMaxHeight, screenUnits - Plugin.HudTop - BarHeadFull - head - 4f));
         strip.sizeDelta = new Vector2(0f, stripHeight);
-        frame.offsetMax = new Vector2(0f, -stripHeight);
+        frame.offsetMax = new Vector2(0f, -head);
         GameStyle.Apply(titleText);
         titleText.fontSize = fontSize;
         string label = GameData.Plain(LLBase.HasL("ui_craft_queue") ? LLBase.L("ui_craft_queue") : "");
         titleText.text = label.Length > 0 ? label : Lang.T("queue");
-        box.sizeDelta = new Vector2(width, maxHeight + stripHeight);
+        box.sizeDelta = new Vector2(width, maxHeight + head);
         // El carril de la barrita siempre reservado: el contenido mide lo mismo con o sin scroll,
         // así nada se mueve ni se compacta al agregar o quitar tareas.
         panel.offsetMin = new Vector2(0f, panel.offsetMin.y);
@@ -1691,7 +1693,7 @@ internal class QueueHud : MonoBehaviour
         contentHeight = panel.rect.height;
         bool overflow = contentHeight > maxHeight + 0.5f;
         viewHeight = Mathf.Min(contentHeight, maxHeight);
-        box.sizeDelta = fullSize = new Vector2(width, viewHeight + stripHeight);
+        box.sizeDelta = fullSize = new Vector2(width, viewHeight + head);
         barTrack.sizeDelta = new Vector2(BarWidth, 0f);
         barTrack.gameObject.SetActive(barShown = overflow);
         lastFit = null; // volver a acomodarlo junto a las ventanas con el tamaño nuevo
@@ -2010,22 +2012,28 @@ internal class QueueHud : MonoBehaviour
 
     private bool loggedTipError;
 
-    // Qué hace cada botón (y lo que cambia con Shift). Sale a la altura de su barra.
+    // Qué hace cada botón (y lo que cambia con Shift). Sale a la altura de su barra (o de su celda).
     private string ButtonTip(Image i, out RectTransform at)
     {
         at = strip;
         if (i == null)
             return null;
-        if (i == lockIcon)
-            return Lang.T("lock_tip");
-        if (i == marksIcon)
-            return Lang.T("pin_tip");
-        if (i == eyeIcon)
-            return Lang.T("eye_tip");
-        if (i == totalIcon)
-            return Lang.T(Plugin.TotalView ? "view_tasks" : "view_total");
-        if (i == trashIcon)
-            return ClearConfirm.Armed ? Lang.T("clear_confirm", Queue.Tasks.Count) : Lang.T("clear");
+        if (bar.KindOf(i) is ButtonBar.Kind kind)
+        {
+            at = bar.RectOf(kind);
+            return kind switch
+            {
+                ButtonBar.Kind.Bag => Lang.T("count_bag_tip"),
+                ButtonBar.Kind.Chest => Lang.T("count_chests_tip"),
+                ButtonBar.Kind.Total => Lang.T(Plugin.TotalView ? "view_tasks" : "view_total"),
+                ButtonBar.Kind.Eye => Lang.T("eye_tip"),
+                ButtonBar.Kind.Pin => Lang.T("pin_tip"),
+                ButtonBar.Kind.Lock => Lang.T("lock_tip"),
+                ButtonBar.Kind.Toggle => Lang.T(Plugin.ButtonsShown ? "bar_hide" : "bar_show") + " · " + Lang.T("bar_turn"),
+                _ => !Queue.HasSlot || Queue.Tasks.Count == 0 ? Lang.T("queue_empty")
+                    : ClearConfirm.Armed ? Lang.T("clear_confirm", Queue.Tasks.Count) : Lang.T("clear"),
+            };
+        }
         string key = null;
         if (focusPins.ContainsKey(i))
             key = "pin_task_tip";
@@ -2077,11 +2085,12 @@ internal class QueueHud : MonoBehaviour
         tipBox.gameObject.SetActive(true);
         LayoutRebuilder.ForceRebuildLayoutImmediate(tipBox);
 
-        // A un lado del panel (el lado con espacio), con el borde de arriba a la altura del ingrediente.
+        // A un lado del panel (el lado con espacio; por fuera de su barra de botones, si va al lado),
+        // con el borde de arriba a la altura del ingrediente.
         float s = canvas.scaleFactor > 0f ? canvas.scaleFactor : 1f;
+        OuterEdges(out float outerLeft, out float outerRight);
+        float boxLeft = outerLeft / s, boxRight = outerRight / s;
         Vector3[] c = new Vector3[4];
-        box.GetWorldCorners(c);
-        float boxLeft = c[0].x / s, boxRight = c[2].x / s;
         target.GetWorldCorners(c);
         float top = c[1].y / s;
         float w = tipBox.rect.width, hgt = tipBox.rect.height;
@@ -2305,9 +2314,11 @@ internal class QueueHud : MonoBehaviour
             ic.transform.SetParent(holder.transform, false);
             RectTransform irt = (RectTransform)ic.transform;
             irt.anchorMin = irt.anchorMax = irt.pivot = new Vector2(0.5f, 0.5f);
-            irt.sizeDelta = new Vector2(size, size); // tamaño exacto: sin reescalar el pixel art
+            irt.sizeDelta = new Vector2(size, size); // el hueco de la celda, en pixeles enteros
             Image img = ic.GetComponent<Image>();
-            img.sprite = icon;
+            // El objeto llena su celda: el dibujo sin el margen transparente de su lienzo (antes ocupaba
+            // menos de la mitad). Afuera de una celda, el sprite completo, como siempre.
+            img.sprite = withCell ? GameStyle.Trimmed(icon) : icon;
             img.preserveAspect = true;
             img.raycastTarget = false;
             if (itemId != null)
@@ -2446,67 +2457,8 @@ internal class QueueHud : MonoBehaviour
         return t;
     }
 
-    // --- Candado (pixel art, mismo estilo que las flechas) ---
-
-    private static Sprite lockOpen, lockClosed;
-
-    private static Sprite LockClosed() => lockClosed != null ? lockClosed : lockClosed = PixelSprite(new[]
-    {
-        "..ooo..", ".o...o.", ".o...o.", "ooooooo", "o#####o", "o##o##o", "o##o##o", "o#####o", "ooooooo"
-    });
-
-    private static Sprite LockOpen() => lockOpen != null ? lockOpen : lockOpen = PixelSprite(new[]
-    {
-        "..ooo..", ".o...o.", ".....o.", "ooooooo", "o#####o", "o##o##o", "o##o##o", "o#####o", "ooooooo"
-    });
-
-    // Siempre visible: ojo dorado = prendido, solo contorno = apagado.
-    private static Sprite eyeOn, eyeOff;
-
-    private static Sprite EyeOn() => eyeOn != null ? eyeOn : eyeOn = PixelSprite(new[]
-    {
-        "..ooooo..", ".o#####o.", "o##ooo##o", "o##ooo##o", "o##ooo##o", ".o#####o.", "..ooooo.."
-    }, new Color(0.30f, 0.19f, 0.07f), new Color(0.98f, 0.78f, 0.26f), Color.clear);
-
-    private static Sprite EyeOff() => eyeOff != null ? eyeOff : eyeOff = PixelSprite(new[]
-    {
-        "..ooooo..", ".o.....o.", "o..ooo..o", "o..ooo..o", "o..ooo..o", ".o.....o.", "..ooooo.."
-    }, new Color(0.62f, 0.58f, 0.52f), Color.clear, Color.clear);
-
-    // Vista Total: Σ dorada = puesta, gris = apagada.
-    private static Sprite totalOn, totalOff;
-    private static readonly string[] SigmaRows =
-    {
-        "ooooooo", ".o....o", "..o....", "...o...", "....o..", "...o...", "..o....", ".o....o", "ooooooo"
-    };
-
-    private static Sprite TotalOn() => totalOn != null ? totalOn : totalOn =
-        PixelSprite(SigmaRows, new Color(0.98f, 0.78f, 0.26f), Color.clear, Color.clear);
-
-    private static Sprite TotalOff() => totalOff != null ? totalOff : totalOff =
-        PixelSprite(SigmaRows, new Color(0.62f, 0.58f, 0.52f), Color.clear, Color.clear);
-
-    // Vaciar la cola: bote gris (tapa con asa separada del cuerpo, rayas, fondo redondeado); rojo
-    // con el mouse encima, "esto vacía la cola"; tras el primer clic, palomita dorada: el segundo
-    // clic confirma. (El bote relleno de rojo de antes se leía como un "!".)
-    private static Sprite trashGrey, trashRed, checkGold;
-    private static readonly string[] TrashRows =
-    {
-        "...ooo...", "ooooooooo", ".........", ".ooooooo.", ".o.o.o.o.", ".o.o.o.o.", ".o.o.o.o.", ".o.o.o.o.", "..ooooo.."
-    };
-
-    private static Sprite TrashGrey() => trashGrey != null ? trashGrey : trashGrey =
-        PixelSprite(TrashRows, new Color(0.62f, 0.58f, 0.52f), Color.clear, Color.clear);
-
-    private static Sprite TrashRed() => trashRed != null ? trashRed : trashRed =
-        PixelSprite(TrashRows, new Color(0.88f, 0.31f, 0.24f), Color.clear, Color.clear);
-
-    private static Sprite CheckGold() => checkGold != null ? checkGold : checkGold = PixelSprite(new[]
-    {
-        ".......oo", "......oo.", "o....oo..", "oo..oo...", ".oooo....", "..oo....."
-    }, new Color(0.98f, 0.78f, 0.26f), Color.clear, Color.clear);
-
-    // Marcar cofres: pin relleno = prendido, solo contorno = apagado.
+    // Pin de cada tarea (marcar en los cofres solo sus materiales): relleno = prendido, contorno = apagado.
+    // (El candado, el ojo, la vista Total, el bote y el pin general están en la barra: ver ButtonBar.)
     private static Sprite pinOn, pinOff;
 
     // Prendido: dorado con borde oscuro (se reconoce de un vistazo). Apagado: solo contorno gris.
@@ -2553,9 +2505,6 @@ internal class QueueHud : MonoBehaviour
     {
         ".ooooooo.", "o#######o", "o#wwwww#o", "o##w#w##o", "o##w#w##o", "o##w#w##o", "o##www##o", "o#######o", ".ooooooo."
     }, BtnLine, BtnRed, BtnMark);
-
-    private static Sprite PixelSprite(string[] rows) =>
-        PixelSprite(rows, new Color(0.93f, 0.86f, 0.74f), new Color(0.47f, 0.35f, 0.22f), Color.clear);
 
     private static Sprite PixelSprite(string[] rows, Color line, Color fill, Color mark)
     {

@@ -215,7 +215,7 @@ internal static class Plan
 
     private static readonly Dictionary<string, bool> wasComplete = new Dictionary<string, bool>();
     private static string lastZone, lastSlot;
-    private static int lastVersion = -1;
+    private static int lastVersion = -1, lastCounting = -1;
     private static float nextCheck;
 
     public static void Tick()
@@ -230,12 +230,14 @@ internal static class Plan
         {
             string zone = MainGame.PlayerData.CurrentWorldZoneData?.id;
             string slot = GameState.Slot;
-            // Cambiar de zona o de partida, o editar la cola (+, −, agregar…), no completa nada:
-            // solo toma la foto nueva.
-            bool sameContext = zone == lastZone && slot == lastSlot && Queue.Version == lastVersion;
+            // Cambiar de zona o de partida, editar la cola (+, −, agregar…) o cambiar qué se cuenta
+            // (la bolsa y el cofre de la barra) no completa nada: solo toma la foto nueva.
+            int counting = (Plugin.CountCarried ? 1 : 0) | (Plugin.CountChests ? 2 : 0);
+            bool sameContext = zone == lastZone && slot == lastSlot && Queue.Version == lastVersion && counting == lastCounting;
             lastZone = zone;
             lastSlot = slot;
             lastVersion = Queue.Version;
+            lastCounting = counting;
 
             Compute(QueueView.Items());
             List<QueueTask> done = new List<QueueTask>();
