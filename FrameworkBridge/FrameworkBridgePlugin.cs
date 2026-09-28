@@ -21,7 +21,7 @@ public sealed class FrameworkBridgePlugin : BaseUnityPlugin
     public const string MainGuid = "verto13.gk2.craftingqueue";
     public const string PluginGuid = "verto13.gk2.craftingqueue.framework";
     public const string PluginName = "Crafting Queue - GK2 Mod Framework integration";
-    public const string PluginVersion = "0.5.0";
+    public const string PluginVersion = "0.5.1";
 
     private void Awake()
     {

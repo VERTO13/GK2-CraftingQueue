@@ -369,7 +369,8 @@ Anota todo lo que no funcione o se sienta raro y corrígelo con el usuario.
 Misma versión en GitHub y Nexus. Siguiente: **0.5.1** (arreglos de la 0.5.0); después 0.5.2…
 
 1. Subir `<Version>` en `CraftQueue.csproj` y `FrameworkBridge/*.csproj`, y en `[BepInPlugin]` de `Plugin.cs` y
-   del puente. Compilar ambos.
+   del puente. Compilar ambos **sin ruta de depuración** (si no, la DLL lleva la ruta de tu carpeta de usuario):
+   `dotnet build -c Release --no-incremental -p:DebugType=none -p:DebugSymbols=false` (en la raíz y en `FrameworkBridge/`).
 2. Empaquetar **un solo zip** (desde la 0.5.1 BepInEx ya no se incluye: es requisito aparte, en Nexus como
    requisito y en el README como Paso 1; el framework es opcional). Rutas con `/` (usa `tar` de Windows:
    `C:\Windows\System32\tar.exe -a -cf x.zip ...`):
