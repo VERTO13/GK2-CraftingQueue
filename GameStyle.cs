@@ -182,10 +182,50 @@ internal static class GameStyle
         return t;
     }
 
+    // La fuente pixelada solo trae letras latinas. En chino, japonés, coreano, etc. el juego cambia sus textos a la
+    // fuente de ese idioma (LazyFontData); aquí esa fuente se agrega como respaldo de la nuestra, así TMP dibuja con
+    // ella solo los caracteres que falten (antes esos textos desaparecían). Se rehace si el jugador cambia de idioma.
+    private static string fallbackLang;
+    private static TMP_FontAsset addedFallback;
+
+    private static void EnsureLanguageFallback()
+    {
+        string lang = LazyBearTechnology.LLBase.CurrentLang;
+        if (font == null || lang == fallbackLang)
+            return;
+        fallbackLang = lang;
+        try
+        {
+            if (font.fallbackFontAssetTable == null)
+                font.fallbackFontAssetTable = new System.Collections.Generic.List<TMP_FontAsset>();
+            if (addedFallback != null)
+                font.fallbackFontAssetTable.Remove(addedFallback);
+            addedFallback = null;
+            foreach (LazyBearTechnology.LazyFontData data in Resources.FindObjectsOfTypeAll<LazyBearTechnology.LazyFontData>())
+            {
+                // El juego de fuentes al que pertenece la nuestra (en su versión fija o en la de inglés)
+                if (data.GetFontAssetFor(lang, true) != font && data.GetFontAssetFor("en", false, false) != font)
+                    continue;
+                TMP_FontAsset langFont = data.GetFontAssetFor(lang, false);
+                if (langFont == null || langFont == font || font.fallbackFontAssetTable.Contains(langFont))
+                    break;
+                font.fallbackFontAssetTable.Add(langFont);
+                addedFallback = langFont;
+                Plugin.Log.LogInfo($"Idioma {lang}: letra de respaldo {langFont.name}");
+                break;
+            }
+        }
+        catch (System.Exception e)
+        {
+            Plugin.Log.LogWarning($"Letra de respaldo para {lang}: {e.Message}");
+        }
+    }
+
     public static void Apply(TMP_Text t)
     {
         if (font == null)
             return;
+        EnsureLanguageFallback();
         t.font = font;
         if (fontMaterial != null)
             t.fontSharedMaterial = fontMaterial;

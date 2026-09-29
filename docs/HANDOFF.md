@@ -12,7 +12,7 @@ cola de crafteo: qué quieres hacer, qué necesitas, qué tienes y en qué cofre
 
 - **GitHub (público):** https://github.com/VERTO13/GK2-CraftingQueue — licencia MIT.
 - **Nexus Mods:** https://www.nexusmods.com/graveyardkeeper2/mods/177 (autor en Nexus: LeBetoven).
-- **Versión publicada:** 0.5.1 (GitHub Release `v0.5.1` y Nexus, 2026-09-28). La siguiente será **0.5.2**.
+- **Versión publicada:** 0.5.2 (GitHub Release `v0.5.2` y Nexus, 2026-09-29): letras en chino/japonés/coreano y menú Mods en 16 idiomas. La siguiente será **0.5.3**.
 - **Anunciado** en el Discord oficial de Lazy Bear Games, foro `#gk2-modding`.
 
 ### Funciones principales (0.4.16)
@@ -81,10 +81,14 @@ cambiar los mismos nombres en el puente y en `en.json`/`es.json`.
    - Dependencias duras de BepInEx a nuestro mod y al framework: **sin el framework, BepInEx omite el puente**
      y el mod funciona igual (modelo "standalone + bridge" de `docs/OPTIONAL_INTEGRATION.md` del framework).
    - `frameworkManagesEnabledState: false` → el framework no muestra Enable/Disable para nosotros.
-   - Traducciones del menú: `FrameworkBridge/Localization/verto13.gk2.craftingqueue/en.json` y `es.json`.
+   - Traducciones del menú: `FrameworkBridge/Localization/verto13.gk2.craftingqueue/<idioma>.json` (los 16 idiomas
+     del mod; `en.json` y `es.json` a mano, los otros 14 los genera `Localization/traducciones.js`).
      Se instalan en `BepInEx/plugins/GK2.Framework/Localization/verto13.gk2.craftingqueue/`. Los nombres de
-     sección del config están en español ("Controles", "Vista rápida", "Panel en pantalla"); `en.json` los
-     traduce para el menú. Otros idiomas caen a `en`.
+     sección del config están en español ("Controles", "Vista rápida", "Panel en pantalla"); cada json los
+     traduce para el menú. Un idioma sin archivo cae a `en`. El framework lee el idioma al arrancar el juego.
+   - Letras en chino, japonés, coreano, etc. (0.5.2): el panel usa la letra pixelada del juego (`tiny_font`), que
+     solo trae latinas; `GameStyle.EnsureLanguageFallback` le agrega como respaldo la fuente del idioma actual
+     (`LazyFontData`). Antes, en esos idiomas desaparecían los nombres del panel (reporte de un jugador en Nexus).
 2. **Teclas como `KeyboardShortcut`** en `Plugin.cs` (antes `KeyCode`). Requisito del framework (`AddKeybind`).
    Un valor guardado viejo como `LeftControl` se lee igual. El resto del mod usa `.Value.MainKey`.
 3. **Panel** (probado por el usuario en 1080p el 2026-09-27):
@@ -365,7 +369,7 @@ Anota todo lo que no funcione o se sienta raro y corrígelo con el usuario.
 ## 7. Publicar una versión
 
 **Regla de versiones:** el número **solo sube al publicar** (nada de subirlo en cada compilación de prueba).
-Misma versión en GitHub y Nexus. Siguiente: **0.5.2**.
+Misma versión en GitHub y Nexus. Siguiente: **0.5.3**.
 
 1. Subir `<Version>` en `CraftQueue.csproj` y `FrameworkBridge/*.csproj`, y en `[BepInPlugin]` de `Plugin.cs` y
    del puente. Compilar ambos **sin ruta de depuración** (si no, la DLL lleva la ruta de tu carpeta de usuario):
