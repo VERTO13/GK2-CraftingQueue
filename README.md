@@ -178,7 +178,7 @@ Hold **Alt** over any item, in your inventory, a chest, or the queue panel itsel
 
 ### Requirements
 
-- Graveyard Keeper 2 (tested on version 1.006).
+- Graveyard Keeper 2 (tested on version 1.008).
 - **Required:** [BepInEx](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5) 5.4.23.x (`BepInEx_win_x64`), installed separately (Step 1).
 - **Optional:** [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) 0.1.14 or later, for the in-game settings menu.
 

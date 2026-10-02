@@ -178,7 +178,7 @@ Mantén **Alt** sobre cualquier objeto, en tu inventario, un cofre o el mismo pa
 
 ### Requisitos
 
-- Graveyard Keeper 2 (probado en la versión 1.006).
+- Graveyard Keeper 2 (probado en la versión 1.008).
 - **Obligatorio:** [BepInEx](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5) 5.4.23.x (`BepInEx_win_x64`), que se instala aparte (Paso 1).
 - **Opcional:** [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) 0.1.14 o posterior, para el menú de ajustes dentro del juego.
 
